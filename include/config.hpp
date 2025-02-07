@@ -2,10 +2,6 @@
 
 #include "header.hpp"
 
-#include <string>
-#include <map>
-#include <vector>
-
 struct RouteConfig {
     vector<string> methodes;
     string root;
@@ -36,9 +32,20 @@ struct WebServerConfig {
 class configFile {
 private:
     string file_name;
+    ifstream cnf;
+
 public:
     configFile(string file_name) : file_name(file_name) {
-        
+        cnf.open(file_name);
+        if (!cnf)
+            throw "Error: failed to open the config file";
+    }
+    ~configFile() {
+        if (cnf.is_open()) {
+            cnf.close();
+        }
     }
 
 };
+
+void config_file(string file);

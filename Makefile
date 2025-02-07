@@ -2,7 +2,7 @@ NAME = webserv
 
 CPP = c++
 
-SRC =  src/main.cpp
+SRC =  src/main.cpp src/config.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
