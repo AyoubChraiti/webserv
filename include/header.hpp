@@ -11,5 +11,9 @@
 #include <vector>
 #include <map>
 #include <fstream>
+#include <sstream>
+#include <netdb.h> 
+#include <arpa/inet.h>
+#include <sys/types.h>
 
 using namespace std;

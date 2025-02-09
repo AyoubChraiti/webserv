@@ -10,42 +10,43 @@ struct RouteConfig {
     string redirect;
     string cgi_pass;
     string cgi_extension;
-    bool file_upload;
-    string upload_store;
-    RouteConfig() : autoindex(false), file_upload(false) {}
+    bool fileUpload;
+    string uploadStore;
+    RouteConfig() : autoindex(false), fileUpload(false) {}
 };
 
 struct ServerConfig {
     string host;
-    int port;
+    string port;
     vector<string> server_names;
     map<int, string> error_pages;
-    size_t client_max_body_size;
+    string maxBodySize;
     map<string, RouteConfig> routes;
-    ServerConfig() : host("0.0.0.0"), port(80), client_max_body_size(1024 * 1024) {}
 };
 
 struct WebServerConfig {
-    vector<ServerConfig> servers;
+    map<string, ServerConfig> servers;
 };
 
 class configFile {
 private:
-    string file_name;
+    string fileName;
     ifstream cnf;
 
 public:
-    configFile(string file_name) : file_name(file_name) {
-        cnf.open(file_name);
-        if (!cnf)
-            throw "Error: failed to open the config file";
-    }
-    ~configFile() {
-        if (cnf.is_open()) {
-            cnf.close();
-        }
-    }
+    configFile(string fileName);
+    ~configFile();
 
+    string trim(const string &s);
+    size_t parseSize(const string &s);
+    void addServer(WebServerConfig &config, ServerConfig &currentServer, RouteConfig &currentRoute, string &currentUri, bool &inServerBlock);
+    void ErrorPages(ServerConfig &currentServer);
+    void addLocation(ServerConfig &currentServer, RouteConfig &currentRoute, string &currentUri);
+    void serverAttributes(ServerConfig &currentServer, const string &line);
+    void routesAttributes(RouteConfig &currentRoute, string &currentUri, const string &line);
+    WebServerConfig parseConfig();
 };
 
-void config_file(string file);
+string getKey(ServerConfig currSer);
+void testConfigParser(const std::string &filePath);
+void configChecking(const string &filePath);
