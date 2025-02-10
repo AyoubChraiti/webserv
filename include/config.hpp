@@ -48,5 +48,4 @@ public:
 };
 
 string getKey(ServerConfig currSer);
-void testConfigParser(const std::string &filePath);
-void configChecking(const string &filePath);
+WebServerConfig configChecking(const string &filePath);
