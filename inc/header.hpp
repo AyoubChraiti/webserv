@@ -15,6 +15,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <cstdlib>
+#include <sys/epoll.h>
 
 using namespace std;
 
@@ -25,8 +26,8 @@ void serverSetup(mpserv conf, map<int, struct sockaddr_in> &servrs);
 void webserver(mpserv conf);
 
 template <typename T>
-std::string to_string(T value) {
-    std::ostringstream oss;
+string to_string(T value) {
+    ostringstream oss;
     oss << value;
     return oss.str();
 }
