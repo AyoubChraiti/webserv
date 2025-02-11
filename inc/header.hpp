@@ -18,10 +18,11 @@
 
 using namespace std;
 
-struct WebServerConfig;
+struct mpserv;
 
 void sysCallFail();
-void serverSetup(WebServerConfig serv);
+void serverSetup(mpserv conf, map<int, struct sockaddr_in> &servrs);
+void webserver(mpserv conf);
 
 template <typename T>
 std::string to_string(T value) {
