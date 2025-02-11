@@ -9,7 +9,6 @@ void add_fds_to_epoll(int epollFd, int serverFd) {
     
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, serverFd, &ev) == -1)
         sysCallFail();
-    cout << "FDDD= " << serverFd << endl;
 }
 
 void handle_client_write(int clientFd, int epollFd) {
@@ -119,7 +118,7 @@ void serverSetup(mpserv conf, map<int, struct sockaddr_in> &servrs) {
 
         servrs[serverFd] = address;
         
-        cout << "server listening on port " << it->second.port << endl;
+        cout << "server " << it->second.host << " listening on port " << it->second.port << endl;
     }
 }
 
