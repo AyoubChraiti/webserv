@@ -8,7 +8,7 @@ bool isValidPort(const string &portStr) {
             return false;
     }
     int port = atoi(portStr.c_str());
-    return (port >= 1 && port <= 65535);
+    return (port >= 1024 && port <= 65535);
 }
 
 bool isValidHost(const string &host) {

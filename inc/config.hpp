@@ -26,6 +26,7 @@ struct servcnf {
 
 struct mpserv {
     map<string, servcnf> servers;
+    // vector<string> keys;
 };
 
 class configFile {

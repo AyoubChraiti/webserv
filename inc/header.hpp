@@ -16,14 +16,17 @@
 #include <sys/types.h>
 #include <cstdlib>
 #include <sys/epoll.h>
+#include <algorithm>
 
 using namespace std;
 
 struct mpserv;
 
 void sysCallFail();
-void serverSetup(mpserv conf, map<int, struct sockaddr_in> &servrs);
-void webserver(mpserv conf);
+void serverSetup(mpserv &conf, vector<int> &servrs);
+void webserver(mpserv &conf);
+void request(int fd, mpserv &conf);
+void testConfigParser(const string &filePath);
 
 template <typename T>
 string to_string(T value) {

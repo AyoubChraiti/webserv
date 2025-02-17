@@ -2,53 +2,54 @@
 
 #define MAX_EVENTS 10
 
-void add_fds_to_epoll(int epollFd, int serverFd) {
+void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
     struct epoll_event ev;
-    ev.events = EPOLLIN; // will listen for read only???
-    ev.data.fd = serverFd;
-    
-    if (epoll_ctl(epollFd, EPOLL_CTL_ADD, serverFd, &ev) == -1)
+    ev.events = events;
+    ev.data.fd = fd;
+
+    if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1)
         sysCallFail();
 }
 
-void handle_client_write(int clientFd, int epollFd) {
-    const char response[] = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, world!";
-    send(clientFd, response, sizeof(response) - 1, 0);
+void handle_client_write(int clientFd, int epollFd, mpserv &conf) { 
+    ifstream html("www/errors/404.html");
+    string line;
+    string response = "HTTP/1.1 200 OK\r\n"
+                      "Content-Type: text/html\r\n"
+                      "Content-Length: ""\r\n"
+                      "\r\n";
 
-    // Remove client from epoll and close socket after response
+    if (!html.is_open())
+        sysCallFail();
+
+    while (getline(html, line)) {
+        response += line + "\n";
+    }
+
+    send(clientFd, response.c_str(), response.length(), 0);
+
+    // Remove from epoll and close the connection
     epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
     close(clientFd);
 }
 
+void handle_client_read(int clientFd, int epollFd, mpserv &conf) {
 
-void handle_client_read(int clientFd, int epollFd) {
-    char buffer[4096];
-    int bytesRead = recv(clientFd, buffer, sizeof(buffer), 0);
-
-    if (bytesRead <= 0) {
-        // Client closed connection or error
-        close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-        return;
-    }
-
-    cout << "Received request from client " << clientFd << ": " << buffer << endl;
-
-    // Switch to EPOLLOUT for response
+    request(clientFd, conf);
+    // Switch to EPOLLIN | EPOLLOUT (so we can read again if needed)
     struct epoll_event ev;
-    ev.events = EPOLLOUT;
+    ev.events = EPOLLIN | EPOLLOUT;
     ev.data.fd = clientFd;
     epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev);
 }
 
-
-void epoll_handler(mpserv conf ,map<int, struct sockaddr_in> &servrs) {
+void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     int epollFd = epoll_create1(0);
     if (epollFd == -1)
         sysCallFail();
 
-    for (const auto &entry : servrs) {
-        add_fds_to_epoll(epollFd, entry.first);
+    for (int i = 0; i < servrs.size(); i++) {
+        add_fds_to_epoll(epollFd, servrs[i], EPOLLIN);
     }
 
     struct epoll_event events[MAX_EVENTS];
@@ -61,8 +62,7 @@ void epoll_handler(mpserv conf ,map<int, struct sockaddr_in> &servrs) {
         for (int i = 0; i < numEvents; ++i) {
             int eventFd = events[i].data.fd;
 
-            if (servrs.find(eventFd) != servrs.end()) {
-                // It's a server socket, accept new client
+            if (find(servrs.begin(), servrs.end(), eventFd) != servrs.end()) {
                 struct sockaddr_in clientAddr;
                 socklen_t clientLen = sizeof(clientAddr);
                 int clientFd = accept(eventFd, (struct sockaddr*)&clientAddr, &clientLen);
@@ -70,31 +70,21 @@ void epoll_handler(mpserv conf ,map<int, struct sockaddr_in> &servrs) {
                     cout << "accept failed" << endl;
                     continue;
                 }
-
-                cout << "New client connected: " << clientFd << endl;
-                cerr << clientFd << "new client connected to : " << eventFd << endl;
-
-                // Set client socket to non-blocking
-                // fcntl(clientFd, F_SETFL, O_NONBLOCK);
-
-                // Add client to epoll
-                add_fds_to_epoll(epollFd, clientFd);
+                add_fds_to_epoll(epollFd, clientFd, EPOLLIN | EPOLLET);  // Edge-triggered for efficiency
             }
             else {
-                // Handle existing client requests
                 if (events[i].events & EPOLLIN) {
-                    cout << eventFd << endl;
-                    handle_client_read(eventFd, epollFd);
+                    handle_client_read(eventFd, epollFd, conf);
                 }
                 else if (events[i].events & EPOLLOUT) {
-                    handle_client_write(eventFd, epollFd);
+                    handle_client_write(eventFd, epollFd, conf);
                 }
             }
         }
     }
 }
 
-void serverSetup(mpserv conf, map<int, struct sockaddr_in> &servrs) {
+void serverSetup(mpserv &conf, vector<int> &servrs) {
     for (map<string, servcnf>::iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
         int serverFd;
         struct sockaddr_in address;
@@ -113,17 +103,17 @@ void serverSetup(mpserv conf, map<int, struct sockaddr_in> &servrs) {
         if (bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0)
             sysCallFail();
 
-        if (listen(serverFd, 3) < 0)
+        if (listen(serverFd, 10) < 0)
             sysCallFail();
 
-        servrs[serverFd] = address;
+        servrs.push_back(serverFd);
         
         cout << "server " << it->second.host << " listening on port " << it->second.port << endl;
     }
 }
 
-void webserver(mpserv conf) {
-    map<int, struct sockaddr_in> servrs;
+void webserver(mpserv &conf) {
+    vector<int> servrs;
     serverSetup(conf, servrs);
     epoll_handler(conf, servrs);
 }
