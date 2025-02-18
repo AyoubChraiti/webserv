@@ -39,7 +39,6 @@ void configFile::addServer(mpserv &config, servcnf &currSer, routeCnf &currRout,
     addLocation(currSer, currRout, currUri);
     if (inServer) {
         string key = getKey(currSer);
-            cout << "KEYS= |" << key << "|" << endl;
         config.servers[key] = currSer;
     }
     currSer = servcnf();
@@ -78,6 +77,10 @@ void configFile::serverAttributes(servcnf &currSer, const string &line) {
     if (pos != string::npos) {
         string key = trim(line.substr(0, pos));
         string value = trim(line.substr(pos + 1));
+
+        if (key.empty() || value.empty()) {
+            throw runtime_error("syntax error in the config file.");
+        }
         
         if (key == "host")
             currSer.host = value;
@@ -92,6 +95,9 @@ void configFile::serverAttributes(servcnf &currSer, const string &line) {
         else if (key == "body_size")
             currSer.maxBodySize = value;
     }
+    else {
+        throw runtime_error("syntax error in the config file.");
+    }
 }
 
 void configFile::routesAttributes(routeCnf &currRout, string &currUri, const string &line) {
@@ -99,6 +105,10 @@ void configFile::routesAttributes(routeCnf &currRout, string &currUri, const str
     if (pos != string::npos) {
         string key = trim(line.substr(0, pos));
         string value = trim(line.substr(pos + 1));
+
+        if (key.empty() || value.empty()) {
+            throw runtime_error("syntax error in the config file.");
+        }
 
         if (key == "uri")
             currUri = value;
@@ -118,6 +128,9 @@ void configFile::routesAttributes(routeCnf &currRout, string &currUri, const str
         }
         else if (key == "autoindex")
             currRout.autoindex = (value == "on");
+    }
+    else {
+        throw runtime_error("syntax error in the config file.");
     }
 }
 
@@ -156,7 +169,6 @@ mpserv configFile::parseConfig() {
     addLocation(currSer, currRout, currUri);
     if (inServer) {
         string key = getKey(currSer);
-        cout << "KEYS= |" << key << "|" << endl;
         if (config.servers.find(key) == config.servers.end()) {
             config.servers[key] = currSer;
         }
@@ -181,34 +193,34 @@ void testConfigParser(const string &filePath) {
             cout << "Server (" << serverKey << "):\n";
             cout << "  Host: " << server.host << "\n";
             cout << "  Port: " << server.port << "\n";
-            // cout << "  Server Names: ";
-            // for (size_t j = 0; j < server.server_names.size(); j++)
-            //     cout << server.server_names[j] << " ";
-            // cout << "\n  Max Body Size: " << server.maxBodySize << " bytes\n";
+            cout << "  Server Names: ";
+            for (size_t j = 0; j < server.server_names.size(); j++)
+                cout << server.server_names[j] << " ";
+            cout << "\n  Max Body Size: " << server.maxBodySize << " bytes\n";
 
-            // cout << "  Error Pages:\n";
-            // map<int, string>::const_iterator err_it;
-            // for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it)
-            //     cout << "    " << err_it->first << " -> " << err_it->second << "\n";
+            cout << "  Error Pages:\n";
+            map<int, string>::const_iterator err_it;
+            for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it)
+                cout << "    " << err_it->first << " -> " << err_it->second << "\n";
 
-            // cout << "  Routes:\n";
-            // map<string, routeCnf>::const_iterator route_it;
-            // for (route_it = server.routes.begin(); route_it != server.routes.end(); ++route_it) {
-            //     const routeCnf &route = route_it->second;
-            //     cout << "    URI: " << route_it->first << "\n";
-            //     cout << "      Root: " << route.root << "\n";
-            //     cout << "      Index: " << route.index << "\n";
-            //     cout << "      Autoindex: " << (route.autoindex ? "On" : "Off") << "\n";
-            //     cout << "      Redirect: " << route.redirect << "\n";
-            //     cout << "      CGI Pass: " << route.cgi_pass << "\n";
-            //     cout << "      CGI Extension: " << route.cgi_extension << "\n";
-            //     cout << "      File Upload: " << (route.fileUpload ? "Enabled" : "Disabled") << "\n";
-            //     cout << "      Upload Store: " << route.uploadStore << "\n";
-            //     cout << "      Allowed Methods: ";
-            //     for (size_t k = 0; k < route.methodes.size(); k++)
-            //         cout << route.methodes[k] << " ";
-            //     cout << "\n";
-            // }
+            cout << "  Routes:\n";
+            map<string, routeCnf>::const_iterator route_it;
+            for (route_it = server.routes.begin(); route_it != server.routes.end(); ++route_it) {
+                const routeCnf &route = route_it->second;
+                cout << "    URI: " << route_it->first << "\n";
+                cout << "      Root: " << route.root << "\n";
+                cout << "      Index: " << route.index << "\n";
+                cout << "      Autoindex: " << (route.autoindex ? "On" : "Off") << "\n";
+                cout << "      Redirect: " << route.redirect << "\n";
+                cout << "      CGI Pass: " << route.cgi_pass << "\n";
+                cout << "      CGI Extension: " << route.cgi_extension << "\n";
+                cout << "      File Upload: " << (route.fileUpload ? "Enabled" : "Disabled") << "\n";
+                cout << "      Upload Store: " << route.uploadStore << "\n";
+                cout << "      Allowed Methods: ";
+                for (size_t k = 0; k < route.methodes.size(); k++)
+                    cout << route.methodes[k] << " ";
+                cout << "\n";
+            }
             cout << "--------------------------------------\n";
         }
     } catch (const exception &e) {

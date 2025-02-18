@@ -1,4 +1,5 @@
 #include "../inc/config.hpp"
+#include <sys/stat.h>
 
 bool isValidPort(const string &portStr) {
     if (portStr.empty())
@@ -41,6 +42,19 @@ bool isValidBodySize(const string& value) {
     return true;
 }
 
+bool isValidDirectory(const string &path) {
+    struct stat info;
+    return (stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode));
+}
+
+bool isValidFile(const string &path) {
+    return (access(path.c_str(), F_OK) == 0);
+}
+
+bool isValidMethod(const string &method) {
+    return method == "GET" || method == "POST" || method == "DELETE";
+}
+
 mpserv configChecking(const string &filePath) {
     try {
         configFile parser(filePath);
@@ -59,32 +73,40 @@ mpserv configChecking(const string &filePath) {
             if (!isValidPort(server.port))
                 throw runtime_error("Error: a Server has an invalid port");
 
-            if (server.server_names.empty())
-                throw runtime_error("Error: the server name is not provided");
-
             if (!isValidBodySize(server.maxBodySize))
                 throw runtime_error("Error: body size syntax issue");
 
             map<int, string>::const_iterator err_it;
             for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it) {
-                if (err_it->second.empty())
-                    throw runtime_error("Error: Error page for code " + to_string<int>(err_it->first) + " in server is empty.");
+                if (!isValidFile(err_it->second))
+                    throw runtime_error("Error: Error page file does not exist: " + err_it->second);
             }
 
-            map<string, routeCnf>::const_iterator route_it;
-            for (route_it = server.routes.begin(); route_it != server.routes.end(); ++route_it) {
+            for (map<string, routeCnf>::const_iterator route_it = server.routes.begin(); route_it != server.routes.end(); ++route_it) {
                 const routeCnf &route = route_it->second;
 
-                if (route.root.empty())
-                    throw runtime_error("Error: Route '" + route_it->first + "' in server has no root directory.");
+                if (route_it->first.empty() || route_it->first[0] != '/')
+                    throw runtime_error("Error: Route '" + route_it->first + "' has an invalid or missing URI.");
 
-                if (!route.methodes.empty()) {
-                    vector<string>::const_iterator method_it;
-                    for (method_it = route.methodes.begin(); method_it != route.methodes.end(); ++method_it) {
-                        if (*method_it != "GET" && *method_it != "POST" && *method_it != "DELETE")
-                            throw runtime_error("Error: Route '" + route_it->first + "' a server has invalid HTTP method '" + *method_it + "'.");
-                    }
+                if (route.root.empty())
+                    throw runtime_error("Error: Route '" + route_it->first + "' is missing root directory.");
+                if (!isValidDirectory(route.root))
+                    throw runtime_error("Error: Root directory '" + route.root + "' does not exist.");
+
+                if (!route.index.empty() && !isValidFile(route.root + "/" + route.index))
+                    throw runtime_error("Error: Index file '" + route.index + "' not found in root '" + route.root + "'.");
+
+                vector<string>::const_iterator method_it;
+                for (method_it = route.methodes.begin(); method_it != route.methodes.end(); ++method_it) {
+                    if (!isValidMethod(*method_it))
+                        throw runtime_error("Error: Route '" + route_it->first + "' has an invalid HTTP method '" + *method_it + "'.");
                 }
+
+                if (!route.uploadStore.empty() && !isValidDirectory(route.uploadStore))
+                    throw runtime_error("Error: Upload directory '" + route.uploadStore + "' does not exist.");
+
+                if (route.autoindex != true && route.autoindex != false)
+                    throw runtime_error("Error: Route '" + route_it->first + "' has an invalid autoindex value.");
             }
         }
         return config;

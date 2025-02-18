@@ -1,7 +1,50 @@
 #include "../inc/config.hpp"
 
+// class httpexcept : public exception {
+// private:
+//     int statusCode;
+//     string statusMessage;
+
+// public:
+//     httpexcept(int code, const string &message)
+//         : statusCode(code), statusMessage(message) {}
+
+//     int getStatusCode() const {
+//         return statusCode;
+//     }
+
+//     const char *what() const throw() {
+//         return statusMessage.c_str();
+//     }
+// };
+
+void sendErrorResponse(int fd, int statusCode, const string &message) {
+    string statusText;
+    
+    switch (statusCode) {
+        case 400: statusText = "Bad Request"; break;
+        case 404: statusText = "Not Found"; break;
+        case 405: statusText = "Method Not Allowed"; break;
+        case 500: statusText = "Internal Server Error"; break;
+        default:  statusText = "Error"; break;
+    }
+
+    string response =
+        "HTTP/1.1 " + to_string(statusCode) + " " + statusText + "\r\n"
+        "Content-Length: " + to_string(message.length()) + "\r\n"
+        "Content-Type: text/plain\r\n"
+        "Connection: close\r\n"
+        "\r\n" + message;
+
+    send(fd, response.c_str(), response.length(), 0);
+    
+    close(fd);
+}
+
 class HttpRequest {
 public:
+    char buffer[8000];
+    ssize_t req_size;
     string method;
     string path;
     string host;
@@ -10,40 +53,52 @@ public:
     string body;
 
     HttpRequest(int fd) {
-        char buffer[4000];
-        ssize_t bytes_received = recv(fd, buffer, sizeof(buffer) - 1, 0);
-        if (bytes_received <= 0) {
+        req_size = recv(fd, buffer, sizeof(buffer) - 1, 0);
+        /*
+            buffer;
+            string stringbuff = buffer;
+            buffer = &(buffer[headerlen]);
+        */
+        if (req_size <= 0) {
             cerr << "Error receiving request" << endl;
             return;
         }
-        buffer[bytes_received] = '\0';
+        buffer[req_size] = '\0';
         parseRequest(buffer);
     }
 
-    std::string trim(const std::string &str) {
+    string trim(const string &str) {
         size_t start = str.find_first_not_of(" \t\r\n");
         size_t end = str.find_last_not_of(" \t\r\n");
 
-        if (start == std::string::npos || end == std::string::npos)
+        if (start == string::npos || end == string::npos)
             return "";
 
         return str.substr(start, end - start + 1);
     }
 
+    string getRequest() const {
+        string s;
+        for (int i = 0; i < req_size; i++) {
+            s += buffer[i];
+        }
+        return s;
+    }
+
     void parseRequest(const string &rawRequest) {
-        istringstream requestStream(rawRequest);
+        istringstream req(rawRequest);
         string line;
 
-        if (getline(requestStream, line)) {
-            istringstream lineStream(line);
-            lineStream >> method >> path;
+        if (getline(req, line)) {
+            istringstream linestr(line);
+            linestr >> method >> path;
         }
 
-        while (getline(requestStream, line) && line != "\r") {
-            size_t colonPos = line.find(":");
-            if (colonPos != string::npos) {
-                string key = trim(line.substr(0, colonPos));
-                string value = trim(line.substr(colonPos + 1));
+        while (getline(req, line) && line != "\r") {
+            size_t colpos = line.find(":");
+            if (colpos != string::npos) {
+                string key = trim(line.substr(0, colpos));
+                string value = trim(line.substr(colpos + 1));
                 headers[key] = value;
             }
         }
@@ -51,13 +106,21 @@ public:
         connection = headers["Connection"];
 
         stringstream bodyStream;
-        bodyStream << requestStream.rdbuf();
+        bodyStream << req.rdbuf();
         body = bodyStream.str();
     }
 };
 
-void request(int fd, mpserv &conf) {
+int request(int fd, mpserv &conf) {
     HttpRequest req(fd);
 
+    if (conf.servers.find(req.host) == conf.servers.end()) {
+        cerr << "Error: No matching server block for host " << req.host << endl;
+        sendErrorResponse(fd, 400, "Bad Request");
+        return 0;
+    }
+
     servcnf server = conf.servers[req.host];
+    // parseChecking(server, req.getRequest());
+    return 1;
 }

@@ -33,9 +33,9 @@ void handle_client_write(int clientFd, int epollFd, mpserv &conf) {
     close(clientFd);
 }
 
-void handle_client_read(int clientFd, int epollFd, mpserv &conf) {
 
-    request(clientFd, conf);
+void handle_client_read(int clientFd, int epollFd, mpserv &conf) {
+    int stat = request(clientFd, conf);
     // Switch to EPOLLIN | EPOLLOUT (so we can read again if needed)
     struct epoll_event ev;
     ev.events = EPOLLIN | EPOLLOUT;
@@ -100,8 +100,10 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
         address.sin_addr.s_addr = inet_addr(it->second.host.c_str());
         address.sin_port = htons(atoi(it->second.port.c_str()));
 
-        if (bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0)
+        if (bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+            cout << "here\n";
             sysCallFail();
+        }
 
         if (listen(serverFd, 10) < 0)
             sysCallFail();

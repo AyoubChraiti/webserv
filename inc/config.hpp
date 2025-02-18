@@ -21,12 +21,11 @@ struct servcnf {
     vector<string> server_names;
     map<int, string> error_pages;
     string maxBodySize;
-    map<string, routeCnf> routes;
+    map<string, routeCnf> routes; // the uri is the key here
 };
 
 struct mpserv {
     map<string, servcnf> servers;
-    // vector<string> keys;
 };
 
 class configFile {
