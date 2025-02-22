@@ -1,4 +1,5 @@
 #include "../inc/config.hpp"
+#include "../inc/request.hpp"
 
 #define MAX_EVENTS 10
 
@@ -12,35 +13,23 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
 }
 
 void handle_client_write(int clientFd, int epollFd, mpserv &conf) { 
-    ifstream html("www/errors/404.html");
-    string line;
-    string response = "HTTP/1.1 200 OK\r\n"
-                      "Content-Type: text/html\r\n"
-                      "Content-Length: ""\r\n"
-                      "\r\n";
-
-    if (!html.is_open())
-        sysCallFail();
-
-    while (getline(html, line)) {
-        response += line + "\n";
-    }
-
-    send(clientFd, response.c_str(), response.length(), 0);
-
-    // Remove from epoll and close the connection
-    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+    std::string response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
+    ssize_t sent = send(clientFd, response.c_str(), response.length(), 0);
     close(clientFd);
+    struct epoll_event ev;
+    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, &ev);
 }
 
-
-void handle_client_read(int clientFd, int epollFd, mpserv &conf) {
-    int stat = request(clientFd, conf);
-    // Switch to EPOLLIN | EPOLLOUT (so we can read again if needed)
-    struct epoll_event ev;
-    ev.events = EPOLLIN | EPOLLOUT;
-    ev.data.fd = clientFd;
-    epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev);
+void handle_client_read(int clientFd, int epollFd, mpserv& conf) {
+    int stat = request(clientFd, conf, epollFd);
+    if (stat == 1) {
+        struct epoll_event ev;
+        ev.events = EPOLLOUT;
+        ev.data.fd = clientFd;
+        if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
+            sysCallFail();
+        }
+    }
 }
 
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
@@ -70,7 +59,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     cout << "accept failed" << endl;
                     continue;
                 }
-                add_fds_to_epoll(epollFd, clientFd, EPOLLIN | EPOLLET);  // Edge-triggered for efficiency
+                add_fds_to_epoll(epollFd, clientFd, EPOLLIN);
             }
             else {
                 if (events[i].events & EPOLLIN) {

@@ -2,8 +2,9 @@ NAME = webserv
 
 CPP = c++
 
-SRC =  src/main.cpp src/config.cpp src/utils.cpp src/setupServer.cpp src/configParser.cpp src/request.cpp
-
+SRC =  src/main.cpp src/config.cpp src/utils.cpp src/setupServer.cpp \
+	src/configParser.cpp src/request.cpp src/requestReader.cpp
+	
 OBJ = $(SRC:.cpp=.o)
 
 CPPFLAGS = #-Wall -Wextra -Werror -std=c++98
