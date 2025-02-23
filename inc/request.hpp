@@ -5,6 +5,10 @@
 
 #define BUFFER_SIZE 1024
 
+class HttpRequest;
+
+static map<int, HttpRequest> requestStates;
+
 class HttpExcept : public exception {
 private:
     int statusCode;
@@ -29,35 +33,25 @@ enum ParseState {
     COMPLETE
 };
 
-struct RequestParser {
-    ParseState state;
-    string buffer;
-    string method;
-    string path;
-    string version;
-    string body;
-    map<string, string> headers;
-    int contentLength;
-    int bytesRead;
-
-    RequestParser() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {}
-};
-
 class HttpRequest {
 public:
-    char buffer[BUFFER_SIZE];
+    string buffer;
+    ParseState state;
     ssize_t req_size;
     string method, path, host, connection, body, version;
     map<string, string> headers;
+    size_t contentLength;
+    int bytesRead;
 
-    HttpRequest(int fd, RequestParser& parser);
-    string getRequest() const;
-    void parseRequest(const string& rawRequest);
+    // --methodes-- //
+
+    HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};
+    string getRequest() const; // wont need this ig
     string get(const string& key, const string& defaultValue) const;
+    bool parseRequestLineByLine(int fd);
+
+    void initFromHeader();
 };
 
 
-
-bool parseRequestLineByLine(int fd, RequestParser& parser);
-
-void parseChecking(const servcnf& server, const HttpRequest& req);
+// void parseChecking(const servcnf& server, const HttpRequest& req);

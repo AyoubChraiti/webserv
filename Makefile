@@ -3,7 +3,7 @@ NAME = webserv
 CPP = c++
 
 SRC =  src/main.cpp src/config.cpp src/utils.cpp src/setupServer.cpp \
-	src/configParser.cpp src/request.cpp src/requestReader.cpp
+	src/configParser.cpp src/UltimateReq.cpp src/requestReader.cpp
 	
 OBJ = $(SRC:.cpp=.o)
 

@@ -21,6 +21,8 @@ void handle_client_write(int clientFd, int epollFd, mpserv &conf) {
 }
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf) {
+    // map<int, HttpRequest> req;
+    cout << "got sum going on\n";
     int stat = request(clientFd, conf, epollFd);
     if (stat == 1) {
         struct epoll_event ev;
@@ -30,6 +32,7 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf) {
             sysCallFail();
         }
     }
+    // maybee i will return the map?, or make it global, il ask l3azzi.
 }
 
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {

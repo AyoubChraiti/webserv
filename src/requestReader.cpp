@@ -1,63 +1,60 @@
 #include "../inc/request.hpp"
-#include <sstream>
-#include <unistd.h>
-#include <sys/epoll.h>
 
-#define BUFFER_SIZE 1024
-
-bool parseRequestLineByLine(int fd, RequestParser& parser) {
+bool HttpRequest::parseRequestLineByLine(int fd) {
     char temp[BUFFER_SIZE];
     ssize_t bytes = recv(fd, temp, sizeof(temp) - 1, 0);
 
     if (bytes > 0) {
         temp[bytes] = '\0';
-        parser.buffer += temp;
+        buffer += temp;
 
         while (true) {
-            size_t newlinePos = parser.buffer.find("\r\n");
+            size_t newlinePos = buffer.find("\r\n");
             if (newlinePos == string::npos)
                 break; // Wait for more data
 
-            string line = parser.buffer.substr(0, newlinePos);
-            parser.buffer.erase(0, newlinePos + 2);
+            string line = buffer.substr(0, newlinePos);
+            buffer.erase(0, newlinePos + 2);
 
-            switch (parser.state) {
+            switch (state) {
                 case READING_REQUEST_LINE:
                     {
                         istringstream linestr(line);
-                        linestr >> parser.method >> parser.path >> parser.version;
+                        linestr >> method >> path >> version;
 
-                        if (parser.method.empty() || parser.path.empty() || parser.version.empty())
+                        if (method.empty() || path.empty() || version.empty())
                             throw HttpExcept(400, "Invalid request line: " + line);
 
-                        if (parser.method != "GET" && parser.method != "POST" && parser.method != "DELETE")
-                            throw HttpExcept(501, "Method not implemented: " + parser.method);
+                        if (method != "GET" && method != "POST" && method != "DELETE")
+                            throw HttpExcept(501, "Method not implemented: " + method);
 
-                        if (parser.version != "HTTP/1.1")
-                            throw HttpExcept(505, "HTTP version not supported: " + parser.version);
+                        if (version != "HTTP/1.1")
+                            throw HttpExcept(505, "HTTP version not supported: " + version);
 
-                        parser.state = READING_HEADERS;
+                        state = READING_HEADERS;
                     }
                     break;
 
                 case READING_HEADERS:
                     if (line.empty() || line == "\r") {
-                        if (parser.headers.find("Host") == parser.headers.end())
+                        if (headers.find("Host") == headers.end())
                             throw HttpExcept(400, "Host header is required");
 
-                        if (parser.method == "POST") {
-                            if (parser.headers.find("Content-Length") == parser.headers.end())
+                        if (method == "POST") {
+                            if (headers.find("Content-Length") == headers.end())
                                 throw HttpExcept(411, "Content-Length required for POST");
 
-                            parser.contentLength = strtol(parser.headers["Content-Length"].c_str(), NULL, 10);
+                            contentLength = strtol(headers["Content-Length"].c_str(), NULL, 10);
 
-                            if (parser.contentLength < 0)
+                            if (contentLength < 0) {
+                                cout << "the content lenght " << contentLength << endl;
                                 throw HttpExcept(400, "Invalid Content-Length: negative value");
+                            }
 
-                            parser.state = parser.contentLength > 0 ? READING_BODY : COMPLETE;
+                            state = contentLength > 0 ? READING_BODY : COMPLETE;
                         }
                         else {
-                            parser.state = COMPLETE;
+                            state = COMPLETE;
                         }
                     }
                     else {
@@ -67,36 +64,34 @@ bool parseRequestLineByLine(int fd, RequestParser& parser) {
 
                         string key = trim(line.substr(0, colpos));
                         string value = trim(line.substr(colpos + 1));
-                        parser.headers[key] = value;
+                        headers[key] = value;
                     }
                     break;
 
                 case READING_BODY:
-                    parser.body += line;
-                    parser.bytesRead += line.length();
-                    if (parser.bytesRead >= parser.contentLength) {
-                        parser.state = COMPLETE;
-                        parser.body = parser.body.substr(0, parser.contentLength);
+                    body += line;
+                    bytesRead += line.length();
+                    if (bytesRead >= contentLength) {
+                        state = COMPLETE;
+                        body = body.substr(0, contentLength);
                     }
                     break;
 
                 case COMPLETE:
                     break;
             }
-
-            if (parser.state == COMPLETE)
+            if (state == COMPLETE)
                 return true;
         }
     }
     else if (bytes == 0) {
-        if (parser.buffer.empty() && parser.state == READING_REQUEST_LINE)
+        if (buffer.empty() && state == READING_REQUEST_LINE)
             throw HttpExcept(400, "Empty request received");
 
-        return parser.state == COMPLETE;
+        return state == COMPLETE;
     }
     else {
         return false; // Wait for the next epoll
     }
-
     return false;
 }
