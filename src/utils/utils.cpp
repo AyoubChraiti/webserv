@@ -1,4 +1,4 @@
-#include "../inc/header.hpp"
+#include "../../inc/header.hpp"
 
 void sysCallFail() {
     perror("syscall Error");

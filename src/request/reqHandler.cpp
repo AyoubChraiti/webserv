@@ -1,4 +1,4 @@
-#include "../inc/request.hpp"
+#include "../../inc/request.hpp"
 
 void sendErrorResponse(int fd, int statusCode, const string& message) {
     string statusText;
@@ -100,7 +100,7 @@ int request(int fd, mpserv& conf, int epollFd) {
         sendErrorResponse(fd, e.getStatusCode(), e.what());
         requestStates.erase(fd);
         struct epoll_event ev;
-        ev.data.fd = fd; // Simplified, events ignored for DEL
+        ev.data.fd = fd;
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
         return -1;
     }

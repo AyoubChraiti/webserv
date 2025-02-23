@@ -1,4 +1,4 @@
-#include "../inc/config.hpp"
+#include "../../inc/config.hpp"
 
 configFile::configFile(string fileName) : fileName(fileName) {
     cnf.open(fileName.c_str());

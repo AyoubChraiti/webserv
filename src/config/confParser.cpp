@@ -1,4 +1,4 @@
-#include "../inc/config.hpp"
+#include "../../inc/config.hpp"
 #include <sys/stat.h>
 
 bool isValidPort(const string &portStr) {

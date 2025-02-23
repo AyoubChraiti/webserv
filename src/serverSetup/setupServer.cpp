@@ -1,5 +1,5 @@
-#include "../inc/config.hpp"
-#include "../inc/request.hpp"
+#include "../../inc/config.hpp"
+#include "../../inc/request.hpp"
 
 #define MAX_EVENTS 10
 

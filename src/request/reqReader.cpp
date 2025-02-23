@@ -1,4 +1,4 @@
-#include "../inc/request.hpp"
+#include "../../inc/request.hpp"
 
 bool HttpRequest::parseRequestLineByLine(int fd) {
     char temp[BUFFER_SIZE];

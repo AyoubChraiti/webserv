@@ -2,8 +2,11 @@ NAME = webserv
 
 CPP = c++
 
-SRC =  src/main.cpp src/config.cpp src/utils.cpp src/setupServer.cpp \
-	src/configParser.cpp src/UltimateReq.cpp src/requestReader.cpp
+SRC =  src/main.cpp \
+	src/config/initConf.cpp src/config/confParser.cpp \
+	src/serverSetup/setupServer.cpp \
+	src/request/reqHandler.cpp src/request/reqReader.cpp \
+	src/utils/utils.cpp
 	
 OBJ = $(SRC:.cpp=.o)
 
