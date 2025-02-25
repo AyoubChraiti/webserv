@@ -1,31 +1,5 @@
 #include "../../inc/request.hpp"
 
-void sendErrorResponse(int fd, int statusCode, const string& message) {
-    string statusText;
-    switch (statusCode) {
-        case 400: statusText = "Bad Request"; break;
-        case 404: statusText = "Not Found"; break;
-        case 405: statusText = "Method Not Allowed"; break;
-        case 411: statusText = "Length Required"; break;
-        case 500: statusText = "Internal Server Error"; break;
-        case 501: statusText = "Not Implemented"; break;
-        case 505: statusText = "HTTP Version Not Supported"; break;
-        default:  statusText = "Error"; break;
-    }
-
-    string response =
-        "HTTP/1.1 " + to_string(statusCode) + " " + statusText + "\r\n"
-        "Content-Length: " + to_string(message.length()) + "\r\n"
-        "Content-Type: text/plain\r\n"
-        "Connection: close\r\n"
-        "\r\n" + message;
-
-    cerr << "Error: '" << message << "' sent to the client" << endl;
-
-    send(fd, response.c_str(), response.length(), 0);
-    close(fd);
-}
-
 void parseChecking(const servcnf& server, const HttpRequest& req) {
     if (req.path.empty() || req.path[0] != '/')
         throw HttpExcept(400, "Invalid path: " + req.path);
@@ -70,7 +44,7 @@ void HttpRequest::initFromHeader() {
     connection = get("Connection", "close");
 }
 
-map<int, HttpRequest>::iterator getReqFrmMap(int fd) {
+map<int, HttpRequest>::iterator getReqFrmMap(int fd, map<int, HttpRequest>& requestStates) {
     map<int, HttpRequest>::iterator it = requestStates.find(fd);
     if (it == requestStates.end()) {
         requestStates.insert(pair<int, HttpRequest>(fd, HttpRequest()));
@@ -79,8 +53,8 @@ map<int, HttpRequest>::iterator getReqFrmMap(int fd) {
     return it;
 }
 
-int request(int fd, mpserv& conf, int epollFd) {
-    map<int, HttpRequest>::iterator it = getReqFrmMap(fd);
+int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestStates) {
+    map<int, HttpRequest>::iterator it = getReqFrmMap(fd, requestStates);
     HttpRequest& req = it->second;
 
     try {
@@ -90,8 +64,8 @@ int request(int fd, mpserv& conf, int epollFd) {
                 cerr << "Error: No matching server block for host " << req.host << endl;
                 throw HttpExcept(400, "No server configured for host: " + req.host);
             }
-            servcnf server = conf.servers[req.host];
-            parseChecking(server, req);
+            req.conf = conf.servers[req.host];
+            parseChecking(req.conf, req);
             return 1; // Request fully parsed
         }
         return 0; // Still parsing

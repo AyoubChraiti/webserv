@@ -10,8 +10,11 @@ bool HttpRequest::parseRequestLineByLine(int fd) {
 
         while (true) {
             size_t newlinePos = buffer.find("\r\n");
-            if (newlinePos == string::npos)
+            if (newlinePos == string::npos) {
+                if (state == READING_REQUEST_LINE && buffer.size() > MAX_FIRST_LINE)
+                    throw HttpExcept(501, "Error in request line: " + method);
                 break; // Wait for more data
+            }
 
             string line = buffer.substr(0, newlinePos);
             buffer.erase(0, newlinePos + 2);

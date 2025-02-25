@@ -11,3 +11,29 @@ std::string trim(const std::string& str) {
     size_t end = str.find_last_not_of(" \t\r\n");
     return str.substr(start, end - start + 1);
 }
+
+void sendErrorResponse(int fd, int statusCode, const string& message) {
+    string statusText;
+    switch (statusCode) {
+        case 400: statusText = "Bad Request"; break;
+        case 404: statusText = "Not Found"; break;
+        case 405: statusText = "Method Not Allowed"; break;
+        case 411: statusText = "Length Required"; break;
+        case 500: statusText = "Internal Server Error"; break;
+        case 501: statusText = "Not Implemented"; break;
+        case 505: statusText = "HTTP Version Not Supported"; break;
+        default:  statusText = "Error"; break;
+    }
+
+    string response =
+        "HTTP/1.1 " + to_string(statusCode) + " " + statusText + "\r\n"
+        "Content-Length: " + to_string(message.length()) + "\r\n"
+        "Content-Type: text/plain\r\n"
+        "Connection: close\r\n"
+        "\r\n" + message;
+
+    cerr << "Error: '" << message << "' sent to the client" << endl;
+
+    send(fd, response.c_str(), response.length(), 0);
+    close(fd);
+}

@@ -25,9 +25,10 @@ struct mpserv;
 void sysCallFail();
 void serverSetup(mpserv &conf, vector<int> &servrs);
 void webserver(mpserv &conf);
-int request(int fd, mpserv &conf, int epollFd);
 void testConfigParser(const string &filePath);
 std::string trim(const std::string& str);
+
+void sendErrorResponse(int fd, int statusCode, const string& message);
 
 template <typename T>
 string to_string(T value) {

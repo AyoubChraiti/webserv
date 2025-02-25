@@ -4,10 +4,7 @@
 #include "config.hpp"
 
 #define BUFFER_SIZE 1024
-
-class HttpRequest;
-
-static map<int, HttpRequest> requestStates;
+#define MAX_FIRST_LINE (1024 * 10)
 
 class HttpExcept : public exception {
 private:
@@ -42,16 +39,13 @@ public:
     map<string, string> headers;
     size_t contentLength;
     int bytesRead;
+    servcnf conf;
 
-    // --methodes-- //
 
     HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};
-    string getRequest() const; // wont need this ig
     string get(const string& key, const string& defaultValue) const;
     bool parseRequestLineByLine(int fd);
-
     void initFromHeader();
 };
 
-
-// void parseChecking(const servcnf& server, const HttpRequest& req);
+int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);
