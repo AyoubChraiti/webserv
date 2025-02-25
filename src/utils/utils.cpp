@@ -12,6 +12,18 @@ std::string trim(const std::string& str) {
     return str.substr(start, end - start + 1);
 }
 
+// both of these are from the config parsing ..
+
+bool isValidDirectory(const string &path) {
+    struct stat info;
+    return (stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode));
+}
+
+bool isValidFile(const string &path) {
+    return (access(path.c_str(), F_OK) == 0);
+}
+
+
 void sendErrorResponse(int fd, int statusCode, const string& message) {
     string statusText;
     switch (statusCode) {

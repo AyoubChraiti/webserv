@@ -6,10 +6,8 @@ int main(int ac, char **av) {
         return 1;
     }
     /*parsing conf file*/
-    // testConfigParser(av[1]);
     mpserv serverCongif = configChecking(av[1]);
 
     /*server part*/
     webserver(serverCongif);
 }
-

@@ -25,7 +25,7 @@ struct servcnf {
 };
 
 struct mpserv {
-    map<string, servcnf> servers;
+    map<string, servcnf> servers; // the key here is host:port
 };
 
 class configFile {

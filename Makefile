@@ -6,6 +6,7 @@ SRC =  src/main.cpp \
 	src/config/initConf.cpp src/config/confParser.cpp \
 	src/serverSetup/setupServer.cpp \
 	src/request/reqHandler.cpp src/request/reqReader.cpp \
+	src/responce/respnce.cpp \
 	src/utils/utils.cpp
 	
 OBJ = $(SRC:.cpp=.o)

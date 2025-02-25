@@ -12,17 +12,17 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
         sysCallFail();
 }
 
-void handle_client_write(int clientFd, int epollFd, mpserv &conf, map<int, HttpRequest>& requestStates) { 
-    map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
-    if (it == requestStates.end()) // do i even need to check??
-        sendErrorResponse(clientFd, 404, "Error sending Responce");
-    HttpRequest& req = it->second;
+// void handle_client_write(int clientFd, int epollFd, mpserv &conf, map<int, HttpRequest>& requestStates) { 
+//     map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
+//     if (it == requestStates.end()) // do i even need to check??
+//         sendErrorResponse(clientFd, 404, "Error sending Responce");
+//     HttpRequest& req = it->second;
 
-    string response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
-    ssize_t sent = send(clientFd, response.c_str(), response.length(), 0);
-    close(clientFd);
-    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-}
+//     string response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
+//     ssize_t sent = send(clientFd, response.c_str(), response.length(), 0);
+//     close(clientFd);
+//     epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+// }
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
     int stat = request(clientFd, conf, epollFd, requestStates);

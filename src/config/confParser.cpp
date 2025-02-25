@@ -1,5 +1,4 @@
 #include "../../inc/config.hpp"
-#include <sys/stat.h>
 
 bool isValidPort(const string &portStr) {
     if (portStr.empty())
@@ -40,15 +39,6 @@ bool isValidBodySize(const string& value) {
     if (numericValue.empty())
         return false;
     return true;
-}
-
-bool isValidDirectory(const string &path) {
-    struct stat info;
-    return (stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode));
-}
-
-bool isValidFile(const string &path) {
-    return (access(path.c_str(), F_OK) == 0);
 }
 
 bool isValidMethod(const string &method) {
