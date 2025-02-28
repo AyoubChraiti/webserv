@@ -1,0 +1,91 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    background-color: #1a2b4a; /* Dark blue background */
+    color: #fff; /* White text for contrast */
+    line-height: 1.6;
+}
+
+header {
+    padding: 1rem;
+    text-align: center;
+    background-color: #14213d; /* Slightly darker blue for header */
+}
+
+nav {
+    margin: 0 auto;
+}
+
+nav a {
+
+    border-radius: 0; /* Changed from 4px */
+    font-weight: normal; /* Changed from 400 */
+
+    background-color: transparent;
+    border: 1px solid #fff;
+    color: #fff;
+    padding: 0.5rem 1.5rem;
+    margin: 0 0.5rem;
+    font-size: 1rem;
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+nav a:hover {
+    background-color: #ffffff20; /* Subtle hover effect */
+}
+
+main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 140px); /* Adjust for header/footer */
+}
+
+.content {
+    text-align: center;
+    padding: 2rem;
+}
+
+.content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.content h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.content p {
+    font-size: 1.2rem;
+    margin: 0.5rem 0;
+}
+
+footer {
+    text-align: center;
+    padding: 1rem;
+    background-color: #14213d;
+}
+
+@media (max-width: 600px) {
+    .content h1 {
+        font-size: 2rem;
+    }
+    .content p {
+        font-size: 1rem;
+    }
+    nav a {
+        padding: 0.4rem 1rem;
+        margin: 0.2rem;
+    }
+}

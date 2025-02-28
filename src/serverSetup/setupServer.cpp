@@ -34,6 +34,7 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
             sysCallFail();
         }
     }
+    cout << "the uri in the request: " << requestStates[clientFd].path << endl;
 }
 
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {

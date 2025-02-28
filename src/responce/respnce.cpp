@@ -101,6 +101,7 @@ public:
             string ext = filePath.substr(dotPos);
             if (ext == ".html") setHeader("Content-Type", "text/html");
             else if (ext == ".txt") setHeader("Content-Type", "text/plain");
+            else if (ext == ".css") setHeader("Content-Type", "text/css");
             else if (ext == ".jpg" || ext == ".jpeg") setHeader("Content-Type", "image/jpeg");
             else setHeader("Content-Type", "application/octet-stream");
         }
