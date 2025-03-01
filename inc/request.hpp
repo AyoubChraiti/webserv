@@ -49,3 +49,4 @@ public:
 };
 
 int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);

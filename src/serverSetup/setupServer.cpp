@@ -1,5 +1,6 @@
 #include "../../inc/config.hpp"
 #include "../../inc/request.hpp"
+#include "../../inc/responce.hpp"
 
 #define MAX_EVENTS 10
 
@@ -10,31 +11,6 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
 
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1)
         sysCallFail();
-}
-
-// void handle_client_write(int clientFd, int epollFd, mpserv &conf, map<int, HttpRequest>& requestStates) { 
-//     map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
-//     if (it == requestStates.end()) // do i even need to check??
-//         sendErrorResponse(clientFd, 404, "Error sending Responce");
-//     HttpRequest& req = it->second;
-
-//     string response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
-//     ssize_t sent = send(clientFd, response.c_str(), response.length(), 0);
-//     close(clientFd);
-//     epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-// }
-
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
-    int stat = request(clientFd, conf, epollFd, requestStates);
-    if (stat == 1) {
-        struct epoll_event ev;
-        ev.events = EPOLLOUT;
-        ev.data.fd = clientFd;
-        if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
-            sysCallFail();
-        }
-    }
-    cout << "the uri in the request: " << requestStates[clientFd].path << endl;
 }
 
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
@@ -69,10 +45,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             }
             else {
                 if (events[i].events & EPOLLIN) {
-                    handle_client_read(eventFd, epollFd, conf, requestStates);
+                    handle_client_read(eventFd, epollFd, conf, requestStates); // request
                 }
                 else if (events[i].events & EPOLLOUT) {
-                    handle_client_write(eventFd, epollFd, conf, requestStates);
+                    handle_client_write(eventFd, epollFd, conf, requestStates); // responce
                 }
             }
         }

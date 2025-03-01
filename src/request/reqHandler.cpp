@@ -87,3 +87,16 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestSta
         return -1;
     }
 }
+
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
+    int stat = request(clientFd, conf, epollFd, requestStates);
+    if (stat == 1) {
+        struct epoll_event ev;
+        ev.events = EPOLLOUT;
+        ev.data.fd = clientFd;
+        if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
+            sysCallFail();
+        }
+    }
+    cout << "the uri in the request: " << requestStates[clientFd].path << endl;
+}
