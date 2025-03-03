@@ -82,8 +82,9 @@ void configFile::serverAttributes(servcnf &currSer, const string &line) {
             throw runtime_error("syntax error in the config file.");
         }
         
-        if (key == "host")
+        if (key == "host") {
             currSer.host = value;
+        }
         else if (key == "port")
             currSer.port = value;
         else if (key == "server_name") {

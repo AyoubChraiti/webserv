@@ -4,6 +4,8 @@ bool HttpRequest::parseRequestLineByLine(int fd) {
     char temp[BUFFER_SIZE];
     ssize_t bytes = recv(fd, temp, sizeof(temp) - 1, 0);
 
+    // cout << "the request:::: " << temp << endl;
+
     if (bytes > 0) {
         temp[bytes] = '\0';
         buffer += temp;

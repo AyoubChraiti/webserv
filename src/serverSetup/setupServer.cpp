@@ -55,6 +55,27 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     }
 }
 
+string getIp(string hostname) {
+    struct addrinfo hints, *res;
+    struct sockaddr_in *addr;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+
+    int status = getaddrinfo(hostname.c_str(), NULL, &hints, &res);
+    if (status != 0)
+        sysCallFail();
+
+    addr = (struct sockaddr_in *)res->ai_addr;
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
+
+    in_addr_t ip = addr->sin_addr.s_addr; // will i need this later?
+    freeaddrinfo(res);
+    return string(ip_str);
+}
+
 void serverSetup(mpserv &conf, vector<int> &servrs) {
     for (map<string, servcnf>::iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
         int serverFd;
@@ -68,7 +89,7 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
             sysCallFail();
 
         address.sin_family = AF_INET;
-        address.sin_addr.s_addr = inet_addr(it->second.host.c_str());
+        address.sin_addr.s_addr = inet_addr(getIp(it->second.host).c_str());
         address.sin_port = htons(atoi(it->second.port.c_str()));
 
         if (bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0) {

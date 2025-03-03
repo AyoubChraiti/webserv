@@ -17,7 +17,7 @@ bool fileExists(const string& path) {
 
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
     map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
-    if (it == requestStates.end()) {
+    if (it == requestStates.end()) { // wont even need this ig
         Response res;
         res.setStatus(500);
         res.setBody("Internal Error: No request state");
@@ -71,6 +71,8 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
             else {
                 string remainingPath = (matchedUri == "/" && req.path == "/") ? "" : req.path.substr(matchedUri.length());
                 string filePath = route->root + remainingPath;
+
+                // cout << "file Path= " << filePath << endl;
 
                 if (fileExists(filePath)) {
                     if (isDirectory(filePath) && !route->index.empty()) {
