@@ -44,3 +44,6 @@ string to_string(T value) {
     oss << value;
     return oss.str();
 }
+
+
+string getIp(string hostname);

@@ -41,6 +41,10 @@ string HttpRequest::get(const string& key, const string& defaultValue) const {
 
 void HttpRequest::initFromHeader() {
     host = headers["Host"];
+    size_t pos = host.find(":");
+    string ip = getIp(host.substr(0, pos)) + ":";
+    ip += host.substr(pos + 1);
+    host = ip;
     connection = get("Connection", "close");
 }
 
@@ -68,7 +72,8 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestSta
             parseChecking(req.conf, req);
             return 1; // Request fully parsed
         }
-        return 0; // Still parsing
+        return 0; // Still parsing    }
+
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what());

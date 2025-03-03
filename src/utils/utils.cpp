@@ -49,3 +49,25 @@ void sendErrorResponse(int fd, int statusCode, const string& message) {
     send(fd, response.c_str(), response.length(), 0);
     close(fd);
 }
+
+
+string getIp(string hostname) {
+    struct addrinfo hints, *res;
+    struct sockaddr_in *addr;
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+
+    int status = getaddrinfo(hostname.c_str(), NULL, &hints, &res);
+    if (status != 0)
+        sysCallFail();
+
+    addr = (struct sockaddr_in *)res->ai_addr;
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
+
+    in_addr_t ip = addr->sin_addr.s_addr; // will i need this later?
+    freeaddrinfo(res);
+    return string(ip_str);
+}

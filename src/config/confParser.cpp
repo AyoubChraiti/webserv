@@ -46,63 +46,57 @@ bool isValidMethod(const string &method) {
 }
 
 mpserv configChecking(const string &filePath) {
-    try {
-        configFile parser(filePath);
-        mpserv config = parser.parseConfig();
+    configFile parser(filePath);
+    mpserv config = parser.parseConfig();
 
-        if (config.servers.empty())
-            throw runtime_error("Error: No servers found in the configuration.");
+    if (config.servers.empty())
+        throw runtime_error("Error: No servers found in the configuration.");
 
-        map<string, servcnf>::iterator it;
-        for (it = config.servers.begin(); it != config.servers.end(); ++it) {
-            const servcnf &server = it->second;
+    map<string, servcnf>::iterator it;
+    for (it = config.servers.begin(); it != config.servers.end(); ++it) {
+        const servcnf &server = it->second;
 
-            if (!isValidHost(server.host))
-                throw runtime_error("Error: a Server has an invalid host");
+        if (!isValidHost(server.host))
+            throw runtime_error("Error: a Server has an invalid host");
 
-            if (!isValidPort(server.port))
-                throw runtime_error("Error: a Server has an invalid port");
+        if (!isValidPort(server.port))
+            throw runtime_error("Error: a Server has an invalid port");
 
-            if (!isValidBodySize(server.maxBodySize))
-                throw runtime_error("Error: body size syntax issue");
+        if (!isValidBodySize(server.maxBodySize))
+            throw runtime_error("Error: body size syntax issue");
 
-            map<int, string>::const_iterator err_it;
-            for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it) {
-                if (!isValidFile(err_it->second))
-                    throw runtime_error("Error: Error page file does not exist: " + err_it->second);
-            }
-
-            for (map<string, routeCnf>::const_iterator route_it = server.routes.begin(); route_it != server.routes.end(); ++route_it) {
-                const routeCnf &route = route_it->second;
-
-                if (route_it->first.empty() || route_it->first[0] != '/')
-                    throw runtime_error("Error: Route '" + route_it->first + "' has an invalid or missing URI.");
-
-                if (route.root.empty())
-                    throw runtime_error("Error: Route '" + route_it->first + "' is missing root directory.");
-                if (!isValidDirectory(route.root))
-                    throw runtime_error("Error: Root directory '" + route.root + "' does not exist.");
-
-                if (!route.index.empty() && !isValidFile(route.root + "/" + route.index))
-                    throw runtime_error("Error: Index file '" + route.index + "' not found in root '" + route.root + "'.");
-
-                vector<string>::const_iterator method_it;
-                for (method_it = route.methodes.begin(); method_it != route.methodes.end(); ++method_it) {
-                    if (!isValidMethod(*method_it))
-                        throw runtime_error("Error: Route '" + route_it->first + "' has an invalid HTTP method '" + *method_it + "'.");
-                }
-
-                if (!route.uploadStore.empty() && !isValidDirectory(route.uploadStore))
-                    throw runtime_error("Error: Upload directory '" + route.uploadStore + "' does not exist.");
-
-                if (route.autoindex != true && route.autoindex != false)
-                    throw runtime_error("Error: Route '" + route_it->first + "' has an invalid autoindex value.");
-            }
+        map<int, string>::const_iterator err_it;
+        for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it) {
+            if (!isValidFile(err_it->second))
+                throw runtime_error("Error: Error page file does not exist: " + err_it->second);
         }
-        return config;
+
+        for (map<string, routeCnf>::const_iterator route_it = server.routes.begin(); route_it != server.routes.end(); ++route_it) {
+            const routeCnf &route = route_it->second;
+
+            if (route_it->first.empty() || route_it->first[0] != '/')
+                throw runtime_error("Error: Route '" + route_it->first + "' has an invalid or missing URI.");
+
+            if (route.root.empty())
+                throw runtime_error("Error: Route '" + route_it->first + "' is missing root directory.");
+            if (!isValidDirectory(route.root))
+                throw runtime_error("Error: Root directory '" + route.root + "' does not exist.");
+
+            if (!route.index.empty() && !isValidFile(route.root + "/" + route.index))
+                throw runtime_error("Error: Index file '" + route.index + "' not found in root '" + route.root + "'.");
+
+            vector<string>::const_iterator method_it;
+            for (method_it = route.methodes.begin(); method_it != route.methodes.end(); ++method_it) {
+                if (!isValidMethod(*method_it))
+                    throw runtime_error("Error: Route '" + route_it->first + "' has an invalid HTTP method '" + *method_it + "'.");
+            }
+
+            if (!route.uploadStore.empty() && !isValidDirectory(route.uploadStore))
+                throw runtime_error("Error: Upload directory '" + route.uploadStore + "' does not exist.");
+
+            if (route.autoindex != true && route.autoindex != false)
+                throw runtime_error("Error: Route '" + route_it->first + "' has an invalid autoindex value.");
+        }
     }
-    catch (const exception &e) {
-        cerr << "Config file " << e.what() << endl;
-        exit(EXIT_FAILURE);
-    }
+    return config;
 }

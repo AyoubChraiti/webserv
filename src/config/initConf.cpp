@@ -83,7 +83,7 @@ void configFile::serverAttributes(servcnf &currSer, const string &line) {
         }
         
         if (key == "host") {
-            currSer.host = value;
+            currSer.host = getIp(value);
         }
         else if (key == "port")
             currSer.port = value;
