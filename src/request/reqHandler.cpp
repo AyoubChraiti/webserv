@@ -57,23 +57,42 @@ map<int, HttpRequest>::iterator getReqFrmMap(int fd, map<int, HttpRequest>& requ
     return it;
 }
 
+string CheckServer(int fd) {
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+    
+    if (getsockname(fd, (struct sockaddr*)&addr, &addrlen) == -1)
+        sysCallFail();
+    
+    char ip_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN);
+    
+    int port = ntohs(addr.sin_port);
+    
+    string result = string(ip_str) + ":" + to_string(port);
+    
+    return result;
+}
+
 int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestStates) {
     map<int, HttpRequest>::iterator it = getReqFrmMap(fd, requestStates);
     HttpRequest& req = it->second;
 
+    string sockHost = CheckServer(fd);
+
     try {
+        if (conf.servers.find(sockHost) == conf.servers.end())
+            throw HttpExcept(400, "No server configured for host: " + req.host);
+
         if (req.parseRequestLineByLine(fd)) {
             req.initFromHeader();
-            if (conf.servers.find(req.host) == conf.servers.end()) {
-                cerr << "Error: No matching server block for host " << req.host << endl;
-                throw HttpExcept(400, "No server configured for host: " + req.host);
-            }
+
             req.conf = conf.servers[req.host];
             parseChecking(req.conf, req);
+
             return 1; // Request fully parsed
         }
-        return 0; // Still parsing    }
-
+        return 0; // Still parsing
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what());
