@@ -77,9 +77,8 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
         address.sin_addr.s_addr = inet_addr(it->second.host.c_str());
         address.sin_port = htons(atoi(it->second.port.c_str()));
 
-        if (bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+        if (bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0)
             sysCallFail();
-        }
 
         if (listen(serverFd, 10) < 0)
             sysCallFail();

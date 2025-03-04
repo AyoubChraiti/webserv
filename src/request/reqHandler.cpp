@@ -114,7 +114,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestSta
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
     int stat = request(clientFd, conf, epollFd, requestStates);
-    if (stat == 1) {
+    if (stat == 1) { // means we done from the req.
         struct epoll_event ev;
         ev.events = EPOLLOUT;
         ev.data.fd = clientFd;

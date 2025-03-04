@@ -37,7 +37,6 @@ public:
     configFile(string fileName);
     ~configFile();
 
-    string trim(const string &s);
     size_t parseSize(const string &s);
     void addServer(mpserv &config, servcnf &currentServer, routeCnf &currentRoute, string &currentUri, bool &inServerBlock);
     void ErrorPages(servcnf &currentServer);

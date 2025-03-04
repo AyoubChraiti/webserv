@@ -11,14 +11,6 @@ configFile::~configFile() {
         cnf.close();
 }
 
-string configFile::trim(const string &s) {
-    size_t start = s.find_first_not_of(" \t\r\n");
-    if (start == string::npos)
-        return "";
-    size_t end = s.find_last_not_of(" \t\r\n");
-    return s.substr(start, end - start + 1);
-}
-
 size_t configFile::parseSize(const string &s) {
     string str = trim(s);
     size_t pos = 0;
@@ -177,7 +169,7 @@ mpserv configFile::parseConfig() {
     return config;
 }
 
-///////////////////////////////////
+/* tester for the */
 
 void testConfigParser(const string &filePath) {
     try {

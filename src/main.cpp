@@ -5,7 +5,7 @@ bool shutServer = false;
 void signal_exit(int sig) {
     (void)sig;
     shutServer = true;
-    cout << "\nexitingggggggg..........\n" << endl;
+    cout << "\nexitingggggggg.........." << endl;
 }
 
 int main(int ac, char **av) {
