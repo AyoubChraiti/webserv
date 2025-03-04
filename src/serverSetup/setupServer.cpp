@@ -27,8 +27,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
 
     while (true) {
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
-        if (numEvents == -1)
-            sysCallFail();
+        if (numEvents == -1) {
+            if (errno != EINTR)
+                sysCallFail();
+        }
 
         for (int i = 0; i < numEvents; ++i) {
             int eventFd = events[i].data.fd;
@@ -52,6 +54,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 }
             }
         }
+        if (shutServer) {
+            cout << "exiting sucesfully" << endl;
+            break;
+        }
     }
 }
 
@@ -69,7 +75,6 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
 
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = inet_addr(it->second.host.c_str());
-        cout << "the host: " << it->second.host << endl;
         address.sin_port = htons(atoi(it->second.port.c_str()));
 
         if (bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0) {

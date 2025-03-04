@@ -18,11 +18,14 @@
 #include <sys/epoll.h>
 #include <algorithm>
 #include <sys/stat.h>
+#include <signal.h>
 
 using namespace std;
 
 struct mpserv;
 class HttpRequest;
+
+extern bool shutServer;
 
 void sysCallFail();
 void serverSetup(mpserv &conf, vector<int> &servrs);
