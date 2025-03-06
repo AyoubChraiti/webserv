@@ -1,3 +1,5 @@
+#pragma once
+
 #include "request.hpp"
 
 class Response {
@@ -106,3 +108,5 @@ public:
     unsigned int getContentLength() const { return contentLength; }
     const string& getBody() const { return body; }
 };
+
+void handle_client_write(int clientFd, int epollFd, mpserv& conf, std::map<int, HttpRequest>& requestStates);

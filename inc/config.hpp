@@ -48,3 +48,8 @@ public:
 };
 
 mpserv configChecking(const string &filePath);
+string getIp(string hostname);
+string trim(const string& str);
+bool isValidDirectory(const string &path);
+bool isValidFile(const string &path);
+void testConfigParser(const string &filePath);

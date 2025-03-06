@@ -2,19 +2,10 @@
 
 bool shutServer = false;
 
-void signal_exit(int sig) {
-    (void)sig;
-    shutServer = true;
-    cout << "\nexitingggggggg.........." << endl;
-}
-
 int main(int ac, char **av) {
-
-    signal(SIGINT, signal_exit);
-    signal(SIGTERM, signal_exit);
-
     if (ac == 2) {
         try {
+            ctrl_C();
             mpserv serverCongif = configChecking(av[1]);
             webserver(serverCongif);
         }

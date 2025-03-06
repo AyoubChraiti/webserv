@@ -7,7 +7,7 @@ SRC =  src/main.cpp \
 	src/serverSetup/setupServer.cpp \
 	src/request/reqHandler.cpp src/request/reqReader.cpp \
 	src/responce/respnce.cpp \
-	src/utils/utils.cpp
+	src/utils/utils.cpp src/utils/signals.cpp src/utils/conf.cpp \
 	
 OBJ = $(SRC:.cpp=.o)
 

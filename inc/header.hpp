@@ -22,25 +22,18 @@
 
 using namespace std;
 
-struct mpserv;
-class HttpRequest;
-
 extern bool shutServer;
 
+struct mpserv; // config info
+class HttpRequest; // request info
+
+/* error handling */
 void sysCallFail();
-void serverSetup(mpserv &conf, vector<int> &servrs);
+
+/* server setup */
 void webserver(mpserv &conf);
-void testConfigParser(const string &filePath);
-std::string trim(const std::string& str);
 
-void sendErrorResponse(int fd, int statusCode, const string& message);
-
-bool isValidDirectory(const string &path);
-bool isValidFile(const string &path);
-
-
-void handle_client_write(int clientFd, int epollFd, mpserv& conf, std::map<int, HttpRequest>& requestStates);
-
+/* c++11 functions */
 template <typename T>
 string to_string(T value) {
     ostringstream oss;
@@ -48,5 +41,4 @@ string to_string(T value) {
     return oss.str();
 }
 
-
-string getIp(string hostname);
+void ctrl_C();

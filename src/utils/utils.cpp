@@ -5,26 +5,7 @@ void sysCallFail() {
     exit(1);
 }
 
-std::string trim(const std::string& str) {
-    size_t start = str.find_first_not_of(" \t\r\n");
-    if (start == std::string::npos) return "";
-    size_t end = str.find_last_not_of(" \t\r\n");
-    return str.substr(start, end - start + 1);
-}
-
-// both of these are from the config parsing ..
-
-bool isValidDirectory(const string &path) {
-    struct stat info;
-    return (stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode));
-}
-
-bool isValidFile(const string &path) {
-    return (access(path.c_str(), F_OK) == 0);
-}
-
-
-void sendErrorResponse(int fd, int statusCode, const string& message) {
+void sendErrorResponse(int fd, int statusCode, const string& message) { // will change this.
     string statusText;
     switch (statusCode) {
         case 400: statusText = "Bad Request"; break;
@@ -49,7 +30,6 @@ void sendErrorResponse(int fd, int statusCode, const string& message) {
     send(fd, response.c_str(), response.length(), 0);
     close(fd);
 }
-
 
 string getIp(string hostname) {
     struct addrinfo hints, *res;
