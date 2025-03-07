@@ -24,8 +24,8 @@ using namespace std;
 
 extern bool shutServer;
 
-struct mpserv; // config info
-class HttpRequest; // request info
+struct mpserv;
+class HttpRequest;
 
 /* error handling */
 void sysCallFail();

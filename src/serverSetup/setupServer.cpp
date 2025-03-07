@@ -14,7 +14,7 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
 }
 
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
-    map<int, HttpRequest> requestStates;
+    map<int, HttpRequest> requestmp;
     int epollFd = epoll_create1(0);
     if (epollFd == -1)
         sysCallFail();
@@ -47,10 +47,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             }
             else {
                 if (events[i].events & EPOLLIN) {
-                    handle_client_read(eventFd, epollFd, conf, requestStates); // request
+                    handle_client_read(eventFd, epollFd, conf, requestmp); // request
                 }
                 else if (events[i].events & EPOLLOUT) {
-                    handle_client_write(eventFd, epollFd, conf, requestStates); // responce
+                    handle_client_write(eventFd, epollFd, conf, requestmp); // responce
                 }
             }
         }

@@ -48,11 +48,11 @@ void HttpRequest::initFromHeader() {
     connection = get("Connection", "close");
 }
 
-map<int, HttpRequest>::iterator getReqFrmMap(int fd, map<int, HttpRequest>& requestStates) {
-    map<int, HttpRequest>::iterator it = requestStates.find(fd);
-    if (it == requestStates.end()) {
-        requestStates.insert(pair<int, HttpRequest>(fd, HttpRequest()));
-        it = requestStates.find(fd);
+map<int, HttpRequest>::iterator getReqFrmMap(int fd, map<int, HttpRequest>& requestmp) {
+    map<int, HttpRequest>::iterator it = requestmp.find(fd);
+    if (it == requestmp.end()) {
+        requestmp.insert(pair<int, HttpRequest>(fd, HttpRequest()));
+        it = requestmp.find(fd);
     }
     return it;
 }
@@ -74,8 +74,8 @@ string CheckServer(int fd) {
     return result;
 }
 
-int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestStates) {
-    map<int, HttpRequest>::iterator it = getReqFrmMap(fd, requestStates);
+int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp) {
+    map<int, HttpRequest>::iterator it = getReqFrmMap(fd, requestmp);
     HttpRequest& req = it->second;
 
     string sockHost = CheckServer(fd);
@@ -85,6 +85,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestSta
             throw HttpExcept(400, "No server configured for host: " + req.host);
 
         if (req.parseRequestLineByLine(fd)) {
+            cout << "mothode=== " << req.method << endl;
             req.initFromHeader();
 
             req.conf = conf.servers[req.host];
@@ -96,7 +97,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestSta
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what());
-        requestStates.erase(fd);
+        requestmp.erase(fd);
         struct epoll_event ev;
         ev.data.fd = fd;
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
@@ -104,7 +105,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestSta
     }
     catch (const exception& e) {
         sendErrorResponse(fd, 500, "Internal Server Error: " + string(e.what()));
-        requestStates.erase(fd);
+        requestmp.erase(fd);
         struct epoll_event ev;
         ev.data.fd = fd;
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
@@ -112,8 +113,8 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestSta
     }
 }
 
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
-    int stat = request(clientFd, conf, epollFd, requestStates);
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
+    int stat = request(clientFd, conf, epollFd, requestmp);
     if (stat == 1) { // means we done from the req.
         struct epoll_event ev;
         ev.events = EPOLLOUT;
@@ -122,5 +123,5 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
             sysCallFail();
         }
     }
-    // cout << "the uri in the request: " << requestStates[clientFd].path << endl;
+    // cout << "the uri in the request: " << requestmp[clientFd].path << endl;
 }

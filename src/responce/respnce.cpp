@@ -15,93 +15,73 @@ bool fileExists(const string& path) {
     return exists;
 }
 
+// void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
+//     map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
+//     if (it == requestStates.end()) { // wont even need this ig
+//         close(clientFd);
+//         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+//         return;
+//     }
+//     HttpRequest& req = it->second;
+// }
+
+
+/* temporary */
+
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
+    // Find the request state for this client
     map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
-    if (it == requestStates.end()) { // wont even need this ig
-        Response res;
-        res.setStatus(500);
-        res.setBody("Internal Error: No request state");
-        res.send(clientFd);
+    if (it == requestStates.end()) {
         close(clientFd);
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
         return;
     }
 
     HttpRequest& req = it->second;
-    servcnf& server = req.conf;
-    Response res;
 
+    // Only handle GET requests
     if (req.method != "GET") {
-        res.setStatus(501);
-        res.setBody("Method Not Implemented: " + req.method);
+        close(clientFd);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+        requestStates.erase(clientFd);
+        return;
     }
-    else {
-        string matchedUri;
-        routeCnf* route = 0;
-        string::size_type longestMatch = 0;
 
-        map<string, routeCnf>::iterator routeIt;
-        for (routeIt = server.routes.begin(); routeIt != server.routes.end(); ++routeIt) {
-            const string& uri = routeIt->first;
-            if (req.path.find(uri) == 0 && uri.length() > longestMatch) {
-                vector<string>& methods = routeIt->second.methodes;
-                bool methodAllowed = false;
-                for (vector<string>::iterator mIt = methods.begin(); mIt != methods.end(); ++mIt) {
-                    if (*mIt == req.method) {
-                        methodAllowed = true;
-                        break;
-                    }
-                }
-                if (methodAllowed) {
-                    matchedUri = uri;
-                    route = &routeIt->second;
-                    longestMatch = uri.length();
-                }
-            }
-        }
+    // Map path to a file (e.g., remove leading '/' and use as filename)
+    string filepath = req.path.substr(1); // e.g., "/index.html" -> "index.html"
+    if (filepath.empty()) filepath = "www/index.html"; // Default file
 
-        if (!route) {
-            res.setStatus(405);
-            res.setBody("No route found for " + req.method + " " + req.path);
-        }
-        else {
-            if (!route->redirect.empty()) {
-                res.setRedirect(route->redirect);
-            }
-            else {
-                string remainingPath = (matchedUri == "/" && req.path == "/") ? "" : req.path.substr(matchedUri.length());
-                string filePath = route->root + remainingPath;
-
-                // cout << "file Path= " << filePath << endl;
-
-                if (fileExists(filePath)) {
-                    if (isDirectory(filePath) && !route->index.empty()) {
-                        string indexPath = filePath + (filePath[filePath.length()-1] == '/' ? "" : "/") + route->index;
-                        if (fileExists(indexPath) && !isDirectory(indexPath)) {
-                            filePath = indexPath;
-                        }
-                        else {
-                            res.setStatus(403);
-                            res.setBody("Directory listing not allowed or no index file");
-                        }
-                    }
-
-                    if (res.getStatusCode() == 200 && !isDirectory(filePath)) {
-                        if (!res.setFile(filePath)) {
-                            res.setStatus(500);
-                            res.setBody("Failed to open file");
-                        }
-                    }
-                }
-                else {
-                    res.setStatus(404);
-                    res.setBody("Resource not found: " + req.path);
-                }
-            }
-        }
+    // Open the file
+    ifstream file(filepath, ios::binary);
+    if (!file.is_open()) {
+        // File not found, send 404
+        string response = "HTTP/1.1 404 Not Found\r\nContent-Length: 14\r\n\r\nFile not found";
+        send(clientFd, response.c_str(), response.size(), 0);
+        close(clientFd);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+        requestStates.erase(clientFd);
+        return;
     }
-    res.send(clientFd);
 
+    // Get file size
+    file.seekg(0, ios::end);
+    size_t fileSize = file.tellg();
+    file.seekg(0, ios::beg);
+
+    // Prepare HTTP response headers
+    string response = "HTTP/1.1 200 OK\r\nContent-Length: " + to_string(fileSize) + "\r\n\r\n";
+
+    // Send headers
+    send(clientFd, response.c_str(), response.size(), 0);
+
+    // Send file content
+    char buffer[4096];
+    while (file.read(buffer, sizeof(buffer)) || file.gcount()) {
+        send(clientFd, buffer, file.gcount(), 0);
+    }
+
+    // Cleanup
+    file.close();
     close(clientFd);
     epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
     requestStates.erase(clientFd);

@@ -4,22 +4,24 @@ bool HttpRequest::parseRequestLineByLine(int fd) {
     char temp[BUFFER_SIZE];
     ssize_t bytes = recv(fd, temp, sizeof(temp) - 1, 0);
 
-    // cout << "the request:::: " << temp << endl;
+    cout << "the request:::: " << temp << endl;
+
+    cout << "the bytes: " << bytes << endl;
 
     if (bytes > 0) {
         temp[bytes] = '\0';
         buffer += temp;
 
         while (true) {
-            size_t newlinePos = buffer.find("\r\n");
+            size_t newlinePos = buffer.find("\n");
             if (newlinePos == string::npos) {
                 if (state == READING_REQUEST_LINE && buffer.size() > MAX_FIRST_LINE)
-                    throw HttpExcept(501, "Error in request line: " + method);
-                break; // Wait for more data
+                    throw HttpExcept(501, "Error in request line: line too long " + method);
+                break; // Wait for more data to complete the line.
             }
 
             string line = buffer.substr(0, newlinePos);
-            buffer.erase(0, newlinePos + 2);
+            buffer.erase(0, newlinePos + 1);
 
             switch (state) {
                 case READING_REQUEST_LINE:
