@@ -75,9 +75,10 @@ bool HttpRequest::parseRequestLineByLine(int fd) {
                     }
                     break;
 
-                case READING_BODY:
+                case READING_BODY: // will test and handle thisssssssssssssssss
+                    cout << "we here\n";
                     body += line;
-                    bytesRead += line.length();
+                    bytesRead += line.size();
                     if (bytesRead >= contentLength) {
                         state = COMPLETE;
                         body = body.substr(0, contentLength);

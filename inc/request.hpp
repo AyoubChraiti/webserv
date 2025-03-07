@@ -1,6 +1,6 @@
 #pragma once
 
-#include "header.hpp"
+#include "string.hpp"
 #include "config.hpp"
 
 #define BUFFER_SIZE 1024
@@ -35,7 +35,8 @@ public:
     string buffer;
     ParseState state;
     ssize_t req_size;
-    string method, path, host, connection, body, version;
+    string method, path, host, connection, version;
+    Bstring body;
     map<string, string> headers;
     size_t contentLength;
     int bytesRead;

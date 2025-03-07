@@ -64,13 +64,28 @@ public:
     }
 
     void append(const char* data, size_t length) {
-        if (!data || length == 0) return;
+        if (!data || length == 0)
+            return;
         size_t newSize = size_ + length;
         char* newData = new char[newSize];
-        if (data_) {
+        if (data_)
             memcpy(newData, data_, size_);
-        }
+
         memcpy(newData + size_, data, length);
+        delete[] data_;
+        data_ = newData;
+        size_ = newSize;
+    }
+
+    void append(const char* data) {
+        if (!data || strlen(data) == 0)
+            return;
+        size_t newSize = size_ + strlen(data);
+        char* newData = new char[newSize];
+        if (data_)
+            memcpy(newData, data_, size_);
+
+        memcpy(newData + size_, data, strlen(data));
         delete[] data_;
         data_ = newData;
         size_ = newSize;
@@ -78,6 +93,23 @@ public:
 
     void append(const Bstring& other) {
         append(other.data(), other.size());
+    }
+
+    Bstring substr(size_t f, size_t l) const {
+        if (f >= size_ || f >= l)
+            return Bstring();
+        
+        if (l > size_)
+            l = size_;
+        
+        size_t len = l - f;
+        char* newStr = new char[len + 1];
+        memcpy(newStr, data_ + f, len);
+        newStr[len] = '\0';
+        
+        Bstring result(newStr, len);
+        delete[] newStr;
+        return result;
     }
 
     const char* data() const {
@@ -108,6 +140,22 @@ public:
         if (index >= size_)
             throw out_of_range("Index out of range");
         return data_[index];
+    }
+
+    Bstring& operator+=(const char* data) {
+        append(data);
+        return *this;
+    }
+
+    Bstring& operator+=(const Bstring& other) {
+        append(other);
+        return *this;
+    }
+
+    Bstring& operator+=(const string& str) {
+        if (!str.empty())
+            append(Bstring(str));
+        return *this;
     }
 
     bool operator<(const Bstring& other) const {

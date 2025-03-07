@@ -27,8 +27,8 @@ void parseChecking(const servcnf& server, const HttpRequest& req) {
 
     if (req.method == "POST" && !server.maxBodySize.empty()) {
         size_t maxSize = strtoul(server.maxBodySize.c_str(), NULL, 10);
-        if (req.body.length() > maxSize) {
-            throw HttpExcept(413, "Request body too large: " + to_string(req.body.length()) +
+        if (req.body.size() > maxSize) {
+            throw HttpExcept(413, "Request body too large: " + to_string(req.body.size()) +
                                  " exceeds max size " + server.maxBodySize);
         }
     }
