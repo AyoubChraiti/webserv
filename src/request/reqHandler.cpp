@@ -85,7 +85,6 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
             throw HttpExcept(400, "No server configured for host: " + req.host);
 
         if (req.parseRequestLineByLine(fd)) {
-            cout << "mothode=== " << req.method << endl;
             req.initFromHeader();
 
             req.conf = conf.servers[req.host];
@@ -93,7 +92,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
 
             return 1; // Request fully parsed
         }
-        return 0; // Still parsing
+        return 0; // still reading the body mr sir
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what());

@@ -1,6 +1,6 @@
 #include "../../inc/request.hpp"
 
-bool HttpRequest::parseRequestLineByLine(int fd) {
+bool HttpRequest::parseRequestLineByLine(int fd) { // return value is based on if i was done reading or not
     char temp[BUFFER_SIZE];
     ssize_t bytes = recv(fd, temp, sizeof(temp) - 1, 0);
 
@@ -15,7 +15,7 @@ bool HttpRequest::parseRequestLineByLine(int fd) {
         while (true) {
             size_t newlinePos = buffer.find("\n");
             if (newlinePos == string::npos) {
-                if (state == READING_REQUEST_LINE && buffer.size() > MAX_FIRST_LINE)
+                if (state == READING_REQUEST_LINE && buffer.size() > MAX_LINE)
                     throw HttpExcept(501, "Error in request line: line too long " + method);
                 break; // Wait for more data to complete the line.
             }

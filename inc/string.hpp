@@ -112,6 +112,26 @@ public:
         return result;
     }
 
+    void erase(size_t pos, size_t len) {
+        if (pos >= size_ || len == 0)
+            return;
+
+        size_t remaining = size_ - pos;
+        if (len > remaining) {
+            len = remaining;
+        }
+
+        if (pos + len < size_)
+            memmove(data_ + pos, data_ + pos + len, size_ - (pos + len));
+
+        size_ -= len;
+
+        if (size_ == 0) {
+            delete[] data_;
+            data_ = nullptr;
+        }
+    }
+
     const char* data() const {
         return data_;
     }
@@ -161,12 +181,14 @@ public:
     bool operator<(const Bstring& other) const {
         size_t minSize = size_ < other.size_ ? size_ : other.size_;
         int cmp = memcmp(data_, other.data_, minSize);
-        if (cmp != 0) return cmp < 0;
+        if (cmp != 0)
+            return cmp < 0;
         return size_ < other.size_;
     }
 
     bool operator==(const Bstring& other) const {
-        if (size_ != other.size_) return false;
+        if (size_ != other.size_)
+            return false;
         return memcmp(data_, other.data_, size_) == 0;
     }
 };

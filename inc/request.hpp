@@ -3,8 +3,8 @@
 #include "string.hpp"
 #include "config.hpp"
 
-#define BUFFER_SIZE 1024
-#define MAX_FIRST_LINE 1024
+#define BUFFER_SIZE 8192
+#define MAX_LINE 1024
 
 class HttpExcept : public exception {
 private:
@@ -47,6 +47,12 @@ public:
     string get(const string& key, const string& defaultValue) const;
     bool parseRequestLineByLine(int fd);
     void initFromHeader();
+
+    /* part of the new parsing methode */
+    int Parser(string& line);
+    void firstLineParser(string& line);
+    void HeadersParsing(string& line);
+    void bodyPart(string& line);
 };
 
 int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);

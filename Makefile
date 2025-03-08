@@ -5,7 +5,7 @@ CPP = c++
 SRC =  src/main.cpp \
 	src/config/initConf.cpp src/config/confParser.cpp \
 	src/serverSetup/setupServer.cpp \
-	src/request/reqHandler.cpp src/request/reqReader.cpp \
+	src/request/reqHandler.cpp src/request/req.cpp \
 	src/responce/respnce.cpp \
 	src/utils/utils.cpp src/utils/signals.cpp src/utils/conf.cpp \
 	
