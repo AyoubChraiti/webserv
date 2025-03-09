@@ -36,23 +36,21 @@ public:
     ParseState state;
     ssize_t req_size;
     string method, path, host, connection, version;
-    Bstring body;
+    std::vector<char> body; // Used to store binary data safely
     map<string, string> headers;
     size_t contentLength;
     int bytesRead;
     servcnf conf;
-
 
     HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};
     string get(const string& key, const string& defaultValue) const;
     bool parseRequestLineByLine(int fd);
     void initFromHeader();
 
-    /* part of the new parsing methode */
-    int Parser(string& line);
-    void firstLineParser(string& line);
-    void HeadersParsing(string& line);
-    void bodyPart(string& line);
+    int Parser(const char* data, size_t length);
+    void firstLineParser(const string& line);
+    void HeadersParsing(const string& line);
+    void bodyPart(const char* data, size_t length);
 };
 
 int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);

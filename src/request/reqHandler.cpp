@@ -7,8 +7,7 @@ void parseChecking(const servcnf& server, const HttpRequest& req) {
     string matchedRoute;
     const routeCnf* mtRoute = NULL;
 
-    for (map<string, routeCnf>::const_iterator it = server.routes.begin();
-         it != server.routes.end(); ++it) {
+    for (map<string, routeCnf>::const_iterator it = server.routes.begin(); it != server.routes.end(); ++it) {
         const string& route = it->first;
         const routeCnf& config = it->second;
         if (req.path.find(route) == 0 && route.length() > matchedRoute.length()) {

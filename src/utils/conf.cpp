@@ -1,10 +1,10 @@
 #include "../../inc/header.hpp"
 
 string trim(const string& str) {
-    size_t start = str.find_first_not_of(" \t\n");
+    size_t start = str.find_first_not_of(" \t\r\n");
     if (start == string::npos)
         return "";
-    size_t end = str.find_last_not_of(" \t\n");
+    size_t end = str.find_last_not_of(" \t\r\n");
     return str.substr(start, end - start + 1);
 }
 

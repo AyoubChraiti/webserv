@@ -48,9 +48,8 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
     }
 
     // Map path to a file (e.g., remove leading '/' and use as filename)
-    string filepath = req.path.substr(1); // e.g., "/index.html" -> "index.html"
-    if (filepath.empty())
-        filepath = "www/index.html"; // Default file
+    string filepath;
+    filepath = "www/tt.mp4"; // Default file
 
     // Open the file
     ifstream file(filepath, ios::binary);
@@ -76,7 +75,7 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
     send(clientFd, response.c_str(), response.size(), 0);
 
     // Send file content
-    char buffer[4096];
+    char buffer[1000000];
     while (file.read(buffer, sizeof(buffer)) || file.gcount()) {
         send(clientFd, buffer, file.gcount(), 0);
     }
