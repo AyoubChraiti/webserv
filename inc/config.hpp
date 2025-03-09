@@ -18,9 +18,9 @@ struct routeCnf {
 struct servcnf {
     string host;
     string port;
+    string maxBodySize;
     vector<string> server_names;
     map<int, string> error_pages;
-    string maxBodySize;
     map<string, routeCnf> routes; // the uri is the key here
 };
 

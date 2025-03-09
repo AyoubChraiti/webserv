@@ -46,7 +46,7 @@ bool isValidMethod(const string &method) {
 }
 
 mpserv configChecking(const string &filePath) {
-    configFile parser(filePath);
+    configFile parser(filePath); // all init for the struct.
     mpserv config = parser.parseConfig();
 
     if (config.servers.empty())

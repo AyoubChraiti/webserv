@@ -12,7 +12,11 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1)
         sysCallFail();
 }
-
+void printRequest(map<int, HttpRequest> &requestStates)
+{
+    for (auto it = requestStates.begin() ; it != requestStates.end(); it++)
+        cout << it->second.buffer << endl;
+}
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     map<int, HttpRequest> requestStates;
     int epollFd = epoll_create1(0);
@@ -47,21 +51,23 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             }
             else {
                 if (events[i].events & EPOLLIN) {
-                    handle_client_read(eventFd, epollFd, conf, requestStates); // request
+                    handleClientRequest(eventFd, epollFd, conf, requestStates); // request
                 }
-                else if (events[i].events & EPOLLOUT) {
-                    handle_client_write(eventFd, epollFd, conf, requestStates); // responce
-                }
+                // else if (events[i].events & EPOLLOUT) {
+                    // handle_client_write(eventFd, epollFd, conf, requestStates); // responce
+                // }
             }
         }
         if (shutServer) {
             cout << "exiting sucesfully" << endl;
+            printRequest(requestStates);
             break;
         }
     }
+   
 }
 
-void serverSetup(mpserv &conf, vector<int> &servrs) {
+void serverSetup(mpserv &conf, vector<int> &servrsFd) {
     for (map<string, servcnf>::iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
         int serverFd;
         struct sockaddr_in address;
@@ -83,14 +89,14 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
         if (listen(serverFd, 10) < 0)
             sysCallFail();
 
-        servrs.push_back(serverFd);
-        
+        servrsFd.push_back(serverFd);
+
         cout << "server " << it->second.host << " listening on port " << it->second.port << endl;
     }
 }
 
 void webserver(mpserv &conf) {
-    vector<int> servrs;
-    serverSetup(conf, servrs);
-    epoll_handler(conf, servrs);
+    vector<int> servrsFd;
+    serverSetup(conf, servrsFd);
+    epoll_handler(conf, servrsFd);
 }

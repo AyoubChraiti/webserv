@@ -2,51 +2,43 @@
 
 #include "header.hpp"
 #include "config.hpp"
+#define BUFFER_SIZE 50
+#define RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, world!"
 
-#define BUFFER_SIZE 1024
-#define MAX_FIRST_LINE (1024 * 10)
 
-class HttpExcept : public exception {
-private:
-    int statusCode;
-    string statusMessage;
-
-public:
-    HttpExcept(int code, const string& message) 
-        : statusCode(code), statusMessage(message) {}
-
-    int getStatusCode() const {
-        return statusCode;
-    }
-    const char* what() const throw() {
-        return statusMessage.c_str();
-    }
-};
-
-enum ParseState {
-    READING_REQUEST_LINE,
-    READING_HEADERS,
-    READING_BODY,
-    COMPLETE
-};
-
-class HttpRequest {
-public:
+class HttpRequest
+{
+    private:
     string buffer;
-    ParseState state;
-    ssize_t req_size;
-    string method, path, host, connection, body, version;
+    int lineLocation;
+    string method, uri, HttpVersion;
     map<string, string> headers;
-    size_t contentLength;
-    int bytesRead;
-    servcnf conf;
 
-
-    HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};
-    string get(const string& key, const string& defaultValue) const;
-    bool parseRequestLineByLine(int fd);
-    void initFromHeader();
+    public:
+    HttpRequest() : lineLocation(0) {};
+    void request(int clientFd, int epollFd, mpserv& conf);
+    // Exception
+    class RequestException : public exception
+    {
+        private:
+            string errorString;
+            int statusCode;
+        public:
+            RequestException (string msg, int  status) : errorString(msg), statusCode(status) {}; 
+            const char *what() const throw();
+    };
 };
 
-int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
+void handleClientRequest(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates);
+/*
+    "
+    GET / HTTP/1.1\r\n
+    Host: localhost\r\n
+    connection: keep-alive\r\n
+    \r\n
+    \0balasbdjasdbsajk"
+*/
+//starter-line;
+//headers
+
+

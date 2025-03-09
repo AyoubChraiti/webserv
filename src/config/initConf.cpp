@@ -171,54 +171,54 @@ mpserv configFile::parseConfig() {
 
 /* tester for the */
 
-void testConfigParser(const string &filePath) {
-    try {
-        configFile parser(filePath);
-        mpserv config = parser.parseConfig();
+// void testConfigParser(const string &filePath) {
+//     try {
+//         configFile parser(filePath);
+//         mpserv config = parser.parseConfig();
 
-        cout << "Parsed " << config.servers.size() << " servers.\n";
+//         cout << "Parsed " << config.servers.size() << " servers.\n";
 
-        map<string, servcnf>::iterator it;
-        for (it = config.servers.begin(); it != config.servers.end(); ++it) {
-            const string &serverKey = it->first;
-            const servcnf &server = it->second;
+//         map<string, servcnf>::iterator it;
+//         for (it = config.servers.begin(); it != config.servers.end(); ++it) {
+//             const string &serverKey = it->first;
+//             const servcnf &server = it->second;
 
-            cout << "Server (" << serverKey << "):\n";
-            cout << "  Host: " << server.host << "\n";
-            cout << "  Port: " << server.port << "\n";
-            cout << "  Server Names: ";
-            for (size_t j = 0; j < server.server_names.size(); j++)
-                cout << server.server_names[j] << " ";
-            cout << "\n  Max Body Size: " << server.maxBodySize << " bytes\n";
+//             cout << "Server (" << serverKey << "):\n";
+//             cout << "  Host: " << server.host << "\n";
+//             cout << "  Port: " << server.port << "\n";
+//             cout << "  Server Names: ";
+//             for (size_t j = 0; j < server.server_names.size(); j++)
+//                 cout << server.server_names[j] << " ";
+//             cout << "\n  Max Body Size: " << server.maxBodySize << " bytes\n";
 
-            cout << "  Error Pages:\n";
-            map<int, string>::const_iterator err_it;
-            for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it)
-                cout << "    " << err_it->first << " -> " << err_it->second << "\n";
+//             cout << "  Error Pages:\n";
+//             map<int, string>::const_iterator err_it;
+//             for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it)
+//                 cout << "    " << err_it->first << " -> " << err_it->second << "\n";
 
-            cout << "  Routes:\n";
-            map<string, routeCnf>::const_iterator route_it;
-            for (route_it = server.routes.begin(); route_it != server.routes.end(); ++route_it) {
-                const routeCnf &route = route_it->second;
-                cout << "    URI: " << route_it->first << "\n";
-                cout << "      Root: " << route.root << "\n";
-                cout << "      Index: " << route.index << "\n";
-                cout << "      Autoindex: " << (route.autoindex ? "On" : "Off") << "\n";
-                cout << "      Redirect: " << route.redirect << "\n";
-                cout << "      CGI Pass: " << route.cgi_pass << "\n";
-                cout << "      CGI Extension: " << route.cgi_extension << "\n";
-                cout << "      File Upload: " << (route.fileUpload ? "Enabled" : "Disabled") << "\n";
-                cout << "      Upload Store: " << route.uploadStore << "\n";
-                cout << "      Allowed Methods: ";
-                for (size_t k = 0; k < route.methodes.size(); k++)
-                    cout << route.methodes[k] << " ";
-                cout << "\n";
-            }
-            cout << "--------------------------------------\n";
-        }
-    } catch (const exception &e) {
-        cerr << "Error: " << e.what() << endl;
-    } catch (...) {
-        cerr << "Unknown error occurred while parsing the config file." << endl;
-    }
-}
+//             cout << "  Routes:\n";
+//             map<string, routeCnf>::const_iterator route_it;
+//             for (route_it = server.routes.begin(); route_it != server.routes.end(); ++route_it) {
+//                 const routeCnf &route = route_it->second;
+//                 cout << "    URI: " << route_it->first << "\n";
+//                 cout << "      Root: " << route.root << "\n";
+//                 cout << "      Index: " << route.index << "\n";
+//                 cout << "      Autoindex: " << (route.autoindex ? "On" : "Off") << "\n";
+//                 cout << "      Redirect: " << route.redirect << "\n";
+//                 cout << "      CGI Pass: " << route.cgi_pass << "\n";
+//                 cout << "      CGI Extension: " << route.cgi_extension << "\n";
+//                 cout << "      File Upload: " << (route.fileUpload ? "Enabled" : "Disabled") << "\n";
+//                 cout << "      Upload Store: " << route.uploadStore << "\n";
+//                 cout << "      Allowed Methods: ";
+//                 for (size_t k = 0; k < route.methodes.size(); k++)
+//                     cout << route.methodes[k] << " ";
+//                 cout << "\n";
+//             }
+//             cout << "--------------------------------------\n";
+//         }
+//     } catch (const exception &e) {
+//         cerr << "Error: " << e.what() << endl;
+//     } catch (...) {
+//         cerr << "Unknown error occurred while parsing the config file." << endl;
+//     }
+// }
