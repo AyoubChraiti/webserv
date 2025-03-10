@@ -27,131 +27,100 @@ void HttpRequest::HeadersParsing(const string& line) {
     if (line.empty() || line == "\r") {
         if (headers.find("Host") == headers.end())
             throw HttpExcept(400, "Host header is required");
-        
+
         if (method == "POST") {
-            if (headers.find("Content-Length") == headers.end())
+            auto it = headers.find("Content-Length");
+            if (it == headers.end()) {
                 throw HttpExcept(411, "Content-Length required for POST");
-
-            contentLength = strtoul(headers["Content-Length"].c_str(), NULL, 10);
-            if (contentLength == 0)
-                throw HttpExcept(400, "Invalid Content-Length");
-
+            }
+              contentLength = stoul(it->second);
+              if (contentLength == 0) {
+                  throw HttpExcept(400, "Invalid Content-Length");
+            }
             state = READING_BODY;
-        } else {
-            state = COMPLETE;
         }
-    } else {
-        size_t colpos = line.find(":");
-        if (colpos == string::npos)
+        else
+            state = COMPLETE;
+    }
+    else {
+        size_t pos = line.find(":");
+        if (pos == string::npos)
             throw HttpExcept(400, "Malformed header: " + line);
 
-        string key = trim(line.substr(0, colpos));
-        string value = trim(line.substr(colpos + 1));
+        string key = line.substr(0, pos);
+        string value = line.substr(pos + 1);
+        key.erase(remove_if(key.begin(), key.end(), ::isspace), key.end());
+        value.erase(0, value.find_first_not_of(" \t"));
+
         if (key.empty() || value.empty())
             throw HttpExcept(400, "Malformed header: " + line);
-
         headers[key] = value;
     }
 }
 
 void HttpRequest::bodyPart(const char* data, size_t length) {
-    body.insert(body.end(), data, data + length);
-    bytesRead += length;
+    size_t remaining = contentLength - bytesRead;
+    size_t toWrite = min(remaining, length);
+    body.insert(body.end(), data, data + toWrite);
+    bytesRead += toWrite;
+
+    cout << "the content lenght = " << contentLength << endl;
 
     if (bytesRead >= contentLength) {
         state = COMPLETE;
-        body.resize(contentLength);
+        ofstream outFile("upload/uploaded_file.bin", ios::binary);
 
-        ofstream outFile("file.bin", ios::binary);
-        if (!outFile) {
+        if (!outFile)
             throw HttpExcept(500, "Failed to open file for writing");
-        }
+
         outFile.write(body.data(), body.size());
-        outFile.close();
     }
 }
 
 int HttpRequest::Parser(const char* data, size_t length) {
-    if (state == READING_REQUEST_LINE) {
-        firstLineParser(string(data, length));
-    } else if (state == READING_HEADERS) {
-        HeadersParsing(string(data, length));
-    } else if (state == READING_BODY) {
-        bodyPart(data, length);
+    switch (state) {
+        case READING_REQUEST_LINE:
+            firstLineParser(string(data, length));
+            break;
+        case READING_HEADERS:
+            HeadersParsing(string(data, length));
+            break;
+        case READING_BODY:
+            bodyPart(data, length);
+            break;
+        default:
+            return 1;
     }
     return state == COMPLETE ? 1 : 0;
 }
 
-bool HttpRequest::parseRequestLineByLine(int fd) {
+bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
     char temp[BUFFER_SIZE];
     ssize_t bytes = recv(fd, temp, sizeof(temp), 0);
-    if (bytes > 0) {
-        buffer.append(temp, bytes);
+    if (bytes <= 0)
+        throw HttpExcept(400, "Empty or invalid request");
 
-        while (!buffer.empty()) {
-            if (state == READING_REQUEST_LINE || state == READING_HEADERS) {
-                size_t newlinePos = buffer.find("\n");
-                if (newlinePos == string::npos || newlinePos > MAX_LINE)
-                    break;
+    buffer.append(temp, bytes);
+    while (!buffer.empty()) {
+        if (state == READING_REQUEST_LINE || state == READING_HEADERS) {
 
-                string line = buffer.substr(0, newlinePos);
-                buffer.erase(0, newlinePos + 1);
-                line = trim(line); // Remove trailing \r if needed
+            size_t newlinePos = buffer.find("\n");
+            if (newlinePos == string::npos || newlinePos > MAX_LINE)
+                break;
 
-                if (Parser(line.c_str(), line.size())) {
-                    return true; // Request fully parsed
-                }
-            } 
-            else if (state == READING_BODY) {
-                size_t remainingBody = contentLength - bytesRead;
-                size_t toRead = min(remainingBody, buffer.size());
+            string line = buffer.substr(0, newlinePos);
+            buffer.erase(0, newlinePos + 1);
+            line.erase(remove(line.begin(), line.end(), '\r'), line.end());
 
-                body.insert(body.end(), buffer.begin(), buffer.begin() + toRead);
-                buffer.erase(buffer.begin(), buffer.begin() + toRead);
-                bytesRead += toRead;
-
-                if (bytesRead >= contentLength) {
-                    state = COMPLETE;
-                    body.resize(contentLength);
-
-                    // Write to file
-                    ofstream outFile("uploaded_file.bin", ios::binary);
-                    if (!outFile) {
-                        throw HttpExcept(500, "Failed to open file for writing");
-                    }
-                    outFile.write(body.data(), body.size());
-                    outFile.close();
-
-                    return true; // Request is complete
-                }
-            }
+            if (Parser(line.c_str(), line.size()))
+                return true;
         }
-    } 
-    else if (bytes == 0 && buffer.empty() && state == READING_REQUEST_LINE) {
-        throw HttpExcept(400, "Empty request received");
+        else if (state == READING_BODY) {
+            bodyPart(buffer.data(), buffer.size());
+            buffer.clear();
+            if (state == COMPLETE)
+                return true;
+        }
     }
     return false;
 }
-
-
-// bool HttpRequest::parseRequestLineByLine(int fd) {
-//     char temp[BUFFER_SIZE];
-//     ssize_t bytes = recv(fd, temp, sizeof(temp), 0);
-//     cout << "we here\n";
-//     if (bytes > 0) {
-//         buffer.append(temp, bytes);
-//         while (!buffer.empty()) {
-//             size_t newlinePos = buffer.find("\n");
-//             if (newlinePos == string::npos || newlinePos > MAX_LINE)
-//                 break;
-//             string line = buffer.substr(0, newlinePos);
-//             buffer.erase(0, newlinePos + 1);
-
-//             if (Parser(line.c_str(), line.size()))
-//                 return true;
-//         }
-//     } else if (bytes == 0 && buffer.empty() && state == READING_REQUEST_LINE) {
-//         throw HttpExcept(400, "Empty request received");
-//     }
-//     return false;
-// }

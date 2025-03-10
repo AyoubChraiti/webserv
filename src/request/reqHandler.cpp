@@ -1,34 +1,36 @@
 #include "../../inc/request.hpp"
 
 void parseChecking(const servcnf& server, const HttpRequest& req) {
-    if (req.path.empty() || req.path[0] != '/')
-        throw HttpExcept(400, "Invalid path: " + req.path);
+    if (req.method != "POST") {
+        if (req.path.empty() || req.path[0] != '/')
+            throw HttpExcept(400, "Invalid path: " + req.path);
 
-    string matchedRoute;
-    const routeCnf* mtRoute = NULL;
+        string matchedRoute;
+        const routeCnf* mtRoute = NULL;
 
-    for (map<string, routeCnf>::const_iterator it = server.routes.begin(); it != server.routes.end(); ++it) {
-        const string& route = it->first;
-        const routeCnf& config = it->second;
-        if (req.path.find(route) == 0 && route.length() > matchedRoute.length()) {
-            matchedRoute = route;
-            mtRoute = &config;
+        for (map<string, routeCnf>::const_iterator it = server.routes.begin(); it != server.routes.end(); ++it) {
+            const string& route = it->first;
+            const routeCnf& config = it->second;
+            if (req.path.find(route) == 0 && route.length() > matchedRoute.length()) {
+                matchedRoute = route;
+                mtRoute = &config;
+            }
         }
-    }
 
-    if (mtRoute == NULL)
-        throw HttpExcept(404, "No route found for path: " + req.path);
+        if (mtRoute == NULL)
+            throw HttpExcept(404, "No route found for path: " + req.path);
 
-    if (find(mtRoute->methodes.begin(), mtRoute->methodes.end(), req.method)
-         == mtRoute->methodes.end()) {
-        throw HttpExcept(405, "Method not allowed: " + req.method + " for route " + matchedRoute);
-    }
+        if (find(mtRoute->methodes.begin(), mtRoute->methodes.end(), req.method)
+            == mtRoute->methodes.end()) {
+            throw HttpExcept(405, "Method not allowed: " + req.method + " for route " + matchedRoute);
+        }
 
-    if (req.method == "POST" && !server.maxBodySize.empty()) {
-        size_t maxSize = strtoul(server.maxBodySize.c_str(), NULL, 10);
-        if (req.body.size() > maxSize) {
-            throw HttpExcept(413, "Request body too large: " + to_string(req.body.size()) +
-                                 " exceeds max size " + server.maxBodySize);
+        if (req.method == "POST" && !server.maxBodySize.empty()) {
+            size_t maxSize = strtoul(server.maxBodySize.c_str(), NULL, 10);
+            if (req.body.size() > maxSize) {
+                throw HttpExcept(413, "Request body too large: " + to_string(req.body.size()) +
+                                    " exceeds max size " + server.maxBodySize);
+            }
         }
     }
 }
@@ -75,18 +77,17 @@ string CheckServer(int fd) {
 
 int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp) {
     map<int, HttpRequest>::iterator it = getReqFrmMap(fd, requestmp);
-    HttpRequest& req = it->second;
-
     string sockHost = CheckServer(fd);
+    HttpRequest& req = it->second;
+    req.conf = conf.servers[sockHost];
 
     try {
         if (conf.servers.find(sockHost) == conf.servers.end())
             throw HttpExcept(400, "No server configured for host: " + req.host);
 
-        if (req.parseRequestLineByLine(fd)) {
+        if (req.parseRequestLineByLine(fd, req.conf)) {
             req.initFromHeader();
 
-            req.conf = conf.servers[req.host];
             parseChecking(req.conf, req);
 
             return 1; // Request fully parsed

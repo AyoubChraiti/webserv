@@ -36,7 +36,7 @@ public:
     ParseState state;
     ssize_t req_size;
     string method, path, host, connection, version;
-    std::vector<char> body; // Used to store binary data safely
+    vector<char> body; // Used to store binary data safely
     map<string, string> headers;
     size_t contentLength;
     int bytesRead;
@@ -44,7 +44,7 @@ public:
 
     HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};
     string get(const string& key, const string& defaultValue) const;
-    bool parseRequestLineByLine(int fd);
+    bool parseRequestLineByLine(int fd, servcnf& conf);
     void initFromHeader();
 
     int Parser(const char* data, size_t length);
@@ -56,3 +56,4 @@ public:
 int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
 void sendErrorResponse(int fd, int statusCode, const string& message);
+

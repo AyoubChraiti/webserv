@@ -40,6 +40,15 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
     HttpRequest& req = it->second;
 
     // Only handle GET requests
+    if (req.method == "POST") {
+        string res = "HTTP/1.1 200 POSTED\r\n";
+        res += "Content-Length: 0\r\n\r\n";
+        send(clientFd, res.c_str(), res.size(), 0);
+        close(clientFd);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+        requestStates.erase(clientFd);
+        return;
+    }
     if (req.method != "GET") {
         close(clientFd);
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
@@ -49,7 +58,7 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
 
     // Map path to a file (e.g., remove leading '/' and use as filename)
     string filepath;
-    filepath = "www/tt.mp4"; // Default file
+    filepath = "www/index.html"; // Default file
 
     // Open the file
     ifstream file(filepath, ios::binary);
