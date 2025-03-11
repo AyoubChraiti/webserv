@@ -2,10 +2,15 @@
 
 #include "header.hpp"
 #include "config.hpp"
-#define BUFFER_SIZE 50
+#define BUFFER_SIZE 4000
 #define RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, world!"
 
 
+enum {
+    REQUEST_LINE,
+    HEAD,
+    BODY
+};
 class HttpRequest
 {
     private:
@@ -15,8 +20,10 @@ class HttpRequest
     map<string, string> headers;
 
     public:
-    HttpRequest() : lineLocation(0) {};
-    void request(int clientFd, int epollFd, mpserv& conf);
+    
+    HttpRequest() : lineLocation(REQUEST_LINE) {};
+    void request(int clientFd, int epollFd, servcnf &reqConfig);
+    void parseRequestLine (servcnf &reqConfig);
     // Exception
     class RequestException : public exception
     {
@@ -30,9 +37,10 @@ class HttpRequest
 };
 
 void handleClientRequest(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates);
+
 /*
     "
-    GET / HTTP/1.1\r\n
+    GET /kjhh HTTP/1.1 sdsdf sdfsf\r\n
     Host: localhost\r\n
     connection: keep-alive\r\n
     \r\n

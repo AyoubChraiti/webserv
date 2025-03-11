@@ -5,73 +5,68 @@ const char *HttpRequest::RequestException::what() const throw ()
     return errorString.c_str();
 }
 
-void SetupClient(int clientFd, map<int, HttpRequest> &reqStates)
-{
-    map<int, HttpRequest>::iterator it = reqStates.find(clientFd);
-    if (it == reqStates.end())
-        reqStates.insert(make_pair(clientFd, HttpRequest()));
-}
-void HttpRequest::request(int clientFd, int epollFd, mpserv& conf)
+void HttpRequest::request(int clientFd, int epollFd, servcnf &reqConfig)
 {
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = recv (clientFd, buff, BUFFER_SIZE , 0);
     if (recvBytes > 0)
     {
-        buffer.append(buff);
-        if (!lineLocation)
+        buff[BUFFER_SIZE - 1] = '\0';
+        buffer.append(buff, recvBytes);
+        if (lineLocation == REQUEST_LINE)
+            parseRequestLine(reqConfig);
+        else if (lineLocation == HEAD)
         {
-            size_t index = 0;
-            vector <string> hold(3);
-            while ((index = buffer.find(' ')) != string::npos)
-            {
-                hold.push_back(buffer.substr(0, index));
-                buffer.erase(0, index);
-            }
-            method = hold[0];
-            uri = hold[1];
-            HttpVersion = hold[2];
+            
         }
-        cout << method << "-" << uri << "-" << HttpVersion << endl;
-        exit(1);
         if (buffer.find("\r\n\r\n") == string::npos)
             return ;
     }
+    else
+        exit(1);
     struct epoll_event structEvent;
     structEvent.events = EPOLLOUT;
     structEvent.data.fd = clientFd;
     epoll_ctl (epollFd, EPOLL_CTL_MOD, clientFd, &structEvent);
     send(clientFd, RESPONSE, strlen(RESPONSE), 0);
 }
-void SendErrorRespone()
+
+
+
+string SetupClient(int clientFd, map<int, HttpRequest> &reqStates)
 {
+    map<int, HttpRequest>::iterator it = reqStates.find(clientFd);
+    if (it == reqStates.end())
+        reqStates.insert(make_pair(clientFd, HttpRequest()));
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+    if (getsockname(clientFd, (struct sockaddr*) &addr, &addrlen))
+        sysCallFail();
+    char ipStore[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(addr.sin_addr), ipStore, INET_ADDRSTRLEN);
+    int port = ntohs(addr.sin_port);
+    string host = static_cast <string> (ipStore) + ":" + to_string(port);
+    return host;
 }
+// void SendErrorRespone()
+// {
+//     // struct epoll_event structEvent;
+//     // structEvent.events = EPOLLOUT;
+//     // structEvent.data.fd = clientFd;
+//     // epoll_ctl (epollFd, EPOLL_CTL_MOD, clientFd, &structEvent);
+// }
 
 void handleClientRequest(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates)
 {
-    SetupClient(clientFd, reqStates);
-    try
+    string host = SetupClient(clientFd, reqStates);
+    servcnf reqConfig = conf.servers[host];
+    try 
     {
-        reqStates[clientFd].request(clientFd, epollFd, conf);
+        reqStates[clientFd].request(clientFd, epollFd, reqConfig);
     }
     catch(const std::exception& e)
-    {
+     {
         std::cerr << e.what() << '\n';
-        SendErrorRespone();
+        // SendErrorRespone();
     }
 }
-
-
-
-
-
-
-
-
-   // stringstream ss(buff);
-    // ss >> req.method >> req.uri >> req.HttpVersion;
-    // if (req.method.empty() || req.uri.empty() || req.HttpVersion.empty())
-        // throw Request::RequestException("Bad Request", 400);
-    // if (req.method != "GET" && req.method != "POST" && req.method != "DELETE")
-        // throw Request::RequestException("Not Implemented", 501);
-    // if (req.HttpVersion != "HTTP/1.1")
-        // throw Request::RequestException("HTTP Version Not Supported", 505);
