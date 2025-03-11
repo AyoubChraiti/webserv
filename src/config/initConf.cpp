@@ -1,15 +1,6 @@
 #include "../../inc/config.hpp"
 
-configFile::configFile(string fileName) : fileName(fileName) {
-    cnf.open(fileName.c_str());
-    if (!cnf)
-        throw runtime_error("Error: failed to open the config file");
-}
-
-configFile::~configFile() {
-    if (cnf.is_open())
-        cnf.close();
-}
+configFile::configFile(const string &file) : fileName(file) {}
 
 size_t configFile::parseSize(const string &s) {
     string str = trim(s);
@@ -19,206 +10,133 @@ size_t configFile::parseSize(const string &s) {
     size_t num = atoi((str.substr(0, pos)).c_str());
     if (pos < str.size()) {
         char unit = toupper(str[pos]);
-        if (unit == 'K') return num * 1024;
-        if (unit == 'M') return num * 1024 * 1024;
-        if (unit == 'G') return num * 1024 * 1024 * 1024;
-        throw runtime_error("invalid unit: " + string(1, unit));
+        if (unit == 'K')
+            return num * 1024;
+        if (unit == 'M')
+            return num * 1024 * 1024;
+        if (unit == 'G')
+            return num * 1024 * 1024 * 1024;
     }
     return num;
 }
 
-void configFile::addServer(mpserv &config, servcnf &currSer, routeCnf &currRout, string &currUri, bool &inServer) {
-    addLocation(currSer, currRout, currUri);
-    if (inServer) {
-        string key = getKey(currSer);
-        config.servers[key] = currSer;
+string configFile::getKey(const servcnf& server) {
+    return server.host + ":" + server.port;
+}
+
+vector<string> configFile::split(const string &str, char delimiter) {
+    vector<string> tokens;
+    stringstream ss(str);
+    string token;
+    while (getline(ss, token, delimiter)) {
+        tokens.push_back(trim(token));
     }
-    currSer = servcnf();
-    currRout = routeCnf();
-    currUri.clear();
-    inServer = true;
+    return tokens;
 }
 
-void configFile::ErrorPages(servcnf &currSer) {
-    string line;
-    while (getline(cnf, line) && trim(line) != ""
-        && line.find("[server.location]") == string::npos) {
-        size_t pos = line.find("=");
-        if (pos != string::npos) {
-            string key = trim(line.substr(0, pos));
-            string value = trim(line.substr(pos + 1));
+string configFile::removeComment(const string &str) {
+    size_t pos = str.find('#');
+    return (pos != string::npos) ? trim(str.substr(0, pos)) : trim(str);
+}
 
-            int code = atoi(key.c_str());
-            if (code != 0 || key == "0")
-                currSer.error_pages[code] = value;
-            else
-                cerr << "Invalid error code: " << key << endl;
-        }
+void configFile::parseLine(string &line, servcnf &server, routeCnf &route, string &section) {
+    line = trim(line);
+
+    if (line.empty() || line[0] == '#')
+        return;
+
+    if (line[0] == '[' && line.back() == ']') {
+        section = removeComment(line.substr(1, line.size() - 2));
+        return;
     }
-}
 
-void configFile::addLocation(servcnf &currSer, routeCnf &currRout, string &currUri) {
-    if (!currUri.empty())
-        currSer.routes[currUri] = currRout;
-    currRout = routeCnf();
-    currUri.clear();
-}
+    size_t pos = line.find('=');
+    if (pos == string::npos)
+        throw runtime_error("Error: syntax issue in the config file.");
+    
+    string key = removeComment(line.substr(0, pos));
+    string value = removeComment(line.substr(pos + 1));
 
-void configFile::serverAttributes(servcnf &currSer, const string &line) {
-    size_t pos = line.find("=");
-    if (pos != string::npos) {
-        string key = trim(line.substr(0, pos));
-        string value = trim(line.substr(pos + 1));
+    if (key.empty() || value.empty())
+        throw runtime_error("Error: syntax issue in the config file.");
 
-        if (key.empty() || value.empty()) {
-            throw runtime_error("syntax error in the config file.");
-        }
-        
+    if (section == "server") {
         if (key == "host") {
-            currSer.host = getIp(value);
+            cout << "befor = " << value << endl;
+            server.host = getIp(value);
+            cout << "aftr = " << server.host << endl;
         }
         else if (key == "port")
-            currSer.port = value;
-        else if (key == "server_name") {
-            stringstream ss(value);
-            string name;
-            while (ss >> name)
-                currSer.server_names.push_back(name);
-        }
-        else if (key == "body_size")
-            currSer.maxBodySize = value;
+            server.port = value;
+        else if (key == "server_names")
+            server.server_names = split(value, ' ');
+        else if (key == "client_body_limit")
+            server.maxBodySize = value;
     }
-    else {
-        throw runtime_error("syntax error in the config file.");
+
+    if (section == "error_pages") {
+        server.error_pages[atoi(key.c_str())] = value;
     }
-}
 
-void configFile::routesAttributes(routeCnf &currRout, string &currUri, const string &line) {
-    size_t pos = line.find("=");
-    if (pos != string::npos) {
-        string key = trim(line.substr(0, pos));
-        string value = trim(line.substr(pos + 1));
-
-        if (key.empty() || value.empty()) {
-            throw runtime_error("syntax error in the config file.");
+    else if (section.rfind("route ", 0) == 0) {
+        string routePath = section.substr(6); 
+        if (key == "methodes") {
+            route.methodes = split(value, ',');
         }
-
-        if (key == "uri")
-            currUri = value;
-        else if (key == "root")
-            currRout.root = value;
-        else if (key == "methods") {
-            stringstream ss(value);
-            string method;
-            while (ss >> method)
-                currRout.methodes.push_back(method);
-        }
-        else if (key == "index")
-            currRout.index = value;
-        else if (key == "upload") {
-            currRout.fileUpload = true;
-            currRout.uploadStore = value;
-        }
-        else if (key == "autoindex")
-            currRout.autoindex = (value == "on");
-    }
-    else {
-        throw runtime_error("syntax error in the config file.");
-    }
-}
-
-string configFile::getKey(servcnf currSer) {
-    string res;
-    res = currSer.host;
-    res += ":";
-    res += currSer.port;
-    return res;
-}
-
-mpserv configFile::parseConfig() {
-    mpserv config;
-    string line;
-    servcnf currSer;
-    bool inServer = false;
-    routeCnf currRout;
-    string currUri;
-
-    while (getline(cnf, line)) {
-        line = trim(line);
-        if (line.empty() || line[0] == '#')
-            continue;
-
-        if (line == "[server]")
-            addServer(config, currSer, currRout, currUri, inServer);
-        else if (line == "[server.errors]")
-            ErrorPages(currSer);
-        else if (line == "[server.location]")
-            addLocation(currSer, currRout, currUri);
-        else {
-            serverAttributes(currSer, line);
-            routesAttributes(currRout, currUri, line);
-        }
-    }
-    addLocation(currSer, currRout, currUri);
-    if (inServer) {
-        string key = getKey(currSer);
-        if (config.servers.find(key) == config.servers.end()) {
-            config.servers[key] = currSer;
-        }
-    }
-    return config;
-}
-
-/* tester for the */
-
-void testConfigParser(const string &filePath) {
-    try {
-        configFile parser(filePath);
-        mpserv config = parser.parseConfig();
-
-        cout << "Parsed " << config.servers.size() << " servers.\n";
-
-        map<string, servcnf>::iterator it;
-        for (it = config.servers.begin(); it != config.servers.end(); ++it) {
-            const string &serverKey = it->first;
-            const servcnf &server = it->second;
-
-            cout << "Server (" << serverKey << "):\n";
-            cout << "  Host: " << server.host << "\n";
-            cout << "  Port: " << server.port << "\n";
-            cout << "  Server Names: ";
-            for (size_t j = 0; j < server.server_names.size(); j++)
-                cout << server.server_names[j] << " ";
-            cout << "\n  Max Body Size: " << server.maxBodySize << " bytes\n";
-
-            cout << "  Error Pages:\n";
-            map<int, string>::const_iterator err_it;
-            for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it)
-                cout << "    " << err_it->first << " -> " << err_it->second << "\n";
-
-            cout << "  Routes:\n";
-            map<string, routeCnf>::const_iterator route_it;
-            for (route_it = server.routes.begin(); route_it != server.routes.end(); ++route_it) {
-                const routeCnf &route = route_it->second;
-                cout << "    URI: " << route_it->first << "\n";
-                cout << "      Root: " << route.root << "\n";
-                cout << "      Index: " << route.index << "\n";
-                cout << "      Autoindex: " << (route.autoindex ? "On" : "Off") << "\n";
-                cout << "      Redirect: " << route.redirect << "\n";
-                cout << "      CGI Pass: " << route.cgi_pass << "\n";
-                cout << "      CGI Extension: " << route.cgi_extension << "\n";
-                cout << "      File Upload: " << (route.fileUpload ? "Enabled" : "Disabled") << "\n";
-                cout << "      Upload Store: " << route.uploadStore << "\n";
-                cout << "      Allowed Methods: ";
-                for (size_t k = 0; k < route.methodes.size(); k++)
-                    cout << route.methodes[k] << " ";
-                cout << "\n";
+        else if (key == "directory")
+            route.root = value;
+        else if (key == "default_file")
+            route.index = value;
+        else if (key == "directory_listing")
+            route.autoindex = (value == "on");
+        else if (key == "redirect")
+            route.redirect = value;
+        else if (key == "cgi_exec") {
+            vector<string> cgiData = split(value, ':');
+            if (cgiData.size() == 2) {
+                route.cgi_extension = cgiData[0];
+                route.cgi_pass = cgiData[1];
             }
-            cout << "--------------------------------------\n";
         }
-    } catch (const exception &e) {
-        cerr << "Error: " << e.what() << endl;
-    } catch (...) {
-        cerr << "Unknown error occurred while parsing the config file." << endl;
+        else if (key == "allow_upload")
+            route.fileUpload = (value == "true");
+        else if (key == "upload_directory")
+            route.uploadStore = value;
+
+        server.routes[routePath] = route;
     }
+}
+
+bool configFile::parseConfig() {
+    cnf.open(fileName);
+    if (!cnf.is_open())
+        throw runtime_error("Error opening the congif file.");
+
+    string line, section;
+    servcnf server; // Holds the current server
+    routeCnf route; // Holds the current route
+    bool inserver = false;
+
+    while (getline(cnf, line)) { // issue here, somthing aint it...
+        parseLine(line, server, route, section);
+
+        if (line == "[server]") {
+            if (inserver) {
+                configData.servers[getKey(server)] = server;
+                server = servcnf(); 
+            }
+            inserver = true;
+        }
+    }
+
+    string key = getKey(server);
+    if (inserver && configData.servers.find(key) == configData.servers.end()) {
+        configData.servers[key] = server;
+    }
+    cnf.close();
+    return true;
+}
+
+const mpserv& configFile::getConfigData() const {
+    return configData;
 }

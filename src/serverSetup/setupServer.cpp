@@ -62,7 +62,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
 }
 
 void serverSetup(mpserv &conf, vector<int> &servrs) {
-    for (map<string, servcnf>::iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
+    for (map<string, servcnf>::const_iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
         int serverFd;
         struct sockaddr_in address;
         int addrlen = sizeof(address);

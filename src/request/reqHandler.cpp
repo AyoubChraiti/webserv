@@ -43,7 +43,7 @@ string HttpRequest::get(const string& key, const string& defaultValue) const {
 void HttpRequest::initFromHeader() {
     host = headers["Host"];
     size_t pos = host.find(":");
-    string ip = getIp(host.substr(0, pos)) + ":";
+    string ip ;//= getIp(host.substr(0, pos)) + ":";
     ip += host.substr(pos + 1);
     host = ip;
     connection = get("Connection", "close");

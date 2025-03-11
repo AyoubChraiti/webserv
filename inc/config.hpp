@@ -12,6 +12,7 @@ struct routeCnf {
     string cgi_extension;
     bool fileUpload;
     string uploadStore;
+
     routeCnf() : autoindex(false), fileUpload(false) {}
 };
 
@@ -21,35 +22,34 @@ struct servcnf {
     vector<string> server_names;
     map<int, string> error_pages;
     string maxBodySize;
-    map<string, routeCnf> routes; // the uri is the key here
+    map<string, routeCnf> routes; // uri is the key
+
+    servcnf() : maxBodySize("1048576") {} // 1mb par defaut
 };
 
 struct mpserv {
-    map<string, servcnf> servers; // the key here is host:port
+    map<string, servcnf> servers; // Key is host:port
 };
 
 class configFile {
 private:
-    string fileName;
-    ifstream cnf;
-
-public:
-    configFile(string fileName);
-    ~configFile();
+    string      fileName;
+    ifstream    cnf;
+    mpserv      configData;
 
     size_t parseSize(const string &s);
-    void addServer(mpserv &config, servcnf &currentServer, routeCnf &currentRoute, string &currentUri, bool &inServerBlock);
-    void ErrorPages(servcnf &currentServer);
-    void addLocation(servcnf &currentServer, routeCnf &currentRoute, string &currentUri);
-    void serverAttributes(servcnf &currentServer, const string &line);
-    void routesAttributes(routeCnf &currentRoute, string &currentUri, const string &line);
-    mpserv parseConfig();
-    string getKey(servcnf currSer);
+    string getKey(const servcnf& server);
+    vector<string> split(const string &str, char delimiter);
+    string removeComment(const string &str);
+    void parseLine(string &line, servcnf &server, routeCnf &route, string &section);
+
+public:
+    configFile(const string &file);
+    bool parseConfig();
+    const mpserv &getConfigData() const;
 };
 
 mpserv configChecking(const string &filePath);
-string getIp(string hostname);
-string trim(const string& str);
-bool isValidDirectory(const string &path);
 bool isValidFile(const string &path);
-void testConfigParser(const string &filePath);
+bool isValidDirectory(const string &path);
+string trim(const string& str);

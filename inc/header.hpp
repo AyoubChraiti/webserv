@@ -42,3 +42,6 @@ string to_string(T value) {
 }
 
 void ctrl_C();
+
+string getIp(string hostname);
+string trim(const string& str);

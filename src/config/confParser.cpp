@@ -47,17 +47,22 @@ bool isValidMethod(const string &method) {
 
 mpserv configChecking(const string &filePath) {
     configFile parser(filePath);
-    mpserv config = parser.parseConfig();
+    parser.parseConfig();
+    mpserv config = parser.getConfigData();
 
-    if (config.servers.empty())
+    if (config.servers.empty()) {
+        cout << "the frst server ip = " << config.servers["127.0.0.1:8080"].host << endl;
         throw runtime_error("Error: No servers found in the configuration.");
+    }
 
     map<string, servcnf>::iterator it;
     for (it = config.servers.begin(); it != config.servers.end(); ++it) {
         const servcnf &server = it->second;
 
-        if (!isValidHost(server.host))
+        if (!isValidHost(server.host)) {
+            cout << "the ip in question = " << server.host << endl; 
             throw runtime_error("Error: a Server has an invalid host");
+        }
 
         if (!isValidPort(server.port))
             throw runtime_error("Error: a Server has an invalid port");
