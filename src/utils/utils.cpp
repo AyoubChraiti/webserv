@@ -1,12 +1,17 @@
 #include "../../inc/header.hpp"
+#include "../../inc/config.hpp"
 
 void sysCallFail() {
     perror("syscall Error");
     exit(1);
 }
 
-void sendErrorResponse(int fd, int statusCode, const string& message) { // will change this.
+void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig) {
     string statusText;
+    string responseBody;
+    string contentType = "text/plain";
+    string filePath;
+
     switch (statusCode) {
         case 400: statusText = "Bad Request"; break;
         case 404: statusText = "Not Found"; break;
@@ -18,14 +23,33 @@ void sendErrorResponse(int fd, int statusCode, const string& message) { // will 
         default:  statusText = "Error"; break;
     }
 
+    if (serverConfig.error_pages.find(statusCode) != serverConfig.error_pages.end()) {
+        filePath = serverConfig.error_pages.at(statusCode);
+        ifstream errorFile(filePath);
+        if (errorFile.is_open()) {
+            stringstream buffer;
+            buffer << errorFile.rdbuf();
+            responseBody = buffer.str();
+            errorFile.close();
+            if (filePath.find(".html") != string::npos) {
+                contentType = "text/html";
+            }
+        } else {
+            cerr << "Warning: Could not open error page file: " << filePath << endl;
+            responseBody = message;
+        }
+    }
+    else {
+        responseBody = message;
+    }
     string response =
         "HTTP/1.1 " + to_string(statusCode) + " " + statusText + "\r\n"
-        "Content-Length: " + to_string(message.length()) + "\r\n"
-        "Content-Type: text/plain\r\n"
+        "Content-Length: " + to_string(responseBody.length()) + "\r\n"
+        "Content-Type: " + contentType + "\r\n"
         "Connection: close\r\n"
-        "\r\n" + message;
+        "\r\n" + responseBody;
 
-    cerr << "Error: '" << message << "' sent to the client" << endl;
+    cerr << "Error: '" << statusText << "' sent to client (code: " << statusCode << ")" << endl;
 
     send(fd, response.c_str(), response.length(), 0);
     close(fd);

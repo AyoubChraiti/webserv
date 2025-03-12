@@ -9,89 +9,274 @@ bool isDirectory(const string& path) {
 }
 
 bool fileExists(const string& path) {
-    ifstream file(path.c_str());
-    bool exists = file.good();
-    file.close();
-    return exists;
+    struct stat st;
+    return stat(path.c_str(), &st) == 0 && (st.st_mode & S_IFREG);
 }
 
-// void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
-//     map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
-//     if (it == requestStates.end()) { // wont even need this ig
+string getContentType(const string& filepath) {
+    map<string, string> mimeTypes;
+
+    mimeTypes[".7z"]    = "application/x-7z-compressed";
+    mimeTypes[".avi"]   = "video/x-msvideo";
+    mimeTypes[".bat"]   = "application/x-msdownload";
+    mimeTypes[".bin"]   = "application/octet-stream";
+    mimeTypes[".bmp"]   = "image/bmp";
+    mimeTypes[".css"]   = "text/css";
+    mimeTypes[".csv"]   = "text/csv";
+    mimeTypes[".doc"]   = "application/msword";
+    mimeTypes[".docx"]  = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    mimeTypes[".dll"]   = "application/octet-stream";
+    mimeTypes[".exe"]   = "application/octet-stream";
+    mimeTypes[".eot"]   = "application/vnd.ms-fontobject";
+    mimeTypes[".gif"]   = "image/gif";
+    mimeTypes[".gz"]    = "application/gzip";
+    mimeTypes[".html"]  = "text/html";
+    mimeTypes[".ico"]   = "image/x-icon";
+    mimeTypes[".iso"]   = "application/octet-stream";
+    mimeTypes[".js"]    = "text/javascript";
+    mimeTypes[".jpg"]   = "image/jpeg";
+    mimeTypes[".jpeg"]  = "image/jpeg";
+    mimeTypes[".json"]  = "application/json";
+    mimeTypes[".java"]  = "text/x-java-source";
+    mimeTypes[".mjs"]   = "text/javascript";
+    mimeTypes[".mp3"]   = "audio/mpeg";
+    mimeTypes[".mp4"]   = "video/mp4";
+    mimeTypes[".mov"]   = "video/quicktime";
+    mimeTypes[".mkv"]   = "video/x-matroska";
+    mimeTypes[".ogg"]   = "audio/ogg";
+    mimeTypes[".odt"]   = "application/vnd.oasis.opendocument.text";
+    mimeTypes[".ods"]   = "application/vnd.oasis.opendocument.spreadsheet";
+    mimeTypes[".odp"]   = "application/vnd.oasis.opendocument.presentation";
+    mimeTypes[".otf"]   = "font/otf";
+    mimeTypes[".png"]   = "image/png";
+    mimeTypes[".pdf"]   = "application/pdf";
+    mimeTypes[".ppt"]   = "application/vnd.ms-powerpoint";
+    mimeTypes[".pptx"]  = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    mimeTypes[".php"]   = "application/x-httpd-php";
+    mimeTypes[".py"]    = "text/x-python";
+    mimeTypes[".rar"]   = "application/x-rar-compressed";
+    mimeTypes[".rtf"]   = "application/rtf";
+    mimeTypes[".svg"]   = "image/svg+xml";
+    mimeTypes[".sh"]    = "application/x-sh";
+    mimeTypes[".sfnt"]  = "font/sfnt";
+    mimeTypes[".txt"]   = "text/plain";
+    mimeTypes[".tiff"]  = "image/tiff";
+    mimeTypes[".tar"]   = "application/x-tar";
+    mimeTypes[".ttf"]   = "font/ttf";
+    mimeTypes[".webp"]  = "image/webp";
+    mimeTypes[".wav"]   = "audio/wav";
+    mimeTypes[".webm"]  = "video/webm";
+    mimeTypes[".woff"]  = "font/woff";
+    mimeTypes[".woff2"] = "font/woff2";
+    mimeTypes[".xml"]   = "application/xml";
+    mimeTypes[".xls"]   = "application/vnd.ms-excel";
+    mimeTypes[".xlsx"]  = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    mimeTypes[".zip"]   = "application/zip";
+
+    size_t extPos = filepath.rfind('.');
+    if (extPos == string::npos) {
+        return "application/octet-stream";
+    }
+
+    string fileExt = filepath.substr(extPos);
+    for (size_t i = 0; i < fileExt.length(); ++i) {
+        fileExt[i] = static_cast<char>(::tolower(static_cast<unsigned char>(fileExt[i])));
+    }
+
+    map<string, string>::const_iterator it = mimeTypes.find(fileExt);
+    if (it != mimeTypes.end()) {
+        return it->second;
+    }
+    return "application/octet-stream";
+}
+
+void routingHandling(int clientFd, HttpRequest& req, servcnf& serverConfig, map<int, HttpRequest>& requestStates,
+                     routeCnf*& routcnf, string& filepath) {
+    routcnf = NULL;
+    string matchedPath;
+    map<string, routeCnf>::iterator routeIt;
+    for (routeIt = serverConfig.routes.begin(); routeIt != serverConfig.routes.end(); ++routeIt) {
+        const string& path = routeIt->first;
+        routeCnf& route = routeIt->second;
+        if (req.path.find(path) == 0 && path.length() > matchedPath.length()) {
+            routcnf = &route;
+            matchedPath = path;
+        }
+    }
+
+    if (!routcnf && serverConfig.routes.count("/")) {
+        routcnf = &serverConfig.routes["/"];
+        matchedPath = "/";
+    }
+
+    if (!routcnf) {
+        sendErrorResponse(clientFd, 404, "No route configured", serverConfig);
+        requestStates.erase(clientFd);
+        return;
+    }
+
+    if (!routcnf->methodes.empty() &&
+        find(routcnf->methodes.begin(), routcnf->methodes.end(), req.method) == routcnf->methodes.end()) {
+        sendErrorResponse(clientFd, 405, "Method " + req.method + " not allowed", serverConfig);
+        requestStates.erase(clientFd);
+        return;
+    }
+
+    filepath = routcnf->root;
+    string uriRemainder = req.path.empty() ? "" : req.path.substr(matchedPath.length());
+    if (uriRemainder.empty() || uriRemainder == "/")
+        filepath += "/" + routcnf->index;
+    else {
+        filepath += "/" + uriRemainder.substr(1);
+    }
+}
+
+void deleteMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverConfig,
+                   map<int, HttpRequest>& requestStates, const string& filepath) {
+    if (req.method == "DELETE") {
+        if (!fileExists(filepath))
+            sendErrorResponse(clientFd, 404, "File not found", serverConfig);
+        else if (unlink(filepath.c_str()) == 0) {
+            string response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+            send(clientFd, response.c_str(), response.length(), 0);
+        }
+        else {
+            sendErrorResponse(clientFd, 500, "Failed to delete file", serverConfig);
+        }
+        requestStates.erase(clientFd);
+        close(clientFd);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+    }
+}
+
+// void postMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverConfig,
+//                  map<int, HttpRequest>& requestStates, const string& filepath, routeCnf* routcnf) {
+//     if (req.method == "POST") {
+//         if (routcnf->fileUpload) {
+//             if (req.body.empty()) {
+//                 sendErrorResponse(clientFd, 400, "No upload data provided", serverConfig);
+//             } else {
+//                 string uploadPath = routcnf->uploadStore + "/" + filepath.substr(routcnf->root.length() + 1);
+//                 ofstream outFile(uploadPath.c_str(), ios::binary);
+//                 if (!outFile.is_open()) {
+//                     sendErrorResponse(clientFd, 500, "Failed to save upload", serverConfig);
+//                 }
+//                 else {
+//                     outFile.write(req.body.c_str(), req.body.length());
+//                     outFile.close();
+//                     string response = "HTTP/1.1 201 Created\r\nContent-Length: 0\r\n\r\n";
+//                     send(clientFd, response.c_str(), response.length(), 0);
+//                 }
+//             }
+//         }
+//         else {
+//             sendErrorResponse(clientFd, 403, "Uploads not allowed for this route", serverConfig);
+//         }
+//         requestStates.erase(clientFd);
 //         close(clientFd);
 //         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-//         return;
 //     }
-//     HttpRequest& req = it->second;
 // }
 
+void getMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverConfig,
+                map<int, HttpRequest>& requestStates, string& filepath, routeCnf* routcnf) {
+    if (req.method == "GET") {
+        if (isDirectory(filepath)) {
+            if (routcnf->autoindex)
+                sendErrorResponse(clientFd, 501, "Directory listing not implemented", serverConfig);
+            else {
+                filepath += "/" + routcnf->index;
+                if (!fileExists(filepath)) {
+                    sendErrorResponse(clientFd, 404, "Index file not found", serverConfig);
+                    requestStates.erase(clientFd);
+                    close(clientFd);
+                    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+                    return;
+                }
+            }
+        }
+        else if (!fileExists(filepath)) {
+            sendErrorResponse(clientFd, 404, "File not found", serverConfig);
+            requestStates.erase(clientFd);
+            close(clientFd);
+            epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+            return;
+        }
 
-/* temporary */
+        ifstream file(filepath.c_str(), ios::binary);
+        if (!file.is_open()) {
+            sendErrorResponse(clientFd, 500, "Failed to open file", serverConfig);
+            requestStates.erase(clientFd);
+            close(clientFd);
+            epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+            return;
+        }
+
+        file.seekg(0, ios::end);
+        size_t fileSize = file.tellg();
+        file.seekg(0, ios::beg);
+
+        string contentType = getContentType(filepath);
+        ostringstream oss;
+        oss << fileSize;
+        string response = "HTTP/1.1 200 OK\r\n"
+                              "Content-Length: " + oss.str() + "\r\n"
+                              "Content-Type: " + contentType + "\r\n"
+                              "Connection: close\r\n"
+                              "\r\n";
+        if (send(clientFd, response.c_str(), response.length(), 0) < 0) {
+            file.close();
+            requestStates.erase(clientFd);
+            close(clientFd);
+            epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+            return;
+        }
+
+        const size_t CHUNK_SIZE = 8192;
+        char buffer[CHUNK_SIZE];
+        while (file.good()) {
+            file.read(buffer, CHUNK_SIZE);
+            size_t bytesRead = file.gcount();
+            if (bytesRead > 0) {
+                ssize_t sent = send(clientFd, buffer, bytesRead, 0);
+                if (sent < 0) {
+                    file.close();
+                    requestStates.erase(clientFd);
+                    close(clientFd);
+                    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+                    return;
+                }
+            }
+            if (bytesRead < CHUNK_SIZE) {
+                break;
+            }
+        }
+
+        file.close();
+        requestStates.erase(clientFd);
+        close(clientFd);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+    }
+}
 
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
-    // Find the request state for this client
     map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
-    if (it == requestStates.end()) {
-        close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-        return;
-    }
-
     HttpRequest& req = it->second;
 
-    // Only handle GET requests
-    if (req.method == "POST") {
-        string res = "HTTP/1.1 200 POSTED\r\n";
-        res += "Content-Length: 0\r\n\r\n";
-        send(clientFd, res.c_str(), res.size(), 0);
-        close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-        requestStates.erase(clientFd);
-        return;
-    }
-    if (req.method != "GET") {
-        close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-        requestStates.erase(clientFd);
-        return;
-    }
-
-    // Map path to a file (e.g., remove leading '/' and use as filename)
+    servcnf& serverConfig = conf.servers[req.key];
+    routeCnf* routcnf = NULL;
     string filepath;
-    filepath = "www/index.html"; // Default file
 
-    // Open the file
-    ifstream file(filepath, ios::binary);
-    if (!file.is_open()) {
-        // File not found, send 404
-        string response = "HTTP/1.1 404 Not Found\r\nContent-Length: 14\r\n\r\nFile not found";
-        send(clientFd, response.c_str(), response.size(), 0);
-        close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-        requestStates.erase(clientFd);
+    routingHandling(clientFd, req, serverConfig, requestStates, routcnf, filepath);
+    if (requestStates.find(clientFd) == requestStates.end())
         return;
-    }
-
-    // Get file size
-    file.seekg(0, ios::end);
-    size_t fileSize = file.tellg();
-    file.seekg(0, ios::beg);
-
-    // Prepare HTTP response headers
-    string response = "HTTP/1.1 200 OK\r\nContent-Length: " + to_string(fileSize) + "\r\n\r\n";
-
-    // Send headers
-    send(clientFd, response.c_str(), response.size(), 0);
-
-    // Send file content
-    char buffer[1000000];
-    while (file.read(buffer, sizeof(buffer)) || file.gcount()) {
-        send(clientFd, buffer, file.gcount(), 0);
-    }
-
-    // Cleanup
-    file.close();
-    close(clientFd);
-    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-    requestStates.erase(clientFd);
+    deleteMethode(clientFd, epollFd, req, serverConfig, requestStates, filepath);
+    if (requestStates.find(clientFd) == requestStates.end())
+        return;
+    // postMethode(clientFd, epollFd, req, serverConfig, requestStates, filepath, routcnf);
+    // if (requestStates.find(clientFd) == requestStates.end())
+    //     return;
+    getMethode(clientFd, epollFd, req, serverConfig, requestStates, filepath, routcnf);
+    if (requestStates.find(clientFd) == requestStates.end())
+        return;
 }

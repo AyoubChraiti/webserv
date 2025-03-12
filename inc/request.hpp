@@ -32,6 +32,7 @@ enum ParseState {
 
 class HttpRequest {
 public:
+    string key;
     string buffer;
     ParseState state;
     ssize_t req_size;
@@ -55,5 +56,5 @@ public:
 
 int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
-void sendErrorResponse(int fd, int statusCode, const string& message);
+void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
 

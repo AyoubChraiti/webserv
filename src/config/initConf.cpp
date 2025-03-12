@@ -62,9 +62,7 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
 
     if (section == "server") {
         if (key == "host") {
-            cout << "befor = " << value << endl;
             server.host = getIp(value);
-            cout << "aftr = " << server.host << endl;
         }
         else if (key == "port")
             server.port = value;

@@ -80,6 +80,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
     string sockHost = CheckServer(fd);
     HttpRequest& req = it->second;
     req.conf = conf.servers[sockHost];
+    req.key = sockHost;
 
     try {
         if (conf.servers.find(sockHost) == conf.servers.end())
@@ -95,7 +96,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
         return 0; // still reading the body mr sir
     }
     catch (const HttpExcept& e) {
-        sendErrorResponse(fd, e.getStatusCode(), e.what());
+        sendErrorResponse(fd, e.getStatusCode(), e.what(), req.conf);
         requestmp.erase(fd);
         struct epoll_event ev;
         ev.data.fd = fd;
@@ -103,7 +104,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
         return -1;
     }
     catch (const exception& e) {
-        sendErrorResponse(fd, 500, "Internal Server Error: " + string(e.what()));
+        sendErrorResponse(fd, 500, "Internal Server Error: " + string(e.what()), req.conf);
         requestmp.erase(fd);
         struct epoll_event ev;
         ev.data.fd = fd;
