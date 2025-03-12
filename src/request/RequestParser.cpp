@@ -18,8 +18,27 @@ void HttpRequest::parseRequestLine (servcnf &reqConfig)
         throw RequestException("Not Implemented", 501);
     if (HttpVersion != "HTTP/1.1")
         throw RequestException("HTTP Version Not Supported", 505);
-    // if (uri[0] != '/')
-    //     throw RequestException("Bad Request", 400);
+    buffer.erase(0, index + 2);
+    if (reqConfig.routes.find(uri) == reqConfig.routes.end())
+        throw RequestException("uri not found 9adha" , 999);
+    exit(1);
     lineLocation = HEAD;
-    // uri complete it 
+}
+void HttpRequest::parseHeader(servcnf &reqConfig)
+{
+    size_t index;
+    index = 0;
+    while ((index = buffer.find("\r\n")) != string::npos)
+    {
+        if (index == 0)
+            break;
+        string headerline = buffer.substr(0, index);
+        size_t indexColon;
+        if ((indexColon = headerline.find(':')) == string::npos)
+            throw RequestException("Bad Request", 400);
+        headers.insert(make_pair(headerline.substr(0, indexColon), trim(headerline.substr(indexColon + 1))));
+        buffer.erase(0, index + 2);
+    }
+    for (auto it = headers.begin(); it != headers.end(); it++)
+        cout << it->first << ": " << it->second << endl;
 }

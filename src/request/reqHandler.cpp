@@ -4,7 +4,10 @@ const char *HttpRequest::RequestException::what() const throw ()
 {
     return errorString.c_str();
 }
-
+void printmap()
+{
+    
+}
 void HttpRequest::request(int clientFd, int epollFd, servcnf &reqConfig)
 {
     char buff[BUFFER_SIZE];
@@ -15,15 +18,16 @@ void HttpRequest::request(int clientFd, int epollFd, servcnf &reqConfig)
         buffer.append(buff, recvBytes);
         if (lineLocation == REQUEST_LINE)
             parseRequestLine(reqConfig);
-        else if (lineLocation == HEAD)
+        if (lineLocation == HEAD)
+            parseHeader(reqConfig);
+        if (buffer.find("\r\n\r\n") != string::npos)
         {
-            
-        }
-        if (buffer.find("\r\n\r\n") == string::npos)
+            cout << "End of Request !" << endl;
             return ;
+        }
     }
-    else
-        exit(1);
+    exit(1);
+    cout << recvBytes << endl;
     struct epoll_event structEvent;
     structEvent.events = EPOLLOUT;
     structEvent.data.fd = clientFd;

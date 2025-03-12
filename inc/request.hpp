@@ -17,13 +17,14 @@ class HttpRequest
     string buffer;
     int lineLocation;
     string method, uri, HttpVersion;
-    map<string, string> headers;
+    map <string, string> headers;
 
     public:
     
     HttpRequest() : lineLocation(REQUEST_LINE) {};
     void request(int clientFd, int epollFd, servcnf &reqConfig);
     void parseRequestLine (servcnf &reqConfig);
+    void parseHeader(servcnf &reqConfig);
     // Exception
     class RequestException : public exception
     {
