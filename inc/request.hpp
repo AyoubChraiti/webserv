@@ -51,7 +51,7 @@ public:
     int Parser(const char* data, size_t length);
     void firstLineParser(const string& line);
     void HeadersParsing(const string& line);
-    void bodyPart(const char* data, size_t length);
+    void bodyPart(const char* data, size_t length, servcnf& conf);
 };
 
 int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);

@@ -92,6 +92,8 @@ string getContentType(const string& filepath) {
 
 void routingHandling(int clientFd, HttpRequest& req, servcnf& serverConfig, map<int, HttpRequest>& requestStates,
                      routeCnf*& routcnf, string& filepath) {
+
+    // TODO = FILEPATH CHOP THE FIRT LINE ALWAYS..
     routcnf = NULL;
     string matchedPath;
     map<string, routeCnf>::iterator routeIt;
@@ -134,8 +136,10 @@ void routingHandling(int clientFd, HttpRequest& req, servcnf& serverConfig, map<
 void deleteMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverConfig,
                    map<int, HttpRequest>& requestStates, const string& filepath) {
     if (req.method == "DELETE") {
-        if (!fileExists(filepath))
+        if (!fileExists(filepath)) {
+            cout << "the file = " << filepath << endl;
             sendErrorResponse(clientFd, 404, "File not found", serverConfig);
+        }
         else if (unlink(filepath.c_str()) == 0) {
             string response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
             send(clientFd, response.c_str(), response.length(), 0);
@@ -180,6 +184,7 @@ void deleteMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverC
 
 void getMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverConfig,
                 map<int, HttpRequest>& requestStates, string& filepath, routeCnf* routcnf) {
+    cout << "file path for get = " << filepath << endl;
     if (req.method == "GET") {
         if (isDirectory(filepath)) {
             if (routcnf->autoindex)

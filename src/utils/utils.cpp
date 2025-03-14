@@ -13,14 +13,30 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
     string filePath;
 
     switch (statusCode) {
-        case 400: statusText = "Bad Request"; break;
-        case 404: statusText = "Not Found"; break;
-        case 405: statusText = "Method Not Allowed"; break;
-        case 411: statusText = "Length Required"; break;
-        case 500: statusText = "Internal Server Error"; break;
-        case 501: statusText = "Not Implemented"; break;
-        case 505: statusText = "HTTP Version Not Supported"; break;
-        default:  statusText = "Error"; break;
+        case 400:
+            statusText = "Bad Request";
+            break;
+        case 404:
+            statusText = "Not Found";
+            break;
+        case 405:
+            statusText = "Method Not Allowed";
+            break;
+        case 411:
+            statusText = "Length Required";
+            break;
+        case 500:
+            statusText = "Internal Server Error";
+            break;
+        case 501:
+            statusText = "Not Implemented";
+            break;
+        case 505:
+            statusText = "HTTP Version Not Supported";
+            break;
+        default:
+            statusText = "Error";
+            break;
     }
 
     if (serverConfig.error_pages.find(statusCode) != serverConfig.error_pages.end()) {

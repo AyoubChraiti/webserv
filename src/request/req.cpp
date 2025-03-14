@@ -58,13 +58,11 @@ void HttpRequest::HeadersParsing(const string& line) {
     }
 }
 
-void HttpRequest::bodyPart(const char* data, size_t length) {
+void HttpRequest::bodyPart(const char* data, size_t length, servcnf& conf) {
     size_t remaining = contentLength - bytesRead;
     size_t toWrite = min(remaining, length);
     body.insert(body.end(), data, data + toWrite);
     bytesRead += toWrite;
-
-    cout << "the content lenght = " << contentLength << endl;
 
     if (bytesRead >= contentLength) {
         state = COMPLETE;
@@ -86,7 +84,7 @@ int HttpRequest::Parser(const char* data, size_t length) {
             HeadersParsing(string(data, length));
             break;
         case READING_BODY:
-            bodyPart(data, length);
+            bodyPart(data, length, conf);
             break;
         default:
             return 1;
@@ -116,7 +114,7 @@ bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
                 return true;
         }
         else if (state == READING_BODY) {
-            bodyPart(buffer.data(), buffer.size());
+            bodyPart(buffer.data(), buffer.size(), conf);
             buffer.clear();
             if (state == COMPLETE)
                 return true;
