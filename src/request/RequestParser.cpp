@@ -1,14 +1,15 @@
 #include "../../inc/request.hpp"
+#define MAX_URI_LENGTH 2000
 
 void HttpRequest::parseRequestLine (servcnf &reqConfig)
 {
     size_t index = buffer.find("\r\n");
     if (index == string::npos)
         return ;
-    string requsetLine = buffer.substr(0, index);
-    if (requsetLine.size() > 2000)
-        throw RequestException ("URI Too Long" ,414 );
-    stringstream ss (requsetLine);
+    string requestLine = buffer.substr(0, index);
+    if (requestLine.size() > MAX_URI_LENGTH)
+        throw RequestException ("URI Too Long" ,414);
+    stringstream ss (requestLine);
     ss >> method >> uri >> HttpVersion;
     if (!ss.eof())
         throw RequestException("Bad Request", 400);
@@ -21,7 +22,10 @@ void HttpRequest::parseRequestLine (servcnf &reqConfig)
     buffer.erase(0, index + 2);
     if (reqConfig.routes.find(uri) == reqConfig.routes.end())
         throw RequestException("uri not found 9adha" , 999);
-    exit(1);
+    vector<string>::iterator beginIt = reqConfig.routes[uri].methodes.begin();
+    vector<string>::iterator endIt = reqConfig.routes[uri].methodes.end();
+    if (find(beginIt, endIt, method) == endIt)
+        throw RequestException("Method Not Allowed", 405);
     lineLocation = HEAD;
 }
 void HttpRequest::parseHeader(servcnf &reqConfig)
@@ -36,9 +40,15 @@ void HttpRequest::parseHeader(servcnf &reqConfig)
         size_t indexColon;
         if ((indexColon = headerline.find(':')) == string::npos)
             throw RequestException("Bad Request", 400);
-        headers.insert(make_pair(headerline.substr(0, indexColon), trim(headerline.substr(indexColon + 1))));
+        string key = trim(headerline.substr(0, indexColon));
+        string value = trim(headerline.substr(indexColon + 1));
+        headers.insert(std::make_pair(key, value));
         buffer.erase(0, index + 2);
     }
+    if (headers.find("Host") == headers.end())
+        throw RequestException("400 Bad Request", 400);
     for (auto it = headers.begin(); it != headers.end(); it++)
         cout << it->first << ": " << it->second << endl;
+    if (buffer.find("\r\n\r\n") != string::npos)
+        lineLocation = END_REQUEST;
 }

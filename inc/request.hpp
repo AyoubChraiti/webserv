@@ -9,7 +9,8 @@
 enum {
     REQUEST_LINE,
     HEAD,
-    BODY
+    BODY,
+    END_REQUEST
 };
 class HttpRequest
 {
@@ -18,7 +19,7 @@ class HttpRequest
     int lineLocation;
     string method, uri, HttpVersion;
     map <string, string> headers;
-
+    
     public:
     
     HttpRequest() : lineLocation(REQUEST_LINE) {};
@@ -29,10 +30,12 @@ class HttpRequest
     class RequestException : public exception
     {
         private:
-            string errorString;
+            string errorResponse;
+            string errorStr;
             int statusCode;
         public:
-            RequestException (string msg, int  status) : errorString(msg), statusCode(status) {}; 
+            RequestException (string msg, int  status) ;
+            void createErrorResponse();
             const char *what() const throw();
     };
 };

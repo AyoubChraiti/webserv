@@ -2,11 +2,34 @@
 
 const char *HttpRequest::RequestException::what() const throw ()
 {
-    return errorString.c_str();
+    return errorResponse.c_str();
 }
-void printmap()
+void HttpRequest::RequestException::createErrorResponse()
 {
-    
+    errorResponse = "HTTP1.1 " + to_string (statusCode) + " " + errorStr + "\r\n";
+    errorResponse += "Content-Type: text/plain\r\n";
+    errorResponse += "Connection: close\r\n";
+    errorResponse += "\r\n";
+    errorResponse += errorStr;
+}
+HttpRequest::RequestException::RequestException (string msg , int status) : errorStr(msg) , statusCode(status)
+{
+    createErrorResponse();
+    switch (statusCode)
+    {
+        case 400:
+            errorStr =  "Bad Request"; break;
+        case 414:
+            errorStr = "URI TOO Long"; break;
+        case 501:
+            errorStr = "Not Implemented"; break;
+        case 505:
+            errorStr = "HTTP Version Not Supported"; break;
+        case 405:
+            errorStr = "Method Not Allowed"; break;
+        default:
+            errorStr  = "Undefined Error" ; break;
+    }
 }
 void HttpRequest::request(int clientFd, int epollFd, servcnf &reqConfig)
 {
@@ -16,27 +39,17 @@ void HttpRequest::request(int clientFd, int epollFd, servcnf &reqConfig)
     {
         buff[BUFFER_SIZE - 1] = '\0';
         buffer.append(buff, recvBytes);
-        if (lineLocation == REQUEST_LINE)
-            parseRequestLine(reqConfig);
-        if (lineLocation == HEAD)
-            parseHeader(reqConfig);
-        if (buffer.find("\r\n\r\n") != string::npos)
+        switch (lineLocation)
         {
-            cout << "End of Request !" << endl;
-            return ;
+            case REQUEST_LINE:
+                parseRequestLine(reqConfig);
+            case HEAD : 
+                parseHeader(reqConfig);
+            case END_REQUEST:
+                cout << "END OF REQUEST"  << endl; break;
         }
     }
-    exit(1);
-    cout << recvBytes << endl;
-    struct epoll_event structEvent;
-    structEvent.events = EPOLLOUT;
-    structEvent.data.fd = clientFd;
-    epoll_ctl (epollFd, EPOLL_CTL_MOD, clientFd, &structEvent);
-    send(clientFd, RESPONSE, strlen(RESPONSE), 0);
 }
-
-
-
 string SetupClient(int clientFd, map<int, HttpRequest> &reqStates)
 {
     map<int, HttpRequest>::iterator it = reqStates.find(clientFd);
@@ -52,14 +65,13 @@ string SetupClient(int clientFd, map<int, HttpRequest> &reqStates)
     string host = static_cast <string> (ipStore) + ":" + to_string(port);
     return host;
 }
-// void SendErrorRespone()
-// {
-//     // struct epoll_event structEvent;
-//     // structEvent.events = EPOLLOUT;
-//     // structEvent.data.fd = clientFd;
-//     // epoll_ctl (epollFd, EPOLL_CTL_MOD, clientFd, &structEvent);
-// }
-
+string sendErrorResponse(const char *e, int clientFd)
+{
+    string str = e;
+    size_t  pos = str.find_last_of("\r\n");
+    send(clientFd , str.substr(0, pos + 1).c_str(),  pos, 0);
+    return str.substr(pos);
+}
 void handleClientRequest(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates)
 {
     string host = SetupClient(clientFd, reqStates);
@@ -67,10 +79,11 @@ void handleClientRequest(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
     try 
     {
         reqStates[clientFd].request(clientFd, epollFd, reqConfig);
+        close(clientFd);
     }
     catch(const std::exception& e)
-     {
-        std::cerr << e.what() << '\n';
-        // SendErrorRespone();
+    {
+        cerr << sendErrorResponse(e.what(), clientFd) << endl;
     }
+    close(clientFd);
 }
