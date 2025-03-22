@@ -91,53 +91,39 @@ string getContentType(const string& filepath) {
 }
 
 void routingHandling(int clientFd, HttpRequest& req, servcnf& serverConfig, map<int, HttpRequest>& requestStates,
-                     routeCnf*& routcnf, string& filepath) {
-
-    // TODO = FILEPATH CHOP THE FIRT LINE ALWAYS..
-    routcnf = NULL;
+    routeCnf*& routcnf, string& filepath) {
+    routcnf = nullptr;
     string matchedPath;
-    map<string, routeCnf>::iterator routeIt;
-    for (routeIt = serverConfig.routes.begin(); routeIt != serverConfig.routes.end(); ++routeIt) {
-        const string& path = routeIt->first;
-        routeCnf& route = routeIt->second;
-        if (req.path.find(path) == 0 && path.length() > matchedPath.length()) {
-            routcnf = &route;
-            matchedPath = path;
+    for (auto& route : serverConfig.routes) {
+        if (req.path.find(route.first) == 0 && route.first.length() > matchedPath.length()) {
+            routcnf = &route.second;
+            matchedPath = route.first;
         }
     }
-
     if (!routcnf && serverConfig.routes.count("/")) {
         routcnf = &serverConfig.routes["/"];
         matchedPath = "/";
     }
-
     if (!routcnf) {
         sendErrorResponse(clientFd, 404, "No route configured", serverConfig);
         requestStates.erase(clientFd);
         return;
     }
-
     if (!routcnf->methodes.empty() &&
         find(routcnf->methodes.begin(), routcnf->methodes.end(), req.method) == routcnf->methodes.end()) {
-        sendErrorResponse(clientFd, 405, "Method " + req.method + " not allowed", serverConfig);
+        sendErrorResponse(clientFd, 405, "Method Not Allowed", serverConfig);
         requestStates.erase(clientFd);
         return;
     }
-
     filepath = routcnf->root;
     string uriRemainder = req.path.empty() ? "" : req.path.substr(matchedPath.length());
-    if (uriRemainder.empty() || uriRemainder == "/")
-        filepath += "/" + routcnf->index;
-    else {
-        filepath += "/" + uriRemainder.substr(1);
-    }
+    filepath += uriRemainder.empty() || uriRemainder == "/" ? "/" + routcnf->index : "/" + uriRemainder.substr(1);
 }
 
-void deleteMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverConfig,
-                   map<int, HttpRequest>& requestStates, const string& filepath) {
+void deleteMethode(int clientFd, HttpRequest& req, servcnf& serverConfig,
+    map<int, HttpRequest>& requestStates, const string& filepath) {
     if (req.method == "DELETE") {
         if (!fileExists(filepath)) {
-            cout << "the file = " << filepath << endl;
             sendErrorResponse(clientFd, 404, "File not found", serverConfig);
         }
         else if (unlink(filepath.c_str()) == 0) {
@@ -149,139 +135,94 @@ void deleteMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverC
         }
         requestStates.erase(clientFd);
         close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
     }
 }
 
-// void postMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverConfig,
-//                  map<int, HttpRequest>& requestStates, const string& filepath, routeCnf* routcnf) {
-//     if (req.method == "POST") {
-//         if (routcnf->fileUpload) {
-//             if (req.body.empty()) {
-//                 sendErrorResponse(clientFd, 400, "No upload data provided", serverConfig);
-//             } else {
-//                 string uploadPath = routcnf->uploadStore + "/" + filepath.substr(routcnf->root.length() + 1);
-//                 ofstream outFile(uploadPath.c_str(), ios::binary);
-//                 if (!outFile.is_open()) {
-//                     sendErrorResponse(clientFd, 500, "Failed to save upload", serverConfig);
-//                 }
-//                 else {
-//                     outFile.write(req.body.c_str(), req.body.length());
-//                     outFile.close();
-//                     string response = "HTTP/1.1 201 Created\r\nContent-Length: 0\r\n\r\n";
-//                     send(clientFd, response.c_str(), response.length(), 0);
-//                 }
-//             }
-//         }
-//         else {
-//             sendErrorResponse(clientFd, 403, "Uploads not allowed for this route", serverConfig);
-//         }
-//         requestStates.erase(clientFd);
-//         close(clientFd);
-//         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-//     }
-// }
-
-void getMethode(int clientFd, int epollFd, HttpRequest& req, servcnf& serverConfig,
-                map<int, HttpRequest>& requestStates, string& filepath, routeCnf* routcnf) {
-    cout << "file path for get = " << filepath << endl;
-    if (req.method == "GET") {
-        if (isDirectory(filepath)) {
-            if (routcnf->autoindex)
-                sendErrorResponse(clientFd, 501, "Directory listing not implemented", serverConfig);
-            else {
-                filepath += "/" + routcnf->index;
-                if (!fileExists(filepath)) {
-                    sendErrorResponse(clientFd, 404, "Index file not found", serverConfig);
-                    requestStates.erase(clientFd);
-                    close(clientFd);
-                    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-                    return;
-                }
-            }
+void getMethode(int clientFd, HttpRequest& req, servcnf& serverConfig,
+    map<int, HttpRequest>& requestStates, string& filepath, routeCnf* routcnf) {
+    if (!routcnf) {
+        sendErrorResponse(clientFd, 500, "Internal Server Error", serverConfig);
+        requestStates.erase(clientFd);
+        close(clientFd);
+        return;
+    }
+    if (isDirectory(filepath)) {
+        if (routcnf->autoindex) {
+            sendErrorResponse(clientFd, 501, "Directory listing not implemented", serverConfig);
         }
-        else if (!fileExists(filepath)) {
-            sendErrorResponse(clientFd, 404, "File not found", serverConfig);
+        else {
+            filepath += "/" + routcnf->index;
+            if (!fileExists(filepath)) {
+            sendErrorResponse(clientFd, 404, "Index file not found", serverConfig);
             requestStates.erase(clientFd);
             close(clientFd);
-            epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
             return;
-        }
-
-        ifstream file(filepath.c_str(), ios::binary);
-        if (!file.is_open()) {
-            sendErrorResponse(clientFd, 500, "Failed to open file", serverConfig);
-            requestStates.erase(clientFd);
-            close(clientFd);
-            epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-            return;
-        }
-
-        file.seekg(0, ios::end);
-        size_t fileSize = file.tellg();
-        file.seekg(0, ios::beg);
-
-        string contentType = getContentType(filepath);
-        ostringstream oss;
-        oss << fileSize;
-        string response = "HTTP/1.1 200 OK\r\n"
-                              "Content-Length: " + oss.str() + "\r\n"
-                              "Content-Type: " + contentType + "\r\n"
-                              "Connection: close\r\n"
-                              "\r\n";
-        if (send(clientFd, response.c_str(), response.length(), 0) < 0) {
-            file.close();
-            requestStates.erase(clientFd);
-            close(clientFd);
-            epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-            return;
-        }
-
-        const size_t CHUNK_SIZE = 8192;
-        char buffer[CHUNK_SIZE];
-        while (file.good()) {
-            file.read(buffer, CHUNK_SIZE);
-            size_t bytesRead = file.gcount();
-            if (bytesRead > 0) {
-                ssize_t sent = send(clientFd, buffer, bytesRead, 0);
-                if (sent < 0) {
-                    file.close();
-                    requestStates.erase(clientFd);
-                    close(clientFd);
-                    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-                    return;
-                }
-            }
-            if (bytesRead < CHUNK_SIZE) {
-                break;
             }
         }
-
+    }
+    else if (!fileExists(filepath)) {
+        sendErrorResponse(clientFd, 404, "File not found", serverConfig);
+        requestStates.erase(clientFd);
+        close(clientFd);
+        return;
+    }
+    ifstream file(filepath.c_str(), ios::binary);
+    if (!file.is_open()) {
+        sendErrorResponse(clientFd, 500, "Failed to open file", serverConfig);
+        requestStates.erase(clientFd);
+        close(clientFd);
+        return;
+    }
+    file.seekg(0, ios::end);
+    size_t fileSize = file.tellg();
+    file.seekg(0, ios::beg);
+    string contentType = getContentType(filepath);
+    ostringstream oss;
+    oss << fileSize;
+    string response = "HTTP/1.1 200 OK\r\n"
+        "Content-Length: " + oss.str() + "\r\n"
+        "Content-Type: " + contentType + "\r\n"
+        "Connection: close\r\n\r\n";
+    if (send(clientFd, response.c_str(), response.length(), 0) < 0) {
         file.close();
         requestStates.erase(clientFd);
         close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+        return;
     }
+    const size_t CHUNK_SIZE = 8192;
+    char buffer[CHUNK_SIZE];
+    while (file.read(buffer, CHUNK_SIZE) || file.gcount() > 0) {
+        if (send(clientFd, buffer, file.gcount(), 0) < 0) {
+            file.close();
+            requestStates.erase(clientFd);
+            close(clientFd);
+            return;
+        }
+    }
+    file.close();
+    requestStates.erase(clientFd);
+    close(clientFd);
 }
 
-void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
-    map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
+void handle_client_write(int clientFd, map<int, HttpRequest>& requestStates) {
+    auto it = requestStates.find(clientFd);
+    if (it == requestStates.end()) {
+        cerr << "Client request not found" << endl;
+        return;
+    }
     HttpRequest& req = it->second;
-
-    servcnf& serverConfig = conf.servers[req.key];
-    routeCnf* routcnf = NULL;
+    servcnf& serverConfig = req.conf;
+    routeCnf* routcnf = nullptr;
     string filepath;
-
     routingHandling(clientFd, req, serverConfig, requestStates, routcnf, filepath);
-    if (requestStates.find(clientFd) == requestStates.end())
+    if (requestStates.find(clientFd) == requestStates.end()) {
+        cout << "the problem maybe?" << endl;
         return;
-    deleteMethode(clientFd, epollFd, req, serverConfig, requestStates, filepath);
-    if (requestStates.find(clientFd) == requestStates.end())
+    }
+    deleteMethode(clientFd, req, serverConfig, requestStates, filepath);
+    if (requestStates.find(clientFd) == requestStates.end()) {
+        cout << "the problem maybe?" << endl;
         return;
-    // postMethode(clientFd, epollFd, req, serverConfig, requestStates, filepath, routcnf);
-    // if (requestStates.find(clientFd) == requestStates.end())
-    //     return;
-    getMethode(clientFd, epollFd, req, serverConfig, requestStates, filepath, routcnf);
-    if (requestStates.find(clientFd) == requestStates.end())
-        return;
+    }
+    getMethode(clientFd, req, serverConfig, requestStates, filepath, routcnf);
 }

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "string.hpp"
 #include "config.hpp"
 
 #define BUFFER_SIZE 8192
@@ -54,7 +53,7 @@ public:
     void bodyPart(const char* data, size_t length, servcnf& conf);
 };
 
-int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
+int request(int fd, mpserv &conf, map<int, HttpRequest>& requestStates);
+void handle_client_read(int clientFd, mpserv& conf, map<int, HttpRequest>& requestStates);
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
 

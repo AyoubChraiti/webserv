@@ -11,7 +11,7 @@ SRC =  src/main.cpp \
 	
 OBJ = $(SRC:.cpp=.o)
 
-CPPFLAGS = #-Wall -Wextra -Werror -std=c++98
+CPPFLAGS = -std=c++11
 
 %.o: %.cpp
 	$(CPP) $(CPPFLAGS) -c -o $@ $<

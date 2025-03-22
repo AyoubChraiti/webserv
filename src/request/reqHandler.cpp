@@ -1,5 +1,8 @@
 #include "../../inc/request.hpp"
 
+fd_set master_fds; // Set to monitor file descriptors
+fd_set write_fds;
+
 void parseChecking(const servcnf& server, const HttpRequest& req) {
     if (req.method != "POST") {
         if (req.path.empty() || req.path[0] != '/')
@@ -75,7 +78,7 @@ string CheckServer(int fd) {
     return result;
 }
 
-int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp) {
+int request(int fd, mpserv& conf, map<int, HttpRequest>& requestmp) {
     map<int, HttpRequest>::iterator it = getReqFrmMap(fd, requestmp);
     string sockHost = CheckServer(fd);
     HttpRequest& req = it->second;
@@ -88,40 +91,35 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
 
         if (req.parseRequestLineByLine(fd, req.conf)) {
             req.initFromHeader();
-
             parseChecking(req.conf, req);
-
             return 1; // Request fully parsed
         }
-        return 0; // still reading the body mr sir
+        return 0; // Still reading the body
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what(), req.conf);
         requestmp.erase(fd);
-        struct epoll_event ev;
-        ev.data.fd = fd;
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
+        FD_CLR(fd, &master_fds);
+        close(fd);
         return -1;
     }
     catch (const exception& e) {
         sendErrorResponse(fd, 500, "Internal Server Error: " + string(e.what()), req.conf);
         requestmp.erase(fd);
-        struct epoll_event ev;
-        ev.data.fd = fd;
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
+        FD_CLR(fd, &master_fds);
+        close(fd);
         return -1;
     }
 }
 
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
-    int stat = request(clientFd, conf, epollFd, requestmp);
-    if (stat == 1) { // means we done from the req.
-        struct epoll_event ev;
-        ev.events = EPOLLOUT;
-        ev.data.fd = clientFd;
-        if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
-            sysCallFail();
-        }
+void handle_client_read(int clientFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
+    FD_ZERO(&master_fds);
+    FD_ZERO(&write_fds);
+
+    // Add clientFd to the master set (for reading)
+    FD_SET(clientFd, &master_fds);
+    int stat = request(clientFd, conf, requestmp);
+    if (stat == 1) { // Request fully parsed
+        FD_SET(clientFd, &write_fds);
     }
-    // cout << "the uri in the request: " << requestmp[clientFd].path << endl;
 }

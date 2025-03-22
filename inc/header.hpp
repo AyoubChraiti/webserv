@@ -15,8 +15,8 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <cstdlib>
-#include <sys/epoll.h>
-#include <algorithm>
+#include <sys/select.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
 
