@@ -67,11 +67,8 @@ string CheckServer(int fd) {
     
     char ip_str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN);
-    
     int port = ntohs(addr.sin_port);
-    
     string result = string(ip_str) + ":" + to_string(port);
-    
     return result;
 }
 
@@ -83,9 +80,6 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
     req.key = sockHost;
 
     try {
-        if (conf.servers.find(sockHost) == conf.servers.end())
-            throw HttpExcept(400, "No server configured for host: " + req.host);
-
         if (req.parseRequestLineByLine(fd, req.conf)) {
             req.initFromHeader();
 

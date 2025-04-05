@@ -47,22 +47,17 @@ bool isValidMethod(const string &method) {
 
 mpserv configChecking(const string &filePath) {
     configFile parser(filePath);
-    parser.parseConfig();
-    mpserv config = parser.getConfigData();
+    mpserv config = parser.parseConfig();
 
-    if (config.servers.empty()) {
-        cout << "the frst server ip = " << config.servers["127.0.0.1:8080"].host << endl;
+    if (config.servers.empty())
         throw runtime_error("Error: No servers found in the configuration.");
-    }
 
     map<string, servcnf>::iterator it;
     for (it = config.servers.begin(); it != config.servers.end(); ++it) {
         const servcnf &server = it->second;
 
-        if (!isValidHost(server.host)) {
-            cout << "the ip in question = " << server.host << endl; 
+        if (!isValidHost(server.host))
             throw runtime_error("Error: a Server has an invalid host");
-        }
 
         if (!isValidPort(server.port))
             throw runtime_error("Error: a Server has an invalid port");
@@ -72,6 +67,8 @@ mpserv configChecking(const string &filePath) {
 
         map<int, string>::const_iterator err_it;
         for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it) {
+            if (err_it->first < 100 && err_it->first > 599)
+                throw runtime_error("Error: invalid error code");
             if (!isValidFile(err_it->second))
                 throw runtime_error("Error: Error page file does not exist: " + err_it->second);
         }
@@ -98,9 +95,6 @@ mpserv configChecking(const string &filePath) {
 
             if (!route.uploadStore.empty() && !isValidDirectory(route.uploadStore))
                 throw runtime_error("Error: Upload directory '" + route.uploadStore + "' does not exist.");
-
-            if (route.autoindex != true && route.autoindex != false)
-                throw runtime_error("Error: Route '" + route_it->first + "' has an invalid autoindex value.");
         }
     }
     return config;

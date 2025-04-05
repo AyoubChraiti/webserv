@@ -34,19 +34,23 @@ vector<string> configFile::split(const string &str, char delimiter) {
     return tokens;
 }
 
-string configFile::removeComment(const string &str) {
-    size_t pos = str.find('#');
-    return (pos != string::npos) ? trim(str.substr(0, pos)) : trim(str);
+string remove_comment(string line) {
+    size_t pos = line.find('#');
+    if (pos != string::npos) {
+        return string(line.substr(0, pos));
+    }
+    return line;
 }
 
 void configFile::parseLine(string &line, servcnf &server, routeCnf &route, string &section) {
+    line = remove_comment(line);
     line = trim(line);
 
-    if (line.empty() || line[0] == '#')
+    if (line.empty())
         return;
 
     if (line[0] == '[' && line.back() == ']') {
-        section = removeComment(line.substr(1, line.size() - 2));
+        section = line.substr(1, line.size() - 2);
         return;
     }
 
@@ -54,16 +58,15 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
     if (pos == string::npos)
         throw runtime_error("Error: syntax issue in the config file.");
     
-    string key = removeComment(line.substr(0, pos));
-    string value = removeComment(line.substr(pos + 1));
+    string key = trim(line.substr(0, pos));
+    string value = trim(line.substr(pos + 1));
 
     if (key.empty() || value.empty())
         throw runtime_error("Error: syntax issue in the config file.");
 
     if (section == "server") {
-        if (key == "host") {
+        if (key == "host")
             server.host = getIp(value);
-        }
         else if (key == "port")
             server.port = value;
         else if (key == "server_names")
@@ -105,7 +108,7 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
     }
 }
 
-bool configFile::parseConfig() {
+const mpserv& configFile::parseConfig() {
     cnf.open(fileName);
     if (!cnf.is_open())
         throw runtime_error("Error opening the congif file.");
@@ -115,7 +118,7 @@ bool configFile::parseConfig() {
     routeCnf route; // Holds the current route
     bool inserver = false;
 
-    while (getline(cnf, line)) { // issue here, somthing aint it...
+    while (getline(cnf, line)) {
         parseLine(line, server, route, section);
 
         if (line == "[server]") {
@@ -132,9 +135,6 @@ bool configFile::parseConfig() {
         configData.servers[key] = server;
     }
     cnf.close();
-    return true;
-}
-
-const mpserv& configFile::getConfigData() const {
     return configData;
 }
+

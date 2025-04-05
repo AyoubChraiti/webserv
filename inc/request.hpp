@@ -37,7 +37,7 @@ public:
     ParseState state;
     ssize_t req_size;
     string method, path, host, connection, version;
-    vector<char> body; // Used to store binary data safely
+    vector<char> body;
     map<string, string> headers;
     size_t contentLength;
     int bytesRead;

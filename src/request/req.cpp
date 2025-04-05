@@ -33,9 +33,9 @@ void HttpRequest::HeadersParsing(const string& line) {
             if (it == headers.end()) {
                 throw HttpExcept(411, "Content-Length required for POST");
             }
-              contentLength = stoul(it->second);
-              if (contentLength == 0) {
-                  throw HttpExcept(400, "Invalid Content-Length");
+            contentLength = stoul(it->second);
+            if (contentLength == 0) {
+                throw HttpExcept(400, "Invalid Content-Length");
             }
             state = READING_BODY;
         }
@@ -101,11 +101,10 @@ bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
     buffer.append(temp, bytes);
     while (!buffer.empty()) {
         if (state == READING_REQUEST_LINE || state == READING_HEADERS) {
-
             size_t newlinePos = buffer.find("\n");
-            if (newlinePos == string::npos || newlinePos > MAX_LINE)
-                break;
-
+            if (newlinePos == string::npos || newlinePos > MAX_LINE) {
+                throw HttpExcept(400, "Invalid line in the request");
+            }
             string line = buffer.substr(0, newlinePos);
             buffer.erase(0, newlinePos + 1);
             line.erase(remove(line.begin(), line.end(), '\r'), line.end());

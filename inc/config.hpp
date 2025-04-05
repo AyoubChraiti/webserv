@@ -40,13 +40,11 @@ private:
     size_t parseSize(const string &s);
     string getKey(const servcnf& server);
     vector<string> split(const string &str, char delimiter);
-    string removeComment(const string &str);
     void parseLine(string &line, servcnf &server, routeCnf &route, string &section);
 
 public:
     configFile(const string &file);
-    bool parseConfig();
-    const mpserv &getConfigData() const;
+    const mpserv& parseConfig();
 };
 
 mpserv configChecking(const string &filePath);
