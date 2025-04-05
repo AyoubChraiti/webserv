@@ -58,3 +58,10 @@ int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestSta
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
 
+/* requestParser file */
+void checkBody(const servcnf& server, const HttpRequest& req);
+void checkAllowed(const routeCnf* route, const string& method, const string& path);
+const routeCnf* getRoute(const servcnf& server, const string& path, string& matched);
+void checkHeaders(const HttpRequest& req);
+void checkURI(const string& path);
+void checkMethod(const string& method);

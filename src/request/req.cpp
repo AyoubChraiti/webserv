@@ -66,12 +66,6 @@ void HttpRequest::bodyPart(const char* data, size_t length, servcnf& conf) {
 
     if (bytesRead >= contentLength) {
         state = COMPLETE;
-        ofstream outFile("upload/uploaded_file.bin", ios::binary);
-
-        if (!outFile)
-            throw HttpExcept(500, "Failed to open file for writing");
-
-        outFile.write(body.data(), body.size());
     }
 }
 

@@ -1,38 +1,15 @@
 #include "../../inc/request.hpp"
 
 void parseChecking(const servcnf& server, const HttpRequest& req) {
-    if (req.method != "POST") {
-        if (req.path.empty() || req.path[0] != '/')
-            throw HttpExcept(400, "Invalid path: " + req.path);
+    checkMethod(req.method);
+    checkURI(req.path);
+    checkHeaders(req);
 
-        string matchedRoute;
-        const routeCnf* mtRoute = NULL;
+    string routeName;
+    const routeCnf* route = getRoute(server, req.path, routeName);
 
-        for (map<string, routeCnf>::const_iterator it = server.routes.begin(); it != server.routes.end(); ++it) {
-            const string& route = it->first;
-            const routeCnf& config = it->second;
-            if (req.path.find(route) == 0 && route.length() > matchedRoute.length()) {
-                matchedRoute = route;
-                mtRoute = &config;
-            }
-        }
-
-        if (mtRoute == NULL)
-            throw HttpExcept(404, "No route found for path: " + req.path);
-
-        if (find(mtRoute->methodes.begin(), mtRoute->methodes.end(), req.method)
-            == mtRoute->methodes.end()) {
-            throw HttpExcept(405, "Method not allowed: " + req.method + " for route " + matchedRoute);
-        }
-
-        if (req.method == "POST" && !server.maxBodySize.empty()) {
-            size_t maxSize = strtoul(server.maxBodySize.c_str(), NULL, 10);
-            if (req.body.size() > maxSize) {
-                throw HttpExcept(413, "Request body too large: " + to_string(req.body.size()) +
-                                    " exceeds max size " + server.maxBodySize);
-            }
-        }
-    }
+    checkAllowed(route, req.method, routeName);
+    checkBody(server, req);
 }
 
 string HttpRequest::get(const string& key, const string& defaultValue) const {
@@ -82,12 +59,10 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
     try {
         if (req.parseRequestLineByLine(fd, req.conf)) {
             req.initFromHeader();
-
             parseChecking(req.conf, req);
-
-            return 1; // Request fully parsed
+            return 1;
         }
-        return 0; // still reading the body mr sir
+        return 0; // still readin
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what(), req.conf);
@@ -109,7 +84,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
     int stat = request(clientFd, conf, epollFd, requestmp);
-    if (stat == 1) { // means we done from the req.
+    if (stat == 1) { // chunked over
         struct epoll_event ev;
         ev.events = EPOLLOUT;
         ev.data.fd = clientFd;
@@ -117,5 +92,4 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
             sysCallFail();
         }
     }
-    // cout << "the uri in the request: " << requestmp[clientFd].path << endl;
 }
