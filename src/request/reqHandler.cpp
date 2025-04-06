@@ -70,6 +70,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
         struct epoll_event ev;
         ev.data.fd = fd;
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
+        close(fd);
         return -1;
     }
     catch (const exception& e) {
@@ -78,6 +79,7 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
         struct epoll_event ev;
         ev.data.fd = fd;
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
+        close(fd);
         return -1;
     }
 }

@@ -90,6 +90,59 @@ string getContentType(const string& filepath) {
     return "application/octet-stream";
 }
 
+void sendRedirect(int clientFd, const string& location, HttpRequest& req) {
+    stringstream response;
+    cout << "im rederectingg to " << location << endl;
+
+    response << "HTTP/1.1 301 Moved Permanently\r\n";
+    response << "Location: " << location << "\r\n";
+    response << "Content-Type: text/html\r\n";
+    response << "Content-Length: 0\r\n";
+    response << "Connection: " << req.connection << "\r\n";
+    response << "\r\n";
+
+    string responseStr = response.str();
+    send(clientFd, responseStr.c_str(), responseStr.size(), 0);
+}
+
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
     HttpRequest req = requestmp[clientFd];
+
+    cout << "the redd= " << req.mtroute.redirect << endl; // this is always empty....
+
+    if (!req.mtroute.redirect.empty()) { // handle redirections ..
+        cout << "we here\n";
+        sendRedirect(clientFd, req.mtroute.redirect, req);
+
+        struct epoll_event ev;
+        ev.events = EPOLLIN;
+        ev.data.fd = clientFd;
+
+        requestmp.erase(clientFd);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, &ev);
+        close(clientFd);
+
+    }
+    else {
+        stringstream response;
+
+        response << "HTTP/1.1 200 OK\r\n";
+        response << "Content-Type: text/html\r\n";
+        response << "Content-Length: 13\r\n";
+        response << "Connection: " << req.connection << "\r\n";
+        response << "\r\n";
+        response << "<h1>Hello</h1>\r\n";
+
+        string responseStr = response.str();
+        send(clientFd, responseStr.c_str(), responseStr.size(), 0);
+
+        struct epoll_event ev;
+        ev.events = EPOLLIN;
+        ev.data.fd = clientFd;
+
+        requestmp.erase(clientFd);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, &ev);
+        close(clientFd);
+        
+    }
 }

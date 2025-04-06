@@ -67,6 +67,8 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
 
     cerr << "Error: '" << statusText << "' sent to client (code: " << statusCode << ")" << endl;
 
+    cerr << "the issue " << message << endl;
+
     send(fd, response.c_str(), response.length(), 0);
     close(fd);
 }

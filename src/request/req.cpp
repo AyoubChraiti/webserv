@@ -89,7 +89,10 @@ int HttpRequest::Parser(const char* data, size_t length) {
 bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
     char temp[BUFFER_SIZE];
     ssize_t bytes = recv(fd, temp, sizeof(temp), 0);
-    if (bytes <= 0)
+
+    if (bytes == 0)
+        return true;
+    else if (bytes < 0)
         throw HttpExcept(400, "Empty or invalid request");
 
     buffer.append(temp, bytes);

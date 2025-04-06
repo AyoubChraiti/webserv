@@ -50,7 +50,6 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     handle_client_read(eventFd, epollFd, conf, requestmp); // request
                 }
                 else if (events[i].events & EPOLLOUT) {
-                    cout << "im here????\n";
                     handle_client_write(eventFd, epollFd, conf, requestmp); // responce
                 }
             }
