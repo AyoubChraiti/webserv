@@ -32,7 +32,7 @@ void checkHeaders(const HttpRequest& req) {
     }
 }
 
-const routeCnf* getRoute(const servcnf& server, const string& path, string& matched) { // matches to the conf routes
+void getRoute(const servcnf& server, const string& path, string& matched, HttpRequest& req) { // matches to the conf routes
     const routeCnf* route = NULL;
     matched.clear();
 
@@ -44,12 +44,13 @@ const routeCnf* getRoute(const servcnf& server, const string& path, string& matc
     }
     if (!route)
         throw HttpExcept(404, "No route for path: " + path);
-    return route;
+    req.mtroute = *route;
 }
 
-void checkAllowed(const routeCnf* route, const string& method, const string& path) {
-    if (find(route->methodes.begin(), route->methodes.end(), method) == route->methodes.end())
+void checkAllowed(routeCnf route, const string& method, const string& path) {
+    if (find(route.methodes.begin(), route.methodes.end(), method) == route.methodes.end()) {
         throw HttpExcept(405, "Method not allowed: " + method + " for route " + path);
+    }
 }
 
 void checkBody(const servcnf& server, const HttpRequest& req) {

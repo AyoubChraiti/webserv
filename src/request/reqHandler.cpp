@@ -1,14 +1,14 @@
 #include "../../inc/request.hpp"
 
-void parseChecking(const servcnf& server, const HttpRequest& req) {
+void parseChecking(const servcnf& server, HttpRequest& req) {
     checkMethod(req.method);
     checkURI(req.path);
     checkHeaders(req);
 
     string routeName;
-    const routeCnf* route = getRoute(server, req.path, routeName);
+    getRoute(server, req.path, routeName, req);
 
-    checkAllowed(route, req.method, routeName);
+    checkAllowed(req.mtroute, req.method, routeName);
     checkBody(server, req);
 }
 

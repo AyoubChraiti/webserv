@@ -10,4 +10,4 @@
 
 
 
-void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
+void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp);

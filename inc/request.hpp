@@ -42,6 +42,7 @@ public:
     size_t contentLength;
     int bytesRead;
     servcnf conf;
+    routeCnf mtroute;
 
     HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};
     string get(const string& key, const string& defaultValue) const;
@@ -60,8 +61,8 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
 
 /* requestParser file */
 void checkBody(const servcnf& server, const HttpRequest& req);
-void checkAllowed(const routeCnf* route, const string& method, const string& path);
-const routeCnf* getRoute(const servcnf& server, const string& path, string& matched);
+void checkAllowed(routeCnf route, const string& method, const string& path);
+void getRoute(const servcnf& server, const string& path, string& matched, HttpRequest& req);
 void checkHeaders(const HttpRequest& req);
 void checkURI(const string& path);
 void checkMethod(const string& method);

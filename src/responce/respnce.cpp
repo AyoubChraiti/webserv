@@ -90,4 +90,6 @@ string getContentType(const string& filepath) {
     return "application/octet-stream";
 }
 
-// starting fresh...
+void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
+    HttpRequest req = requestmp[clientFd];
+}
