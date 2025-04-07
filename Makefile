@@ -6,7 +6,7 @@ SRC =  src/main.cpp \
 	src/config/initConf.cpp src/config/confParser.cpp \
 	src/serverSetup/setupServer.cpp \
 	src/request/reqHandler.cpp src/request/req.cpp src/request/requestParser.cpp \
-	src/responce/respnce.cpp src/responce/post.cpp \
+	src/responce/respnce.cpp src/responce/post.cpp src/responce/resUtils.cpp \
 	src/utils/utils.cpp src/utils/signals.cpp src/utils/conf.cpp \
 
 OBJDIR = obj

@@ -73,15 +73,6 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
         close(fd);
         return -1;
     }
-    catch (const exception& e) {
-        sendErrorResponse(fd, 500, "Internal Server Error: " + string(e.what()), req.conf);
-        requestmp.erase(fd);
-        struct epoll_event ev;
-        ev.data.fd = fd;
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
-        close(fd);
-        return -1;
-    }
 }
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
@@ -90,8 +81,6 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
         struct epoll_event ev;
         ev.events = EPOLLOUT;
         ev.data.fd = clientFd;
-        if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
-            sysCallFail();
-        }
+        epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev);
     }
 }
