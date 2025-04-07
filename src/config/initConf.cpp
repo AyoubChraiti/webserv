@@ -90,8 +90,9 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
             route.index = value;
         else if (key == "directory_listing")
             route.autoindex = (value == "on");
-        else if (key == "redirect")
+        else if (key == "redirect") {
             route.redirect = value;
+        }
         else if (key == "cgi_exec") {
             vector<string> cgiData = split(value, ':');
             if (cgiData.size() == 2) {

@@ -111,17 +111,8 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
     cout << "the redd= " << req.mtroute.redirect << endl; // this is always empty....
 
     if (!req.mtroute.redirect.empty()) { // handle redirections ..
-        cout << "we here\n";
+        cout << "redirection code" << endl;
         sendRedirect(clientFd, req.mtroute.redirect, req);
-
-        struct epoll_event ev;
-        ev.events = EPOLLIN;
-        ev.data.fd = clientFd;
-
-        requestmp.erase(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, &ev);
-        close(clientFd);
-
     }
     else {
         stringstream response;
@@ -135,14 +126,5 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
 
         string responseStr = response.str();
         send(clientFd, responseStr.c_str(), responseStr.size(), 0);
-
-        struct epoll_event ev;
-        ev.events = EPOLLIN;
-        ev.data.fd = clientFd;
-
-        requestmp.erase(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, &ev);
-        close(clientFd);
-        
     }
 }
