@@ -51,23 +51,6 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 }
                 else if (events[i].events & EPOLLOUT) {
                     handle_client_write(eventFd, epollFd, conf, requestmp); // responce
-
-                    auto it = requestmp.find(eventFd);
-                    if (it != requestmp.end()) {
-                        string connHeader = it->second.connection;
-                        
-                        // if (connHeader == "close") {
-                            epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
-                            close(eventFd);
-                            requestmp.erase(eventFd);
-                        // }
-                        // else {
-                        //     struct epoll_event ev;
-                        //     ev.events = EPOLLIN;
-                        //     ev.data.fd = eventFd;
-                        //     epoll_ctl(epollFd, EPOLL_CTL_MOD, eventFd, &ev);
-                        // }
-                    }
                 }
             }
         }

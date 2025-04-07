@@ -108,23 +108,78 @@ void sendRedirect(int clientFd, const string& location, HttpRequest& req) {
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
     HttpRequest req = requestmp[clientFd];
 
-    cout << "the redd= " << req.mtroute.redirect << endl; // this is always empty....
-
     if (!req.mtroute.redirect.empty()) { // handle redirections ..
-        cout << "redirection code" << endl;
         sendRedirect(clientFd, req.mtroute.redirect, req);
+        return;
     }
-    else {
-        stringstream response;
+    if (req.method == "GET") {
+        string fullPath;
+        string responseBody;
+        string contentType;
+        int statusCode = 200;
+        string statusText = "OK";
+        
+        // Get the file path from route configuration
+        fullPath = req.mtroute.root + req.path;
+        
+        cout << "GET request for: " << fullPath << endl;
+        
+        // Handle default file for directory requests
+        if (isDirectory(fullPath)) {
+            if (req.path.back() != '/') {
+                // Redirect to add trailing slash for directories
+                sendRedirect(clientFd, req.path + "/", req);
+                return;
+            }
+            
+            // Try to serve default file
+            string indexFile = req.mtroute.index;
+            if (!indexFile.empty()) {
+                if (indexFile[0] != '/') {
+                    fullPath += "/" + indexFile;
+                } else {
+                    fullPath += indexFile;
+                }
+            }
+        }
+        
+        ifstream file(fullPath.c_str(), ios::binary);
+        if (!file) {
+            cout << "the file does not exist" << endl;
+            return;
+        }
+        
+        stringstream buffer;
+        buffer << file.rdbuf();
+        responseBody = buffer.str();
+        file.close();
+        
+        size_t dotPos = fullPath.find_last_of(".");
+        contentType = getContentType(fullPath);
 
-        response << "HTTP/1.1 200 OK\r\n";
-        response << "Content-Type: text/html\r\n";
-        response << "Content-Length: 13\r\n";
+        
+        stringstream response;
+        response << "HTTP/1.1 " << statusCode << " " << statusText << "\r\n";
+        response << "Content-Type: " << contentType << "\r\n";
+        response << "Content-Length: " << responseBody.length() << "\r\n";
         response << "Connection: " << req.connection << "\r\n";
         response << "\r\n";
-        response << "<h1>Hello</h1>\r\n";
-
+        response << responseBody;
+        
         string responseStr = response.str();
         send(clientFd, responseStr.c_str(), responseStr.size(), 0);
+        
+        if (req.connection != "keep-alive") {
+            requestmp.erase(clientFd);
+            epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+            close(clientFd);
+        }
+        else {
+            requestmp.erase(clientFd);
+            struct epoll_event ev;
+            ev.events = EPOLLIN;
+            ev.data.fd = clientFd;
+            epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev);
+        }
     }
 }
