@@ -12,11 +12,7 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1)
         sysCallFail();
 }
-// void printRequest(map<int, HttpRequest> &requestStates)
-// {
-//     for (auto it = requestStates.begin() ; it != requestStates.end(); it++)
-//         cout << it->second.buffer << endl;
-// }
+
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     map<int, HttpRequest> requestStates;
     int epollFd = epoll_create1(0);
@@ -53,20 +49,21 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 if (events[i].events & EPOLLIN) {
                     handleClientRequest(eventFd, epollFd, conf, requestStates); // request
                 }
-                // else if (events[i].events & EPOLLOUT) {
-                    // handle_client_write(eventFd, epollFd, conf, requestStates); // responce
-                // }
+                else if (events[i].events & EPOLLOUT) {
+                    cerr << "HERE" <<endl; // responce
+                }
             }
         }
         if (shutServer) {
             cout << "exiting sucesfully" << endl;
-            // printRequest(re questStates);
             break;
         }
     }
+    
 }
 
-void serverSetup(mpserv &conf, vector<int> &servrsFd) {
+void serverSetup(mpserv &conf, vector<int> &servrsFd)
+ {
     for (map<string, servcnf>::iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
         int serverFd;
         struct sockaddr_in address;

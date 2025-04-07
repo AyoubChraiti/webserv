@@ -15,7 +15,8 @@
 //     return exists;
 // }
 
-// void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
+// void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) 
+// {
 //     map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
 //     if (it == requestStates.end()) { // wont even need this ig
 //         Response res;

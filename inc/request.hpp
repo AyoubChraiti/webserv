@@ -2,8 +2,7 @@
 
 #include "header.hpp"
 #include "config.hpp"
-#define BUFFER_SIZE 4000
-#define RESPONSE "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 13\r\n\r\nHello, world!"
+#define BUFFER_SIZE 1024
 
 
 enum {
@@ -23,7 +22,7 @@ class HttpRequest
     public:
     
     HttpRequest() : lineLocation(REQUEST_LINE) {};
-    void request(int clientFd, int epollFd, servcnf &reqConfig);
+    bool request(int clientFd, int epollFd, servcnf &reqConfig);
     void parseRequestLine (servcnf &reqConfig);
     void parseHeader(servcnf &reqConfig);
     // Exception
@@ -35,7 +34,6 @@ class HttpRequest
             int statusCode;
         public:
             RequestException (string msg, int  status) ;
-            void createErrorResponse();
             const char *what() const throw();
     };
 };

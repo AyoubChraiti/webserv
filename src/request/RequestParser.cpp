@@ -3,9 +3,10 @@
 
 void HttpRequest::parseRequestLine (servcnf &reqConfig)
 {
+    cout << buffer << endl;
     size_t index = buffer.find("\r\n");
     if (index == string::npos)
-        return ;
+        throw RequestException("Bad Request", 400);
     string requestLine = buffer.substr(0, index);
     if (requestLine.size() > MAX_URI_LENGTH)
         throw RequestException ("URI Too Long" ,414);
@@ -46,9 +47,8 @@ void HttpRequest::parseHeader(servcnf &reqConfig)
         buffer.erase(0, index + 2);
     }
     if (headers.find("Host") == headers.end())
-        throw RequestException("400 Bad Request", 400);
-    for (auto it = headers.begin(); it != headers.end(); it++)
-        cout << it->first << ": " << it->second << endl;
-    if (buffer.find("\r\n\r\n") != string::npos)
-        lineLocation = END_REQUEST;
+        throw RequestException("Bad Request", 400);
+    // if (buffer.find("\r\n\r\n") != string::npos)
+    cout << buffer << endl;
+    lineLocation = END_REQUEST;
 }

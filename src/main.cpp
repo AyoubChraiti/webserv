@@ -58,7 +58,6 @@ int main(int ac, char **av) {
     if (ac == 2) {
         try {
             mpserv serverCongif = configChecking(av[1]);
-            // PrintConfigFile(serverCongif);
             // return 1;
             webserver(serverCongif);
 
