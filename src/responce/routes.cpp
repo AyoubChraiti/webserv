@@ -18,18 +18,14 @@ RouteResult handleRouting(HttpRequest& req) {
 
 
     reqPath.erase(reqPath.begin(), reqPath.begin()+bestMatch.size());
-    string fullPath = "/" + req.mtroute.alias + reqPath;
-
-    cout << "the index: " << req.mtroute.index << endl;
+    string fullPath = req.mtroute.alias + reqPath;
 
     if (isDirectory(fullPath)) {
         if (req.mtroute.index.empty()) {
             // directory listing..
             cout << "need to list directories" << endl;
         }
-        else {
-            fullPath += req.mtroute.index;
-        }
+        fullPath += req.mtroute.index;
     }
 
     cout << "full path: " << fullPath << endl;

@@ -89,7 +89,7 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
         }
         else if (key == "alias")
             route.alias = value;
-        else if (key == "default_file")
+        else if (key == "index")
             route.index = value;
         else if (key == "directory_listing")
             route.autoindex = (value == "on");
