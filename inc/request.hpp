@@ -36,7 +36,7 @@ public:
     string buffer;
     ParseState state;
     ssize_t req_size;
-    string method, path, host, connection, version;
+    string method, uri, host, connection, version;
     vector<char> body;
     map<string, string> headers;
     size_t contentLength;

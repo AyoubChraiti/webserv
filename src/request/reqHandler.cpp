@@ -2,11 +2,11 @@
 
 void parseChecking(const servcnf& server, HttpRequest& req) {
     checkMethod(req.method);
-    checkURI(req.path);
+    checkURI(req.uri);
     checkHeaders(req);
 
     string routeName;
-    getRoute(server, req.path, routeName, req);
+    getRoute(server, req.uri, routeName, req);
 
     checkAllowed(req.mtroute, req.method, routeName);
     checkBody(server, req);
@@ -17,11 +17,10 @@ string HttpRequest::get(const string& key, const string& defaultValue) const {
     return (it != headers.end()) ? it->second : defaultValue;
 }
 
-void HttpRequest::initFromHeader() {
+void HttpRequest::initFromHeader() { // check somthing sus here..
     host = headers["Host"];
     size_t pos = host.find(":");
-    string ip ;//= getIp(host.substr(0, pos)) + ":";
-    ip += host.substr(pos + 1);
+    string ip = getIp(host.substr(0, pos)) + ":" + host.substr(pos + 1);;
     host = ip;
     connection = get("Connection", "close");
 }

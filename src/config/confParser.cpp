@@ -79,10 +79,10 @@ mpserv configChecking(const string &filePath) {
             if (route_it->first.empty() || route_it->first[0] != '/')
                 throw runtime_error("Error: Route '" + route_it->first + "' has an invalid or missing URI.");
 
-            if (route.root.empty())
-                throw runtime_error("Error: Route '" + route_it->first + "' is missing root directory.");
-            if (!isValidDirectory(route.root))
-                throw runtime_error("Error: Root directory '" + route.root + "' does not exist.");
+            if (route.alias.empty())
+                throw runtime_error("Error: Route '" + route_it->first + "' is missing alias directory.");
+            if (!isValidDirectory(route.alias))
+                throw runtime_error("Error: alias directory '" + route.alias + "' does not exist.");
 
             vector<string>::const_iterator method_it;
             for (method_it = route.methodes.begin(); method_it != route.methodes.end(); ++method_it) {

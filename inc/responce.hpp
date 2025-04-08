@@ -9,7 +9,6 @@ struct RouteResult {
     string statusText;
     string responseBody;
     string contentType;
-    bool shouldRedirect;
     string redirectLocation;
 };
 
@@ -20,3 +19,5 @@ bool isDirectory(const string& path);
 string getContentType(const string& filepath);
 string generateAutoIndex(const string& fullPath, const string& uriPath);
 RouteResult handleRouting(HttpRequest& req);
+bool fileExists(const string& path);
+bool isDirectory(const string& path);

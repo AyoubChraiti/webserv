@@ -81,11 +81,14 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
 
     else if (section.rfind("route ", 0) == 0) {
         string routePath = section.substr(6); 
+        if (routePath.empty())
+            throw runtime_error("Error: syntax issue in the config file.");
+        route.root = routePath;
         if (key == "methodes") {
             route.methodes = split(value, ',');
         }
-        else if (key == "directory")
-            route.root = value;
+        else if (key == "alias")
+            route.alias = value;
         else if (key == "default_file")
             route.index = value;
         else if (key == "directory_listing")

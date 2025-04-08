@@ -3,8 +3,9 @@
 #include "header.hpp"
 
 struct routeCnf {
+    string root; // the rout from the cnf file
     vector<string> methodes;
-    string root;
+    string alias;
     string index;
     bool autoindex;
     string redirect;

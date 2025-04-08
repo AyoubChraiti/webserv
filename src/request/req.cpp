@@ -11,13 +11,13 @@ void HttpRequest::firstLineParser(const string& line) {
 
     size_t secondSpace = trimmedLine.find(' ', firstSpace + 1);
     if (secondSpace == string::npos || secondSpace <= firstSpace + 1)
-        throw HttpExcept(400, "Invalid request line: missing path or version");
+        throw HttpExcept(400, "Invalid request line: missing uri or version");
 
     method = trimmedLine.substr(0, firstSpace);
-    path = trimmedLine.substr(firstSpace + 1, secondSpace - firstSpace - 1);
+    uri = trimmedLine.substr(firstSpace + 1, secondSpace - firstSpace - 1);
     version = trimmedLine.substr(secondSpace + 1);
 
-    if (method.empty() || path.empty() || version.empty())
+    if (method.empty() || uri.empty() || version.empty())
         throw HttpExcept(400, "Invalid request line");
 
     state = READING_HEADERS;

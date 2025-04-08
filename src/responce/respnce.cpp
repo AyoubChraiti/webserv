@@ -2,7 +2,6 @@
 
 void sendRedirect(int fd, const string& location, HttpRequest& req) {
     stringstream response;
-    cout << "im rederectingg to " << location << endl;
 
     response << "HTTP/1.1 301 Moved Permanently\r\n";
     response << "Location: " << location << "\r\n";
@@ -17,11 +16,6 @@ void sendRedirect(int fd, const string& location, HttpRequest& req) {
 
 void getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
     RouteResult routeResult = handleRouting(req);
-
-    if (routeResult.shouldRedirect) {
-        sendRedirect(clientFd, routeResult.redirectLocation, req);
-        return;
-    }
 
     stringstream response;
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
