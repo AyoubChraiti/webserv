@@ -115,8 +115,8 @@ const mpserv& configFile::parseConfig() {
         throw runtime_error("Error opening the congif file.");
 
     string line, section;
-    servcnf server; // Holds the current server
-    routeCnf route; // Holds the current route
+    servcnf server;
+    routeCnf route;
     bool inserver = false;
 
     while (getline(cnf, line)) {

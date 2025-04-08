@@ -84,9 +84,6 @@ mpserv configChecking(const string &filePath) {
             if (!isValidDirectory(route.root))
                 throw runtime_error("Error: Root directory '" + route.root + "' does not exist.");
 
-            // if (!route.index.empty() && !isValidFile(route.root + "/" + route.index))
-            //     throw runtime_error("Error: Index file '" + route.index + "' not found in root '" + route.root + "'.");
-
             vector<string>::const_iterator method_it;
             for (method_it = route.methodes.begin(); method_it != route.methodes.end(); ++method_it) {
                 if (!isValidMethod(*method_it))

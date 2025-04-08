@@ -105,3 +105,42 @@ void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpReq
         epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev);
     }
 }
+
+string generateAutoIndex(const string& fullPath, const string& uriPath) {
+    stringstream html;
+
+    html << "<html><head><title>Index of " << uriPath << "</title></head><body>";
+    html << "<h1>Index of " << uriPath << "</h1><hr><pre>";
+
+    DIR* dir = opendir(fullPath.c_str());
+    if (!dir) {
+        return "<h1>403 Forbidden</h1>";
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        string name = entry->d_name;
+
+        // Skip "." but include ".."
+        if (name == ".")
+            continue;
+
+        string displayName = name;
+        string href = uriPath;
+        if (href.back() != '/') href += "/";
+        href += name;
+
+        string fullEntryPath = fullPath + "/" + name;
+
+        struct stat st;
+        if (stat(fullEntryPath.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
+            displayName += "/";
+            href += "/";
+        }
+
+        html << "<a href=\"" << href << "\">" << displayName << "</a>\n";
+    }
+    closedir(dir);
+    html << "</pre><hr></body></html>";
+    return html.str();
+}
