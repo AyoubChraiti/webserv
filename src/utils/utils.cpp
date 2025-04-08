@@ -1,4 +1,4 @@
-#include "../../inc/header.hpp"
+#include "../../inc/request.hpp"
 
 void sysCallFail() {
     perror("syscall Error");
@@ -23,32 +23,40 @@ bool isValidFile(const string &path) {
     return (access(path.c_str(), F_OK) == 0);
 }
 
-
-void sendErrorResponse(int fd, int statusCode, const string& message) {
-    string statusText;
-    switch (statusCode) {
-        case 400: statusText = "Bad Request"; break;
-        case 404: statusText = "Not Found"; break;
-        case 405: statusText = "Method Not Allowed"; break;
-        case 411: statusText = "Length Required"; break;
-        case 500: statusText = "Internal Server Error"; break;
-        case 501: statusText = "Not Implemented"; break;
-        case 505: statusText = "HTTP Version Not Supported"; break;
-        default:  statusText = "Error"; break;
-    }
-
-    string response =
-        "HTTP/1.1 " + to_string(statusCode) + " " + statusText + "\r\n"
-        "Content-Length: " + to_string(message.length()) + "\r\n"
-        "Content-Type: text/plain\r\n"
-        "Connection: close\r\n"
-        "\r\n" + message;
-
-    cerr << "Error: '" << message << "' sent to the client" << endl;
-
-    send(fd, response.c_str(), response.length(), 0);
-    close(fd);
+const char *HttpRequest::RequestException::what() const throw ()
+{
+    return errorResponse.c_str();
 }
+
+HttpRequest::RequestException::RequestException (string msg , int status) : errorStr(msg) , statusCode(status)
+{
+    errorResponse += errorStr + '\n' + to_string(statusCode);
+}
+
+string sendErrorResponse(const char *e, int clientSocket)
+{
+    string str = e;
+    size_t  pos = str.find_last_of("\n");
+    string errorMessage = str.substr(0, pos);
+    int statusCode = atoi(str.substr(pos).c_str());
+    std::string response = 
+        "HTTP/1.1 " + std::to_string(statusCode) + " " + errorMessage + "\r\n"
+        "Content-Type: text/html\r\n"
+        "Connection: close\r\n"
+        "\r\n"
+        "<!DOCTYPE html>\n"
+        "<html>\n"
+        "<head><title>" + std::to_string(statusCode) + " " + errorMessage + "</title></head>\n"
+        "<body>\n"
+        "<h1>" + errorMessage + "</h1>\n"
+        "<p>Error code: " + std::to_string(statusCode) + "</p>\n"
+        "</body>\n"
+        "</html>";
+    
+    send(clientSocket, response.c_str(), response.length(), 0);
+    return "Client :" + errorMessage;
+}
+
 
 
 string getIp(string hostname) {

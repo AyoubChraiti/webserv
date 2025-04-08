@@ -50,7 +50,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     handleClientRequest(eventFd, epollFd, conf, requestStates); // request
                 }
                 else if (events[i].events & EPOLLOUT) {
-                    cerr << "HERE" <<endl; // responce
+                    handle_client_write(eventFd, epollFd, conf, requestStates);
                 }
             }
         }

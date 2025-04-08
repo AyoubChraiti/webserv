@@ -3,7 +3,6 @@
 
 void HttpRequest::parseRequestLine (servcnf &reqConfig)
 {
-    cout << buffer << endl;
     size_t index = buffer.find("\r\n");
     if (index == string::npos)
         throw RequestException("Bad Request", 400);
@@ -21,14 +20,20 @@ void HttpRequest::parseRequestLine (servcnf &reqConfig)
     if (HttpVersion != "HTTP/1.1")
         throw RequestException("HTTP Version Not Supported", 505);
     buffer.erase(0, index + 2);
+    if (uri.find("\"<>#%{}|'\\^[]") != string::npos)
+        throw RequestException("Bad Request", 400);
+    map<string, routeCnf>::iterator uriIt = reqConfig.routes.find("/");
+    if (reqConfig.routes.find(uri) == reqConfig.routes.end() && uriIt == reqConfig.routes.end())
+        throw RequestException("Not Found", 404); 
     if (reqConfig.routes.find(uri) == reqConfig.routes.end())
-        throw RequestException("uri not found 9adha" , 999);
+        uri = "/";
     vector<string>::iterator beginIt = reqConfig.routes[uri].methodes.begin();
     vector<string>::iterator endIt = reqConfig.routes[uri].methodes.end();
     if (find(beginIt, endIt, method) == endIt)
         throw RequestException("Method Not Allowed", 405);
     lineLocation = HEAD;
 }
+
 void HttpRequest::parseHeader(servcnf &reqConfig)
 {
     size_t index;
@@ -49,6 +54,5 @@ void HttpRequest::parseHeader(servcnf &reqConfig)
     if (headers.find("Host") == headers.end())
         throw RequestException("Bad Request", 400);
     // if (buffer.find("\r\n\r\n") != string::npos)
-    cout << buffer << endl;
     lineLocation = END_REQUEST;
 }

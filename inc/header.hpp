@@ -34,7 +34,7 @@ void webserver(mpserv &conf);
 void testConfigParser(const string &filePath);
 std::string trim(const std::string& str);
 
-void sendErrorResponse(int fd, int statusCode, const string& message);
+string sendErrorResponse(const char *e, int clientSocket);
 
 bool isValidDirectory(const string &path);
 bool isValidFile(const string &path);

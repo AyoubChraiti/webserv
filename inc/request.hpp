@@ -25,6 +25,9 @@ class HttpRequest
     bool request(int clientFd, int epollFd, servcnf &reqConfig);
     void parseRequestLine (servcnf &reqConfig);
     void parseHeader(servcnf &reqConfig);
+    string getMethod () const;
+    string getURI() const;
+
     // Exception
     class RequestException : public exception
     {
@@ -37,18 +40,8 @@ class HttpRequest
             const char *what() const throw();
     };
 };
-
+string getInfoClient(int clientFd);
 void handleClientRequest(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates);
-
-/*
-    "
-    GET /kjhh HTTP/1.1 sdsdf sdfsf\r\n
-    Host: localhost\r\n
-    connection: keep-alive\r\n
-    \r\n
-    \0balasbdjasdbsajk"
-*/
-//starter-line;
-//headers
+void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& reqStates) ;
 
 
