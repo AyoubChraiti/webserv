@@ -10,6 +10,8 @@ struct RouteResult {
     string responseBody;
     string contentType;
     string redirectLocation;
+    bool shouldRDR;
+    int responceFd;
 };
 
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp);
@@ -18,6 +20,6 @@ void sendRedirect(int clientFd, const string& location, HttpRequest& req);
 bool isDirectory(const string& path);
 string getContentType(const string& filepath);
 string generateAutoIndex(const string& fullPath, const string& uriPath);
-RouteResult handleRouting(HttpRequest& req);
+RouteResult handleRouting(int fd, HttpRequest& req);
 bool fileExists(const string& path);
 bool isDirectory(const string& path);

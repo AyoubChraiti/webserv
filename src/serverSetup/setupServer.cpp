@@ -9,8 +9,10 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
     ev.events = events;
     ev.data.fd = fd;
 
-    if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1)
+    if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1) {
+        cout << "epoll ctl error in add fds to epoll\n";
         sysCallFail();
+    }
 }
 
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
@@ -28,8 +30,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     while (true) {
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
         if (numEvents == -1) {
-            if (errno != EINTR)
+            if (errno != EINTR) {
+                cout << "epoll fail\n";
                 sysCallFail();
+            }
         }
 
         for (int i = 0; i < numEvents; i++) {

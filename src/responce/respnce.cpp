@@ -14,8 +14,8 @@ void sendRedirect(int fd, const string& location, HttpRequest& req) {
     send(fd, responseStr.c_str(), responseStr.size(), 0);
 }
 
-void getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
-    RouteResult routeResult = handleRouting(req);
+int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
+    RouteResult routeResult = handleRouting(clientFd, req);
 
     stringstream response;
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
@@ -27,13 +27,14 @@ void getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpReques
 
     string responseStr = response.str();
     send(clientFd, responseStr.c_str(), responseStr.size(), 0);
+    return 0;
 }
 
 void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
     HttpRequest req = requestmp[fd];
 
     try {
-        if (!req.mtroute.redirect.empty()) { // handle redirections ..
+        if (!req.mtroute.redirect.empty()) {
             sendRedirect(fd, req.mtroute.redirect, req);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
@@ -49,7 +50,8 @@ void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest
         requestmp.erase(fd);
         struct epoll_event ev;
         ev.data.fd = fd;
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev) == -1)
+            cout << "epoll ctl error in handle client write\n";
         close(fd);
         return;
     }

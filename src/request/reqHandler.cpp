@@ -38,8 +38,10 @@ string CheckServer(int fd) {
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     
-    if (getsockname(fd, (struct sockaddr*)&addr, &addrlen) == -1)
+    if (getsockname(fd, (struct sockaddr*)&addr, &addrlen) == -1) {
+        cout << "we failing here?\n";
         sysCallFail();
+    }
     
     char ip_str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN);
@@ -68,7 +70,8 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
         requestmp.erase(fd);
         struct epoll_event ev;
         ev.data.fd = fd;
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev);
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev) == -1)
+            cout << "epoll ctl error in the req func\n";
         close(fd);
         return -1;
     }
@@ -80,6 +83,7 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
         struct epoll_event ev;
         ev.events = EPOLLOUT;
         ev.data.fd = clientFd;
-        epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev);
+        if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1)
+            cout << "epoll ctl error in handle client read\n";
     }
 }

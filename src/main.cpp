@@ -17,4 +17,5 @@ int main(int ac, char **av) {
         cout << "Usage: ./webserv <config_file>" << endl;
         return 1;
     }
+    cout << "here??" << endl;
 }
