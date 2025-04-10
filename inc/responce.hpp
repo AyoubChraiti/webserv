@@ -11,7 +11,8 @@ struct RouteResult {
     string contentType;
     string redirectLocation;
     bool shouldRDR;
-    int responceFd;
+    int resFd;
+    string fullPath;
 };
 
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp);
