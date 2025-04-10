@@ -38,7 +38,7 @@ string sendErrorResponse(const char *e, int clientSocket)
     string str = e;
     size_t  pos = str.find_last_of("\n");
     string errorMessage = str.substr(0, pos);
-    int statusCode = atoi(str.substr(pos).c_str());
+    int statusCode = StringStream(str.substr(pos).c_str());
     std::string response = 
         "HTTP/1.1 " + std::to_string(statusCode) + " " + errorMessage + "\r\n"
         "Content-Type: text/html\r\n"
@@ -58,6 +58,13 @@ string sendErrorResponse(const char *e, int clientSocket)
 }
 
 
+size_t StringStream(string string)
+{
+    size_t num;
+    stringstream ss (string);
+    ss >> num;
+    return num;
+}
 
 string getIp(string hostname) {
     struct addrinfo hints, *res;

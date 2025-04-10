@@ -9,8 +9,8 @@ void Response::buildResponse (servcnf& conf, HttpRequest &reqStates, int clientF
     headers["Content-Type"] = "text/html";
     headers["Content-Length"] = to_string (body.size());
     headers["Connection"] = "close";
-    if (reqStates.getMethod() == "GET")
-    {
+    // if (reqStates.getMethod() == "GET")
+    // {
         string response;
         response += "HTTP/1.1 " + to_string (statusCode) + " " + statusText + "\r\n"; 
         response += "Content-Type: " + headers["Content-Type"] + "\r\n";
@@ -20,9 +20,9 @@ void Response::buildResponse (servcnf& conf, HttpRequest &reqStates, int clientF
         response += body;
         send(clientFd, response.c_str(), response.length(), 0);
         close(clientFd);
-    }
-    else
-        return ;
+    // }
+    // else
+        // return ;
         // string uri = reqStates.getURI();
         // // if (uri == "/")
         // // {
@@ -39,8 +39,14 @@ void Response::buildResponse (servcnf& conf, HttpRequest &reqStates, int clientF
 
         // }
 }
-void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& reqStates) 
+void HandleCGI (HttpRequest &reqStates)
 {
+}
+void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& reqStates) 
+{   
+    string URI = reqStates[clientFd].getURI();
+    if (URI.find("/cgi-bin/") != string::npos)
+        HandleCGI(reqStates[clientFd]);
     string host = getInfoClient(clientFd);
     servcnf reqConfig = conf.servers[host];    
     Response response;

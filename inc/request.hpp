@@ -18,13 +18,17 @@ class HttpRequest
     int lineLocation;
     string method, uri, HttpVersion;
     map <string, string> headers;
-    
+    bool isPostKeys;
+    string body;
+    size_t sizeBody;
+    bool isChunked;
     public:
     
-    HttpRequest() : lineLocation(REQUEST_LINE) {};
+    HttpRequest() : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false) {};
     bool request(int clientFd, int epollFd, servcnf &reqConfig);
     void parseRequestLine (servcnf &reqConfig);
     void parseHeader(servcnf &reqConfig);
+    void parseBody(servcnf &reqConfig);
     string getMethod () const;
     string getURI() const;
 
@@ -40,6 +44,7 @@ class HttpRequest
             const char *what() const throw();
     };
 };
+size_t StringStream(string string);
 string getInfoClient(int clientFd);
 void handleClientRequest(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates);
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& reqStates) ;

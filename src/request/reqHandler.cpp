@@ -21,6 +21,7 @@ void modifyState(int epollFd ,int clientFd, uint32_t events)
     if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) 
         return ;
 }
+
 string  HttpRequest::getMethod () const
 {
     return method;
@@ -40,11 +41,14 @@ bool HttpRequest::request(int clientFd, int epollFd, servcnf &reqConfig)
     if (recvBytes > 0)
     {
         buff[recvBytes] = '\0';
+        cout << buff << endl;
         buffer.append(buff, recvBytes);
         if (lineLocation == REQUEST_LINE)
             parseRequestLine(reqConfig); 
         if (lineLocation == HEAD)
-            parseHeader(reqConfig); 
+            parseHeader(reqConfig);
+        if (lineLocation == BODY)
+            parseBody(reqConfig);
         if (lineLocation == END_REQUEST)
             return true;
     }
