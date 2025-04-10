@@ -34,6 +34,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 cout << "epoll fail\n";
                 sysCallFail();
             }
+            cout << "epoll fail\n";
         }
 
         for (int i = 0; i < numEvents; i++) {
