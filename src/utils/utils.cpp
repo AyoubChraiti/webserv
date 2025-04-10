@@ -2,6 +2,7 @@
 #include "../../inc/config.hpp"
 
 void sysCallFail() {
+    cout << "Error: im being called here" << endl;
     perror("syscall Error");
     exit(1);
 }
@@ -80,8 +81,10 @@ string getIp(string hostname) {
     hints.ai_socktype = SOCK_STREAM;
 
     int status = getaddrinfo(hostname.c_str(), NULL, &hints, &res);
-    if (status != 0)
+    if (status != 0) {
+        cout << "getaddrinfo failed: thats in the get ip func" << gai_strerror(status) << endl;
         sysCallFail();
+    }
 
     addr = (struct sockaddr_in *)res->ai_addr;
     char ip_str[INET_ADDRSTRLEN];

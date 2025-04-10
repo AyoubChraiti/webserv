@@ -23,38 +23,33 @@ size_t getContentLength(const string& path) {
     return fileStat.st_size;
 }
 
-int sendFileInChunks(int clientFd, std::ifstream& fileStream, off_t fileSize) {
+int sendFileInChunks(int clientFd, int resFD, size_t fileSize) {
     char buffer[BUFFER_SIZE];
     off_t bytesSent = 0;
 
-    // Send chunks until the entire file is sent
     while (bytesSent < fileSize) {
-        // Read a chunk of the file
-        fileStream.read(buffer, BUFFER_SIZE);
-        size_t bytesRead = fileStream.gcount();
-
-        // If no more data to send, break out of the loop
+        ssize_t bytesRead = read(resFD, buffer, BUFFER_SIZE);
+        if (bytesRead < 0) {
+            perror("read");
+            return -1;
+        }
         if (bytesRead == 0)
             break;
 
-        // Calculate the chunk size in hexadecimal
-        std::stringstream chunkHeader;
-        chunkHeader << std::hex << bytesRead << "\r\n";  // Hexadecimal size of the chunk
+        stringstream chunkHeader;
+        chunkHeader << hex << bytesRead << "\r\n";  // Hexadecimal size of the chunk
+        string chunkHeaderStr = chunkHeader.str();
 
-        // Send the chunk header (size in hexadecimal)
-        std::string chunkHeaderStr = chunkHeader.str();
         if (send(clientFd, chunkHeaderStr.c_str(), chunkHeaderStr.size(), 0) == -1) {
             perror("send chunk size header");
             return -1;
         }
 
-        // Send the chunk data
         if (send(clientFd, buffer, bytesRead, 0) == -1) {
             perror("send chunk data");
             return -1;
         }
 
-        // Send the CRLF after the chunk data
         const char* crlf = "\r\n";
         if (send(clientFd, crlf, 2, 0) == -1) {
             perror("send CRLF after chunk");
@@ -64,15 +59,15 @@ int sendFileInChunks(int clientFd, std::ifstream& fileStream, off_t fileSize) {
         bytesSent += bytesRead;
     }
 
-    // Send the final chunk (empty with size 0)
     const char* finalChunk = "0\r\n\r\n";
     if (send(clientFd, finalChunk, 5, 0) == -1) {
         perror("send final chunk");
         return -1;
     }
 
-    return 0;  // Success
+    return 0;
 }
+
 
 int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
     RouteResult routeResult = handleRouting(clientFd, req);
@@ -81,8 +76,10 @@ int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
     response << "Content-Type: " << routeResult.contentType << "\r\n";
 
+    size_t contentLength = getContentLength(routeResult.fullPath);
+
     if (routeResult.resFd != -1) {
-        response << "Content-Length: " << getContentLength(routeResult.fullPath) << "\r\n";
+        response << "Content-Length: " << contentLength << "\r\n";
         // response << "Accept-Ranges: bytes\r\n";
     } else {
         response << "Content-Length: " << routeResult.responseBody.size() << "\r\n";
@@ -91,7 +88,6 @@ int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest
     response << "Connection: " << "close" << "\r\n";
     response << "\r\n";
 
-    cout << "Response headers:\n" << response.str() << endl;
 
     string headerStr = response.str();
     if (send(clientFd, headerStr.c_str(), headerStr.size(), 0) == -1) {
@@ -99,34 +95,33 @@ int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest
         return -1;
     }
 
-    cout << "Headers sent successfully" << endl;
-    cout << "Response body:\n" << endl;
-
     if (routeResult.resFd != -1) {
-        char buffer[BUFFER_SIZE];
+        // char buffer[BUFFER_SIZE];
 
-        while (true) {
-            size_t bytesRead = read(routeResult.resFd, buffer, BUFFER_SIZE);
+        // while (true) {
+        //     size_t bytesRead = read(routeResult.resFd, buffer, BUFFER_SIZE);
 
-            if (bytesRead <= 0)
-                break;
+        //     if (bytesRead <= 0)
+        //         break;
 
-            streamsize totalSent = 0;
-            while (totalSent < bytesRead) {
-                // cout  << buffer << endl;
-                ssize_t sent = send(clientFd, buffer + totalSent, bytesRead - totalSent, 0);
-                if (sent == -1) {
-                    if (errno == EPIPE || errno == ECONNRESET) {
-                        cout << "Socket is not ready for writing, try again later" << endl;
-                        break; // Non-blocking mode, try again later
-                    }
-                    perror("send body (file)");
-                    close(routeResult.resFd);
-                    return -1;
-                }
-                totalSent += sent;
-            }
-        }
+        //     streamsize totalSent = 0;
+        //     while (totalSent < bytesRead) {
+        //         // cout  << buffer << endl;
+        //         ssize_t sent = send(clientFd, buffer + totalSent, bytesRead - totalSent, 0);
+        //         if (sent == -1) {
+        //             if (errno == EPIPE || errno == ECONNRESET) {
+        //                 cout << "Socket is not ready for writing, try again later" << endl;
+        //                 break; // Non-blocking mode, try again later
+        //             }
+        //             perror("send body (file)");
+        //             close(routeResult.resFd);
+        //             return -1;
+        //         }
+        //         totalSent += sent;
+        //     }
+        // }
+        // close(routeResult.resFd);
+        sendFileInChunks(clientFd, routeResult.resFd, contentLength);
         close(routeResult.resFd);
     }
     else {

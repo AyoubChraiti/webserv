@@ -18,8 +18,10 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     map<int, HttpRequest> requestmp;
     int epollFd = epoll_create1(0);
-    if (epollFd == -1)
+    if (epollFd == -1) {
+        cout << "epoll create failed\n";
         sysCallFail();
+    }
 
     for (int i = 0; i < servrs.size(); i++) {
         add_fds_to_epoll(epollFd, servrs[i], EPOLLIN);
@@ -31,10 +33,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
         if (numEvents == -1) {
             if (errno != EINTR) {
-                cout << "epoll fail\n";
+                cout << "epoll wait fail\n";
                 sysCallFail();
             }
-            cout << "epoll fail\n";
+            cout << "epoll wait fail\n";
         }
 
         for (int i = 0; i < numEvents; i++) {
@@ -71,12 +73,16 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
         int serverFd;
         struct sockaddr_in address;
         int addrlen = sizeof(address);
-        if ((serverFd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+        if ((serverFd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+            cout << "socket creation failed\n";
             sysCallFail();
+        }
 
         int option = 1;
-        if (setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) < 0)
+        if (setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) < 0) {
+            cout << "setsockopt failed\n";
             sysCallFail();
+        }
 
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = inet_addr(it->second.host.c_str());
@@ -87,8 +93,10 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
             sysCallFail();
         }
 
-        if (listen(serverFd, 10) < 0)
+        if (listen(serverFd, 10) < 0) {
+            cout << "listen failed\n";
             sysCallFail();
+        }
 
         servrs.push_back(serverFd);
         

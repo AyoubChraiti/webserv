@@ -15,7 +15,6 @@ OBJ = $(SRC:%.cpp=$(OBJDIR)/%.o)
 
 CPPFLAGS = -fsanitize=address #-Wall -Wextra -Werror -std=c++98
 
-# Rule to create obj directory and compile .cpp to .o inside it
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CPP) $(CPPFLAGS) -c $< -o $@

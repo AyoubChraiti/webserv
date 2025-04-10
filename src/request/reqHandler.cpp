@@ -17,13 +17,29 @@ string HttpRequest::get(const string& key, const string& defaultValue) const {
     return (it != headers.end()) ? it->second : defaultValue;
 }
 
-void HttpRequest::initFromHeader() { // check somthing sus here..
+void HttpRequest::initFromHeader() {
     host = headers["Host"];
+
     size_t pos = host.find(":");
-    string ip = getIp(host.substr(0, pos)) + ":" + host.substr(pos + 1);;
-    host = ip;
+    if (pos != string::npos) {
+        string ip = host.substr(0, pos);
+        string port = host.substr(pos + 1);
+        host = ip + ":" + port;
+    }
+    else {
+        host = host;
+    }
     connection = get("Connection", "close");
 }
+
+
+// void HttpRequest::initFromHeader() { // check somthing sus here..
+//     host = headers["Host"];
+//     size_t pos = host.find(":");
+//     string ip = getIp(host.substr(0, pos)) + ":" + host.substr(pos + 1);;
+//     host = ip;
+//     connection = get("Connection", "close");
+// }
 
 map<int, HttpRequest>::iterator getReqFrmMap(int fd, map<int, HttpRequest>& requestmp) {
     map<int, HttpRequest>::iterator it = requestmp.find(fd);
