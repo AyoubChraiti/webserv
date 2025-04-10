@@ -8,6 +8,7 @@ SRC =  src/main.cpp \
 	src/request/reqHandler.cpp src/request/req.cpp src/request/requestParser.cpp \
 	src/responce/respnce.cpp src/responce/post.cpp src/responce/resUtils.cpp src/responce/routes.cpp \
 	src/utils/utils.cpp src/utils/signals.cpp src/utils/conf.cpp \
+	epoll/epoll.cpp \
 
 OBJDIR = obj
 OBJ = $(SRC:%.cpp=$(OBJDIR)/%.o)

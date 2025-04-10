@@ -6,22 +6,26 @@
 #define BUFFER_SIZE 8192
 #define MAX_LINE 1024
 
+
 class HttpExcept : public exception {
-private:
-    int statusCode;
-    string statusMessage;
-
-public:
-    HttpExcept(int code, const string& message) 
-        : statusCode(code), statusMessage(message) {}
-
-    int getStatusCode() const {
-        return statusCode;
-    }
-    const char* what() const throw() {
-        return statusMessage.c_str();
-    }
-};
+    private:
+        int statusCode;
+        string statusMessage;
+    
+    public:
+        HttpExcept(int code, const string& message) 
+            : statusCode(code), statusMessage(message) {}
+    
+        int getStatusCode() const {
+            return statusCode;
+        }
+    
+        virtual const char* what() const throw() {
+            return statusMessage.c_str();
+        }
+    
+        virtual ~HttpExcept() throw() {}
+    };
 
 enum ParseState {
     READING_REQUEST_LINE,

@@ -15,13 +15,15 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <cstdlib>
-#include <sys/epoll.h>
+// #include <sys/epoll.h>
 #include <algorithm>
 #include <sys/stat.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <dirent.h>
 #include <iomanip>
+
+#include "epoll.hpp"
 
 using namespace std;
 
