@@ -20,6 +20,8 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <unordered_map>
+#include <sys/wait.h>
+
 
 using namespace std;
 

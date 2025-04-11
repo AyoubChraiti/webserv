@@ -21,7 +21,7 @@ void HttpRequest::parseRequestLine (servcnf &reqConfig) // 4. URI path normaliza
     if (HttpVersion != "HTTP/1.1")
         throw RequestException("HTTP Version Not Supported", 505);
     buffer.erase(0, index + 2);
-    if (uri.find("/cgi-bin/") == string::npos)
+    if (uri.find("/cgi-bin/") == string::npos)  
     {
         if (uri[0] != '/')
             throw RequestException("Bad Request", 400);

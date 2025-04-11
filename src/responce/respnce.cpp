@@ -79,14 +79,14 @@ void childCGI (HttpRequest &reqStates, int fds[2])
     envcgi.push_back("SERVER_PROTOCOL=HTTP/1.1");
     vector <char *> vec;
     for (vector<string>::iterator it = envcgi.begin(); it != envcgi.end(); it++)
-        vec.push_back(const_cast <char*> (it->c_str()));
+        vec.push_back(const_cast <char*> (it->c_str())); 
     vec.push_back(NULL);
-    const char *args[] = {scriptPATH.c_str(), NULL};
-    execve(scriptPATH.c_str(), const_cast<char* const*>(args), vec.data());
+    const char *args[] = {scriptPATH.c_str(), NULL}; // cant change charcter
+    execve(scriptPATH.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
     cerr << "Fail" << endl;
     exit(1);
 }
-void HandleCGI (HttpRequest &reqStates)
+void HandleCGI (int clientFd, HttpRequest &reqStates)
 {
     int fds[2];
     if (pipe(fds) == -1)
@@ -97,15 +97,31 @@ void HandleCGI (HttpRequest &reqStates)
     if (pid == 0)
         childCGI(reqStates, fds);
     else
-        return ;
+    {
+        cout << "helo" << endl;
+        close (fds[1]);
+        string output_cgi;
+        char buff[1024];
+        while (ssize_t recvBytes = read(fds[0], buff, sizeof(buff)) == 0)
+            output_cgi.append(buff, recvBytes); // know why u should 2param
+        close(fds[0]);
+        int status;
+        waitpid(pid, &status, 0);
+        if (WEXITSTATUS(status))
+            exit(1);
+        send(clientFd, output_cgi.c_str(),  output_cgi.length(), 0);
+    }
 }
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& reqStates) 
 {   
     string URI = reqStates[clientFd].getURI();
     if (URI.find("/cgi-bin/") != string::npos)
-        HandleCGI(reqStates[clientFd]);
-    string host = getInfoClient(clientFd);
-    servcnf reqConfig = conf.servers[host];    
-    Response response;
-    response.buildResponse(reqConfig, reqStates[clientFd], clientFd);
+        HandleCGI(clientFd, reqStates[clientFd]);
+    else
+    {
+        string host = getInfoClient(clientFd);
+        servcnf reqConfig = conf.servers[host];    
+        Response response;
+        response.buildResponse(reqConfig, reqStates[clientFd], clientFd);
+    }
 }

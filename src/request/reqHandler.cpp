@@ -30,7 +30,7 @@ string HttpRequest::getURI () const
 {
     return uri;
 }
-bool HttpRequest::request(int clientFd, int epollFd, servcnf &reqConfig)
+bool HttpRequest::request(int clientFd, servcnf &reqConfig)
 {
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = recv(clientFd, buff, BUFFER_SIZE - 1, 0);
@@ -64,7 +64,7 @@ void handleClientRequest(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
     servcnf reqConfig = conf.servers[host];
     try 
     {
-        if (reqStates[clientFd].request(clientFd, epollFd, reqConfig))
+        if (reqStates[clientFd].request(clientFd, reqConfig))
             modifyState(epollFd, clientFd, EPOLLOUT);
     }
     catch(const std::exception& e)

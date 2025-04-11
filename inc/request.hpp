@@ -25,7 +25,7 @@ class HttpRequest
     public:
     
     HttpRequest() : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false) {};
-    bool request(int clientFd, int epollFd, servcnf &reqConfig);
+    bool request(int clientFd, servcnf &reqConfig);
     void parseRequestLine (servcnf &reqConfig);
     void parseHeader(servcnf &reqConfig);
     void parseBody(servcnf &reqConfig);
