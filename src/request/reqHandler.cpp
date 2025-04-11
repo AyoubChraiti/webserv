@@ -37,7 +37,7 @@ bool HttpRequest::request(int clientFd, int epollFd, servcnf &reqConfig)
     if (recvBytes == 0)
         return true;
     else if (recvBytes < 0)
-        throw RequestException("error in recv", 500); // check after
+        throw RequestException("Internal Server Error", 500);
     if (recvBytes > 0)
     {
         buff[recvBytes] = '\0';

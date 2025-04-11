@@ -21,12 +21,12 @@ void HttpRequest::parseRequestLine (servcnf &reqConfig) // 4. URI path normaliza
     if (HttpVersion != "HTTP/1.1")
         throw RequestException("HTTP Version Not Supported", 505);
     buffer.erase(0, index + 2);
-    if (uri != "/cgi-bin/")
+    if (uri.find("/cgi-bin/") == string::npos)
     {
         if (uri[0] != '/')
             throw RequestException("Bad Request", 400);
-        if (uri.find_first_of("\"<>#%{}|'\\^[]") != string::npos)
-            throw RequestException("Bad Request", 400);
+        // if (uri.find_first_of("\"<>#%{}|'\\^[]") != string::npos)
+        //     throw RequestException("Bad Request", 400);
         if (reqConfig.routes.find(uri) == reqConfig.routes.end()) 
         {
             if (reqConfig.routes.find("/") == reqConfig.routes.end())
