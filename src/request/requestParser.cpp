@@ -1,8 +1,11 @@
 #include "../../inc/request.hpp"
 
 void checkMethod(const string& method) {
-    if (method != "GET" && method != "POST" && method != "DELETE")
+    if (method != "GET" && method != "POST" && method != "DELETE") {
+        // cout << "THE METHID IS: " << method << endl;
+        cout << "checkMethod function" << endl;
         throw HttpExcept(405, "Unsupported method: " + method);
+    }
 }
 
 void checkURI(const string& path) {
@@ -49,6 +52,7 @@ void getRoute(const servcnf& server, const string& path, string& matched, HttpRe
 
 void checkAllowed(routeCnf route, const string& method, const string& path) {
     if (find(route.methodes.begin(), route.methodes.end(), method) == route.methodes.end()) {
+        cout << "checkAllowed function" << endl;
         throw HttpExcept(405, "Method not allowed: " + method + " for route " + path);
     }
 }

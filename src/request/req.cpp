@@ -90,8 +90,6 @@ bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
     char temp[BUFFER_SIZE];
     ssize_t bytes = recv(fd, temp, sizeof(temp), 0);
 
-    // cout << temp << endl;
-
     if (bytes == 0)
         return true;
     else if (bytes < 0)

@@ -1,6 +1,6 @@
 #include "../../inc/request.hpp"
 
-void parseChecking(const servcnf& server, HttpRequest& req) {
+void parseChecking(const servcnf& server, HttpRequest& req, int fd) {
     checkMethod(req.method);
     checkURI(req.uri);
     checkHeaders(req);
@@ -20,7 +20,7 @@ string HttpRequest::get(const string& key, const string& defaultValue) const {
 void HttpRequest::initFromHeader() { // check somthing sus here..
     host = headers["Host"];
     size_t pos = host.find(":");
-    string ip = getIp(host.substr(0, pos)) + ":" + host.substr(pos + 1);;
+    string ip = host.substr(0, pos) + ":" + host.substr(pos + 1);;
     host = ip;
     connection = get("Connection", "close");
 }
@@ -60,25 +60,29 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
     try {
         if (req.parseRequestLineByLine(fd, req.conf)) {
             req.initFromHeader();
-            parseChecking(req.conf, req);
+            parseChecking(req.conf, req, fd);
             return 1;
         }
-        return 0; // still readin
+        return 0; // still reading
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what(), req.conf);
         requestmp.erase(fd);
-        struct epoll_event ev;
+        struct epoll_event ev = {0};
         ev.data.fd = fd;
-        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev) == -1)
-            cout << "epoll ctl error in the req func\n";
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev) == -1) {
+            perror("epoll_ctl failed");
+            cout << "epollFd: " << epollFd << ", fd: " << fd << endl;
+        }
         close(fd);
         return -1;
     }
 }
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
+    cout << "fd: " << clientFd << " is reading\n";
     int stat = request(clientFd, conf, epollFd, requestmp);
+    // cout << "client host: " << 
     if (stat == 1) { // chunked over
         struct epoll_event ev;
         ev.events = EPOLLOUT;
