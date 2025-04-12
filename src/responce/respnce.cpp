@@ -1,89 +1,159 @@
 #include "../../inc/responce.hpp"
 
-bool isDirectory(const string& path) {
-    struct stat st;
-    if (stat(path.c_str(), &st) == 0) {
-        return (st.st_mode & S_IFDIR) != 0;
-    }
-    return false;
+void sendRedirect(int fd, const string& location, HttpRequest& req) {
+    stringstream response;
+
+    response << "HTTP/1.1 301 Moved Permanently\r\n";
+    response << "Location: " << location << "\r\n";
+    response << "Content-Type: text/html\r\n";
+    response << "Content-Length: 0\r\n";
+    response << "Connection: " << req.connection << "\r\n";
+    response << "\r\n";
+
+    string responseStr = response.str();
+    send(fd, responseStr.c_str(), responseStr.size(), 0);
 }
 
-bool fileExists(const string& path) {
-    ifstream file(path.c_str());
-    bool exists = file.good();
-    file.close();
-    return exists;
+size_t getContentLength(const string& path) {
+    struct stat fileStat;
+    if (stat(path.c_str(), &fileStat) == -1) {
+        perror("stat");
+        return 0;
+    }
+    return fileStat.st_size;
 }
 
-// void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
-//     map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
-//     if (it == requestStates.end()) { // wont even need this ig
-//         close(clientFd);
-//         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-//         return;
-//     }
-//     HttpRequest& req = it->second;
-// }
+int sendFileInChunks(int clientFd, std::ifstream& fileStream, off_t fileSize) {
+    char buffer[BUFFER_SIZE];
+    off_t bytesSent = 0;
 
+    while (bytesSent < fileSize) {
+        // Read a chunk of the file
+        fileStream.read(buffer, BUFFER_SIZE);
+        size_t bytesRead = fileStream.gcount();
 
-/* temporary */
+        if (bytesRead == 0)
+            break;
 
-void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates) {
-    // Find the request state for this client
-    map<int, HttpRequest>::iterator it = requestStates.find(clientFd);
-    if (it == requestStates.end()) {
-        close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+        std::stringstream chunkHeader;
+        chunkHeader << std::hex << bytesRead << "\r\n";  // Hexadecimal size of the chunk
+
+        std::string chunkHeaderStr = chunkHeader.str();
+        if (send(clientFd, chunkHeaderStr.c_str(), chunkHeaderStr.size(), 0) == -1) {
+            perror("send chunk size header");
+            return -1;
+        }
+
+        if (send(clientFd, buffer, bytesRead, 0) == -1) {
+            perror("send chunk data");
+            return -1;
+        }
+
+        const char* crlf = "\r\n";
+        if (send(clientFd, crlf, 2, 0) == -1) {
+            perror("send CRLF after chunk");
+            return -1;
+        }
+
+        bytesSent += bytesRead;
+    }
+
+    const char* finalChunk = "0\r\n\r\n";
+    if (send(clientFd, finalChunk, 5, 0) == -1) {
+        perror("send final chunk");
+        return -1;
+    }
+    return 0;  // Success
+}
+
+int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
+    RouteResult routeResult = handleRouting(clientFd, req);
+
+    stringstream response;
+    response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
+    response << "Content-Type: " << routeResult.contentType << "\r\n";
+
+    if (routeResult.resFd != -1) {
+        response << "Content-Length: " << getContentLength(routeResult.fullPath) << "\r\n";
+        // response << "Accept-Ranges: bytes\r\n";
+    } else {
+        response << "Content-Length: " << routeResult.responseBody.size() << "\r\n";
+    }
+
+    response << "Connection: " << "close" << "\r\n";
+    response << "\r\n";
+
+    string headerStr = response.str();
+    if (send(clientFd, headerStr.c_str(), headerStr.size(), 0) == -1) {
+        perror("send headers");
+        return -1;
+    }
+
+    if (routeResult.resFd != -1) {
+        char buffer[BUFFER_SIZE];
+
+        while (true) {
+            size_t bytesRead = read(routeResult.resFd, buffer, BUFFER_SIZE);
+
+            if (bytesRead <= 0)
+                break;
+
+            streamsize totalSent = 0;
+            while (totalSent < bytesRead) {
+                ssize_t sent = send(clientFd, buffer + totalSent, bytesRead - totalSent, 0);
+                if (sent == -1) {
+                    if (errno == EPIPE || errno == ECONNRESET) {
+                        cout << "Socket is not ready for writing, try again later" << endl;
+                        break; // Non-blocking mode, try again later
+                    }
+                    perror("send body (file)");
+                    close(routeResult.resFd);
+                    return -1;
+                }
+                totalSent += sent;
+            }
+        }
+        close(routeResult.resFd);
+    }
+    else {
+        const string& body = routeResult.responseBody;
+        ssize_t totalSent = 0;
+        while (totalSent < (ssize_t)body.size()) {
+            ssize_t sent = send(clientFd, body.c_str() + totalSent, body.size() - totalSent, 0);
+            if (sent == -1) {
+                perror("int send body (string)");
+                return -1;
+            }
+            totalSent += sent;
+        }
+    }
+
+    return 0;
+}
+
+void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
+    HttpRequest req = requestmp[fd];
+
+    try {
+        if (!req.mtroute.redirect.empty()) {
+            sendRedirect(fd, req.mtroute.redirect, req);
+            closeOrSwitch(fd, epollFd, req, requestmp);
+            return;
+        }
+        if (req.method == "GET") {
+            getMethode(fd, epollFd, req, requestmp);
+            closeOrSwitch(fd, epollFd, req, requestmp);
+            return;
+        }
+    }
+    catch (const HttpExcept& e) {
+        sendErrorResponse(fd, e.getStatusCode(), e.what(), req.conf);
+        requestmp.erase(fd);
+        struct epoll_event ev;
+        ev.data.fd = fd;
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev) == -1)
+            cout << "epoll ctl error in the client write\n";
+        close(fd);
         return;
     }
-
-    HttpRequest& req = it->second;
-
-    // Only handle GET requests
-    if (req.method != "GET") {
-        close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-        requestStates.erase(clientFd);
-        return;
-    }
-
-    // Map path to a file (e.g., remove leading '/' and use as filename)
-    string filepath = req.path.substr(1); // e.g., "/index.html" -> "index.html"
-    if (filepath.empty())
-        filepath = "www/index.html"; // Default file
-
-    // Open the file
-    ifstream file(filepath, ios::binary);
-    if (!file.is_open()) {
-        // File not found, send 404
-        string response = "HTTP/1.1 404 Not Found\r\nContent-Length: 14\r\n\r\nFile not found";
-        send(clientFd, response.c_str(), response.size(), 0);
-        close(clientFd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-        requestStates.erase(clientFd);
-        return;
-    }
-
-    // Get file size
-    file.seekg(0, ios::end);
-    size_t fileSize = file.tellg();
-    file.seekg(0, ios::beg);
-
-    // Prepare HTTP response headers
-    string response = "HTTP/1.1 200 OK\r\nContent-Length: " + to_string(fileSize) + "\r\n\r\n";
-
-    // Send headers
-    send(clientFd, response.c_str(), response.size(), 0);
-
-    // Send file content
-    char buffer[4096];
-    while (file.read(buffer, sizeof(buffer)) || file.gcount()) {
-        send(clientFd, buffer, file.gcount(), 0);
-    }
-
-    // Cleanup
-    file.close();
-    close(clientFd);
-    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
-    requestStates.erase(clientFd);
 }

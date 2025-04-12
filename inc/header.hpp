@@ -19,6 +19,10 @@
 #include <algorithm>
 #include <sys/stat.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <iomanip>
+#include <algorithm>
 
 using namespace std;
 
@@ -42,3 +46,6 @@ string to_string(T value) {
 }
 
 void ctrl_C();
+
+string getIp(string hostname);
+string trim(const string& str);
