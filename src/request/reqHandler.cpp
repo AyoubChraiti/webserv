@@ -1,7 +1,7 @@
 #include "../../inc/request.hpp"
 HttpRequest::HttpRequest()
 {
-    cout << "here" << endl;
+
 }
 string getInfoClient(int clientFd)
 {
@@ -63,7 +63,6 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
     }
     catch(const HttpExcept& e)
     {
-        // modifyState(epollFd, clientFd, EPOLLOUT);
         sendErrorResponse(clientFd, e.getStatusCode(),e.what(), conf.servers[host]);
         reqStates.erase(clientFd);
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL); 

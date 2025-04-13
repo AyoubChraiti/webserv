@@ -23,6 +23,7 @@
 #include <dirent.h>
 #include <iomanip>
 #include <algorithm>
+#include <sys/wait.h>
 
 using namespace std;
 

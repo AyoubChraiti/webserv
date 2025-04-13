@@ -131,29 +131,143 @@ int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest
     return 0;
 }
 
-void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
-    HttpRequest req = requestmp[fd];
+// void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
+//     HttpRequest req = requestmp[fd];
 
-    try {
-        if (!req.mtroute.redirect.empty()) {
-            sendRedirect(fd, req.mtroute.redirect, req);
-            closeOrSwitch(fd, epollFd, req, requestmp);
-            return;
-        }
-        if (req.method == "GET") {
-            getMethode(fd, epollFd, req, requestmp);
-            closeOrSwitch(fd, epollFd, req, requestmp);
-            return;
-        }
+//     try {
+//         if (!req.mtroute.redirect.empty()) {
+//             sendRedirect(fd, req.mtroute.redirect, req);
+//             closeOrSwitch(fd, epollFd, req, requestmp);
+//             return;
+//         }
+//         if (req.method == "GET") {
+//             getMethode(fd, epollFd, req, requestmp);
+//             closeOrSwitch(fd, epollFd, req, requestmp);
+//             return;
+//         }
+//     }
+//     catch (const HttpExcept& e) {
+//         sendErrorResponse(fd, e.getStatusCode(), e.what(), req.conf);
+//         requestmp.erase(fd);
+//         struct epoll_event ev;
+//         ev.data.fd = fd;
+//         if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev) == -1)
+//             cout << "epoll ctl error in the client write\n";
+//         close(fd);
+//         return;
+//     }
+// }
+
+
+
+
+
+
+
+
+// STARTER
+
+
+
+
+void Response::buildResponse (servcnf& conf, HttpRequest &reqStates, int clientFd)
+{
+    ifstream file("index.html");
+    stringstream ss;
+    ss << file.rdbuf();
+    string body = ss.str();
+    headers["Content-Type"] = "text/html";
+    headers["Content-Length"] = to_string (body.size());
+    headers["Connection"] = "close";
+    string response;
+    response += "HTTP/1.1 " + to_string (statusCode) + " " + statusText + "\r\n"; 
+    response += "Content-Type: " + headers["Content-Type"] + "\r\n";
+    response += "Content-Length: " + headers["Content-Length"] + "\r\n";
+    response += "Connection: " + headers["Connection"] + "\r\n";
+    response += "\r\n";
+    response += body;
+    send(clientFd, response.c_str(), response.length(), 0);
+    close(clientFd);
+}
+
+void childCGI (HttpRequest &reqStates, int fds[2], int clientFd)
+{
+    string scriptPATH = "." + reqStates.uri;
+    close(fds[0]);
+    dup2(fds[1], STDOUT_FILENO);
+    close(fds[1]);
+    // close (clientFd);
+    // vector <string> envcgi;
+    // envcgi.push_back("REQUEST_METHOD=" + reqStates.getMethod());
+    // envcgi.push_back("QUERY_STRING="); // mnb3d
+    // envcgi.push_back("SCRIPT_NAME=" + scriptPATH);
+    // envcgi.push_back("SERVER_PROTOCOL=HTTP/1.1");
+    // vector <char *> vec;
+    // for (vector<string>::iterator it = envcgi.begin(); it != envcgi.end(); it++)
+    //     vec.push_back(const_cast <char*> (it->c_str())); 
+    // vec.push_back(NULL);
+    const char *args[] = {scriptPATH.c_str(), NULL}; // cant change charcter
+    execve(scriptPATH.c_str(), const_cast<char* const*>(args), NULL); // cast (cant change string)
+    cerr << "Fail" << endl;
+    exit(1);
+}
+
+void HandleCGI (int clientFd, HttpRequest &reqStates)
+{
+    int fds[2];
+    if (pipe(fds) == -1)
+    {
+        perror("pipe"); 
+        return; 
     }
-    catch (const HttpExcept& e) {
-        sendErrorResponse(fd, e.getStatusCode(), e.what(), req.conf);
-        requestmp.erase(fd);
-        struct epoll_event ev;
-        ev.data.fd = fd;
-        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, &ev) == -1)
-            cout << "epoll ctl error in the client write\n";
-        close(fd);
+    pid_t pid = fork();
+    if (pid == -1)
+    {
+        perror("fork");
         return;
     }
+    if (pid == 0)
+        childCGI(reqStates, fds, clientFd);
+    else
+    {
+        close (fds[1]);
+        string output_cgi;
+        char buff[1024];
+        while (ssize_t recvBytes = read(fds[0], buff, sizeof(buff)))
+        {
+            if (recvBytes == -1)
+            {
+                perror("read");
+                return ;
+            }
+            output_cgi.append(buff, recvBytes);
+        }
+        close(fds[0]);
+        int status;
+        waitpid(pid, &status, 0);
+        if (WEXITSTATUS(status) != 0) 
+        {
+            std::cerr << "CGI process failed" << std::endl;
+            return;
+        }
+        string starterline = "HTTP/1.1, 200 OK\r\n";
+        send(clientFd, starterline.c_str(),  starterline.length(), 0);
+        send(clientFd, output_cgi.c_str(),  output_cgi.length(), 0);
+        close(clientFd);
+    }
+}
+
+void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& reqStates) 
+{   
+    string URI = reqStates[clientFd].uri;
+    if (URI.find("/cgi-bin/") != string::npos)
+        HandleCGI(clientFd, reqStates[clientFd]);
+    else
+    {
+        string host = getInfoClient(clientFd);
+        servcnf reqConfig = conf.servers[host];    
+        Response response;
+        response.buildResponse(reqConfig, reqStates[clientFd], clientFd);
+    }
+    reqStates.erase(clientFd);
 }

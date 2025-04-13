@@ -21,23 +21,23 @@ void HttpRequest::parseRequestLine () // 4. URI path normalization
     if (version != "HTTP/1.1")
         throw HttpExcept(505, "HTTP Version Not Supported");
     buffer.erase(0, index + 2);
-    if (uri.find("/cgi-bin/") == string::npos)  
-    {
-        if (uri[0] != '/')
-            throw HttpExcept(400, "Bad Request");
-        // if (uri.find_first_of("\"<>#%{}|'\\^[]") != string::npos)
-        //     throw HttpExcept(400, "Bad Request");
-        if (conf.routes.find(uri) == conf.routes.end()) 
-        {
-            if (conf.routes.find("/") == conf.routes.end())
-                throw HttpExcept(404, "Not Found");
-            uri = "/";
-        }
-        vector<string>::iterator beginIt = conf.routes[uri].methodes.begin();
-        vector<string>::iterator endIt = conf.routes[uri].methodes.end();
-        if (find(beginIt, endIt, method) == endIt)
-            throw HttpExcept(405, "Method Not Allowed");
-    }
+    // if (uri == "hehe")  
+    // {
+    //     if (uri[0] != '/')
+    //         throw HttpExcept(400, "Bad Request");
+    //     // if (uri.find_first_of("\"<>#%{}|'\\^[]") != string::npos)
+    //     //     throw HttpExcept(400, "Bad Request");
+    //     if (conf.routes.find(uri) == conf.routes.end()) 
+    //     {
+    //         if (conf.routes.find("/") == conf.routes.end())
+    //             throw HttpExcept(404, "Not Found");
+    //         uri = "/";
+    //     }
+    //     vector<string>::iterator beginIt = conf.routes[uri].methodes.begin();
+    //     vector<string>::iterator endIt = conf.routes[uri].methodes.end();
+    //     if (find(beginIt, endIt, method) == endIt)
+    //         throw HttpExcept(405, "Method Not Allowed");
+    // }
     lineLocation = HEAD;
 }
 size_t StringStream(string string)
@@ -66,7 +66,7 @@ void HttpRequest::parseHeader()
             if (key == "Transfer-Encoding")
                 isChunked = true;
             else
-                sizeBody = StringStream(value);
+                contentLength = StringStream(value);
             isPostKeys = true;
         }
         headers.insert(make_pair(key, value));
@@ -83,6 +83,7 @@ void HttpRequest::parseHeader()
         buffer.erase(0, 2);
         lineLocation = BODY;
     }
+
 }
 
 
@@ -96,10 +97,10 @@ void HttpRequest::parseBody()
 {
     if (!isChunked)
     {
-        sizeBody -= buffer.size();
+        contentLength -= buffer.size();
         body.append(buffer, buffer.size());
         buffer.erase(0);
-        if (sizeBody == 0)
+        if (contentLength == 0)
             lineLocation = END_REQUEST;
     }
     else
@@ -107,15 +108,15 @@ void HttpRequest::parseBody()
         while (buffer.size())
         {
             size_t index = buffer.find("\r\n");
-            sizeBody =  hexToInt(buffer.substr(0, index));
-            // cout << sizeBody << endl;
-            if (sizeBody == 0)
+            contentLength =  hexToInt(buffer.substr(0, index));
+            // cout << contentLength << endl;
+            if (contentLength == 0)
                 break;
             // buffer.erase(0, index + 2);
-            // body.append(buffer, sizeBody);
+            // body.append(buffer, contentLength);
             // buffer.erase(0);
         }
-        // if (sizeBody == 0 )
+        // if (contentLength == 0 )
         //     lineLocation = END_REQUEST;
     }
 }

@@ -32,19 +32,18 @@ enum ParseState {
 
 class HttpRequest {
 public:
-    string key;
+    // string key;
+    // ssize_t req_size;
+    // vector<char> body;
     string buffer;
     ParseState lineLocation;
-    ssize_t req_size;
     string method, uri, host, connection, version;
-    // vector<char> body;
-    string body;
+    string body; // change
     map<string, string> headers;
     size_t contentLength;
-    int bytesRead;
+    // int bytesRead;
     servcnf conf;
     routeCnf mtroute;
-    size_t sizeBody;
     int isPostKeys;
     int isChunked;
 
