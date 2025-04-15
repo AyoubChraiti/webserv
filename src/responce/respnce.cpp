@@ -191,50 +191,53 @@ void Response::buildResponse (servcnf& conf, HttpRequest &reqStates, int clientF
 }
 
 
-
-// void setupCGI(string &scriptPATH, string &QUERYstring , string URI)
-// {
- 
-
-// }
+void setupCGIenv(string &scriptPATH, string &QUERYstring , HttpRequest reqStates, vector <char *> &vec)
+{
+    vector <string> envcgi;
+    envcgi.push_back("GATEWAY_INTERFACE=CGI/1.1");
+    envcgi.push_back("SERVER_PROTOCOL=HTTP/1.1");
+    envcgi.push_back("REQUEST_METHOD=" + reqStates.method);
+    envcgi.push_back("QUERY_STRING=" + QUERYstring);
+    envcgi.push_back("SCRIPT_NAME=" + scriptPATH);
+    for (vector<string>::iterator it = envcgi.begin(); it != envcgi.end(); it++)
+        vec.push_back(const_cast <char*> (it->c_str())); 
+    vec.push_back(NULL);
+}
 
 void childCGI (HttpRequest &reqStates, int fds[2], int clientFd)
 {
     size_t indexQUERY = reqStates.uri.find("?");
     string scriptPATH = "." + reqStates.uri.substr(0, indexQUERY);
+    if (access(scriptPATH.c_str(), X_OK) != 0)
+        throw HttpExcept(404, "Not Found");
     string QUERYstring = (indexQUERY != string::npos) ? reqStates.uri.substr(indexQUERY + 1) : "";
+    vector <char *> vec;
+    setupCGIenv(scriptPATH, QUERYstring, reqStates, vec);
+
     close(fds[0]);
     close (clientFd);
     dup2(fds[1], STDOUT_FILENO);
     close(fds[1]);
-    vector <string> envcgi;
-    envcgi.push_back("REQUEST_METHOD=" + reqStates.method);
-    envcgi.push_back("QUERY_STRING=" + QUERYstring);
-    envcgi.push_back("SCRIPT_NAME=" + scriptPATH);
-    envcgi.push_back("SERVER_PROTOCOL=HTTP/1.1");
-    vector <char *> vec;
-    for (vector<string>::iterator it = envcgi.begin(); it != envcgi.end(); it++)
-        vec.push_back(const_cast <char*> (it->c_str())); 
-    vec.push_back(NULL);
+
     const char *args[] = {scriptPATH.c_str(), NULL}; // cant change charcter
     execve(scriptPATH.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
     cerr << "Fail" << endl;
     exit(1);
 }
 
-void HandleCGI (int clientFd, HttpRequest &reqStates)
+int HandleCGI (int clientFd, HttpRequest &reqStates)
 {
     int fds[2];
     if (pipe(fds) == -1)
     {
         perror("pipe"); 
-        return; 
+        return -1; 
     }
     pid_t pid = fork();
     if (pid == -1)
     {
         perror("fork");
-        return;
+        return -1;
     }
     if (pid == 0)
         childCGI(reqStates, fds, clientFd);
@@ -248,7 +251,7 @@ void HandleCGI (int clientFd, HttpRequest &reqStates)
             if (recvBytes == -1)
             {
                 perror("read");
-                return ;
+                return -1;
             }
             output_cgi.append(buff, recvBytes);
         }
@@ -258,26 +261,44 @@ void HandleCGI (int clientFd, HttpRequest &reqStates)
         if (WEXITSTATUS(status) != 0) 
         {
             std::cerr << "CGI process failed" << std::endl;
-            return;
+            return -1;
         }
         string starterline = "HTTP/1.1, 200 OK\r\n";
         send(clientFd, starterline.c_str(),  starterline.length(), 0);
         send(clientFd, output_cgi.c_str(),  output_cgi.length(), 0);
         close(clientFd);
     }
+    return 0;
 }
 
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) 
 {   
-    string URI = requestmp[clientFd].uri;
-    if (URI.find("/cgi-bin/") != string::npos)
-        HandleCGI(clientFd, requestmp[clientFd]);
-    else
+    try
     {
-        string host = getInfoClient(clientFd);
-        servcnf reqConfig = conf.servers[host];    
-        Response response;
-        response.buildResponse(reqConfig, requestmp[clientFd], clientFd);
+        string URI = requestmp[clientFd].uri;
+        if (URI.find("/cgi-bin/") != string::npos)
+        {
+            if (HandleCGI(clientFd, requestmp[clientFd]) == -1)
+                return ;
+        }
+        else
+        {
+            string host = getInfoClient(clientFd);
+            servcnf reqConfig = conf.servers[host];    
+            Response response;
+            response.buildResponse(reqConfig, requestmp[clientFd], clientFd);
+        }
+    }
+    catch(const HttpExcept& e)
+    {
+        sendErrorResponse(clientFd, e.getStatusCode(), e.what(), requestmp[clientFd].conf);
+        requestmp.erase(clientFd);
+        struct epoll_event ev;
+        ev.data.fd = clientFd;
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, &ev) == -1)
+            cout << "epoll ctl error in the client write\n";
+        close(clientFd);
+        return;
     }
     requestmp.erase(clientFd);
 }
