@@ -190,24 +190,34 @@ void Response::buildResponse (servcnf& conf, HttpRequest &reqStates, int clientF
     close(clientFd);
 }
 
+
+
+// void setupCGI(string &scriptPATH, string &QUERYstring , string URI)
+// {
+ 
+
+// }
+
 void childCGI (HttpRequest &reqStates, int fds[2], int clientFd)
 {
-    string scriptPATH = "." + reqStates.uri;
+    size_t indexQUERY = reqStates.uri.find("?");
+    string scriptPATH = "." + reqStates.uri.substr(0, indexQUERY);
+    string QUERYstring = (indexQUERY != string::npos) ? reqStates.uri.substr(indexQUERY + 1) : "";
     close(fds[0]);
+    close (clientFd);
     dup2(fds[1], STDOUT_FILENO);
     close(fds[1]);
-    // close (clientFd);
-    // vector <string> envcgi;
-    // envcgi.push_back("REQUEST_METHOD=" + reqStates.getMethod());
-    // envcgi.push_back("QUERY_STRING="); // mnb3d
-    // envcgi.push_back("SCRIPT_NAME=" + scriptPATH);
-    // envcgi.push_back("SERVER_PROTOCOL=HTTP/1.1");
-    // vector <char *> vec;
-    // for (vector<string>::iterator it = envcgi.begin(); it != envcgi.end(); it++)
-    //     vec.push_back(const_cast <char*> (it->c_str())); 
-    // vec.push_back(NULL);
+    vector <string> envcgi;
+    envcgi.push_back("REQUEST_METHOD=" + reqStates.method);
+    envcgi.push_back("QUERY_STRING=" + QUERYstring);
+    envcgi.push_back("SCRIPT_NAME=" + scriptPATH);
+    envcgi.push_back("SERVER_PROTOCOL=HTTP/1.1");
+    vector <char *> vec;
+    for (vector<string>::iterator it = envcgi.begin(); it != envcgi.end(); it++)
+        vec.push_back(const_cast <char*> (it->c_str())); 
+    vec.push_back(NULL);
     const char *args[] = {scriptPATH.c_str(), NULL}; // cant change charcter
-    execve(scriptPATH.c_str(), const_cast<char* const*>(args), NULL); // cast (cant change string)
+    execve(scriptPATH.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
     cerr << "Fail" << endl;
     exit(1);
 }
@@ -257,17 +267,17 @@ void HandleCGI (int clientFd, HttpRequest &reqStates)
     }
 }
 
-void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& reqStates) 
+void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) 
 {   
-    string URI = reqStates[clientFd].uri;
+    string URI = requestmp[clientFd].uri;
     if (URI.find("/cgi-bin/") != string::npos)
-        HandleCGI(clientFd, reqStates[clientFd]);
+        HandleCGI(clientFd, requestmp[clientFd]);
     else
     {
         string host = getInfoClient(clientFd);
         servcnf reqConfig = conf.servers[host];    
         Response response;
-        response.buildResponse(reqConfig, reqStates[clientFd], clientFd);
+        response.buildResponse(reqConfig, requestmp[clientFd], clientFd);
     }
-    reqStates.erase(clientFd);
+    requestmp.erase(clientFd);
 }

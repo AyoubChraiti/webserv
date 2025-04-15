@@ -10,11 +10,17 @@ RouteResult handleRouting(int fd, HttpRequest& req) {
     reqPath.erase(reqPath.begin(), reqPath.begin() + bestMatch.size());
     string fullPath = req.mtroute.alias + reqPath;
 
+    cout << "alias: " << req.mtroute.alias << endl;
+
     // cout << "the route: " << req.mtroute.root << endl;
     // cout << "the full path: " << fullPath << endl;
 
+    cout << "index== " << req.mtroute.index << endl;
+
     if (isDirectory(fullPath)) {
+        cout << "its a directory\n";
         if (req.mtroute.index.empty()) {
+            cout << "here\n";
             if (req.mtroute.autoindex) {
                 result.contentType = "text/html";
                 if (reqPath.empty())

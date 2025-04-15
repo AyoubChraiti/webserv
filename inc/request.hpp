@@ -48,12 +48,13 @@ public:
     int isChunked;
 
     HttpRequest ();
-    HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false) {};
+    HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false), conf(config) {};
     // method of reqeust
     bool request(int clientFd);
     void parseRequestLine ();
     void parseHeader();
     void parseBody();
+    void HandleUri();
 };
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);

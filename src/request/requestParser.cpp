@@ -1,6 +1,26 @@
 #include "../../inc/request.hpp"
 #define MAX_URI_LENGTH 2000
 
+void HttpRequest::HandleUri()
+{
+    // check this http://localhost:8080/abc/dsadsadas/kapouet/
+    map<string , routeCnf>::iterator it = conf.routes.begin();
+    size_t prevLength = 0;
+    string key;
+    bool flag = false;
+    for (; it != conf.routes.end(); it++)
+    {
+        if (uri.find(it->first) != string::npos && it->first.length() > prevLength) 
+        {
+            prevLength = it->first.length();
+            key = it->first;
+            flag = true;
+        }
+    }
+    if (!flag)
+        throw HttpExcept(404, "No route for path: " + uri);
+    mtroute = conf.routes[key];
+}
 void HttpRequest::parseRequestLine () // 4. URI path normalization
 {
     size_t index = buffer.find("\r\n");
@@ -21,23 +41,12 @@ void HttpRequest::parseRequestLine () // 4. URI path normalization
     if (version != "HTTP/1.1")
         throw HttpExcept(505, "HTTP Version Not Supported");
     buffer.erase(0, index + 2);
-    // if (uri == "hehe")  
-    // {
-    //     if (uri[0] != '/')
-    //         throw HttpExcept(400, "Bad Request");
-    //     // if (uri.find_first_of("\"<>#%{}|'\\^[]") != string::npos)
-    //     //     throw HttpExcept(400, "Bad Request");
-    //     if (conf.routes.find(uri) == conf.routes.end()) 
-    //     {
-    //         if (conf.routes.find("/") == conf.routes.end())
-    //             throw HttpExcept(404, "Not Found");
-    //         uri = "/";
-    //     }
-    //     vector<string>::iterator beginIt = conf.routes[uri].methodes.begin();
-    //     vector<string>::iterator endIt = conf.routes[uri].methodes.end();
-    //     if (find(beginIt, endIt, method) == endIt)
-    //         throw HttpExcept(405, "Method Not Allowed");
-    // }
+    if (uri.find("/cgi-bin/") == string::npos)
+    {
+        HandleUri();
+        if (find(mtroute.methodes.begin(), mtroute.methodes.end(), method) == mtroute.methodes.end())
+            throw HttpExcept(405, "Method Not Allowed");
+    }
     lineLocation = HEAD;
 }
 size_t StringStream(string string)
@@ -69,6 +78,10 @@ void HttpRequest::parseHeader()
                 contentLength = StringStream(value);
             isPostKeys = true;
         }
+        if (key == "Host")
+            host = value;
+        if (key == "Connection")
+            connection = value;
         headers.insert(make_pair(key, value));
         buffer.erase(0, index + 2);
     }
