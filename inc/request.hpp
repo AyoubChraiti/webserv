@@ -3,7 +3,7 @@
 #include "string.hpp"
 #include "config.hpp"
 
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE 2024
 #define MAX_LINE 1024
 
 class HttpExcept : public exception {
@@ -34,21 +34,22 @@ class HttpRequest {
 public:
     // string key;
     // ssize_t req_size;
-    // vector<char> body;
+    // int bytesRead;
     string buffer;
     ParseState lineLocation;
     string method, uri, host, connection, version;
     string body; // change
+    vector<char> bodyChunked;
     map<string, string> headers;
     size_t contentLength;
-    // int bytesRead;
     servcnf conf;
     routeCnf mtroute;
-    int isPostKeys;
-    int isChunked;
+    bool isPostKeys;
+    bool isChunked;
+    bool isCGI;
 
     HttpRequest ();
-    HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false), conf(config) {};
+    HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false), isCGI(false) ,conf(config) {};
     // method of reqeust
     bool request(int clientFd);
     void parseRequestLine ();

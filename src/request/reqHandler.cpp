@@ -36,10 +36,10 @@ bool HttpRequest::request(int clientFd)
     if (recvBytes > 0)
     {
         buff[recvBytes] = '\0';
-        cout << buff << endl;
+        // cout << buff << endl;
         buffer.append(buff, recvBytes);
         if (lineLocation == REQUEST_LINE)
-            parseRequestLine(); 
+            parseRequestLine();
         if (lineLocation == HEAD)
             parseHeader();
         if (lineLocation == BODY)
@@ -59,7 +59,10 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
     try 
     {
         if (reqStates[clientFd].request(clientFd))
+        {
+            cout << reqStates[clientFd].body << endl;
             modifyState(epollFd, clientFd, EPOLLOUT);
+        }
     }
     catch(const HttpExcept& e)
     {

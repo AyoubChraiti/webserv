@@ -7,7 +7,7 @@ void HttpRequest::HandleUri()
     map<string , routeCnf>::iterator it = conf.routes.begin();
     size_t prevLength = 0;
     string key;
-    bool flag = false;
+    bool flag = false; 
     for (; it != conf.routes.end(); it++)
     {
         if (uri.find(it->first) != string::npos && it->first.length() > prevLength) 
@@ -21,6 +21,7 @@ void HttpRequest::HandleUri()
         throw HttpExcept(404, "No route for path: " + uri);
     mtroute = conf.routes[key];
 }
+
 void HttpRequest::parseRequestLine () // 4. URI path normalization
 {
     size_t index = buffer.find("\r\n");
@@ -41,12 +42,11 @@ void HttpRequest::parseRequestLine () // 4. URI path normalization
     if (version != "HTTP/1.1")
         throw HttpExcept(505, "HTTP Version Not Supported");
     buffer.erase(0, index + 2);
-    if (uri.find("/cgi-bin/") == string::npos)
-    {
-        HandleUri();
-        if (find(mtroute.methodes.begin(), mtroute.methodes.end(), method) == mtroute.methodes.end())
-            throw HttpExcept(405, "Method Not Allowed");
-    }
+    HandleUri();
+    if (mtroute.root == "/cgi-bin/")
+        isCGI = true;
+    if (find(mtroute.methodes.begin(), mtroute.methodes.end(), method) == mtroute.methodes.end() && !isCGI)
+        throw HttpExcept(405, "Method Not Allowed");
     lineLocation = HEAD;
 }
 size_t StringStream(string string)
@@ -56,6 +56,7 @@ size_t StringStream(string string)
     ss >> num;
     return num;
 }
+
 void HttpRequest::parseHeader()
 {
     size_t index;
@@ -96,14 +97,15 @@ void HttpRequest::parseHeader()
         buffer.erase(0, 2);
         lineLocation = BODY;
     }
-
 }
 
 
 size_t hexToInt (string str)
 {
-    return 0;
-    // complete this
+    size_t result;
+    stringstream ss (str) ;
+    ss >> hex >> result;
+    return result;
 }
 
 void HttpRequest::parseBody()
@@ -111,25 +113,28 @@ void HttpRequest::parseBody()
     if (!isChunked)
     {
         contentLength -= buffer.size();
-        body.append(buffer, buffer.size());
-        buffer.erase(0);
+        body.append(buffer.c_str(), buffer.size());
+        buffer.clear();
         if (contentLength == 0)
             lineLocation = END_REQUEST;
-    }
+    }  
+    // still need updates (chunked Body)
     else
     {
+        size_t index;
         while (buffer.size())
         {
-            size_t index = buffer.find("\r\n");
+            index = buffer.find("\r\n");
             contentLength =  hexToInt(buffer.substr(0, index));
-            // cout << contentLength << endl;
             if (contentLength == 0)
-                break;
-            // buffer.erase(0, index + 2);
-            // body.append(buffer, contentLength);
-            // buffer.erase(0);
+            {
+                lineLocation = END_REQUEST;
+                return ;
+            }
+            buffer.erase(0, index + 2);
+            for (size_t i = 0; i < contentLength ; i++)
+                bodyChunked.push_back(buffer[i]);
+            buffer.erase(0, contentLength + 2);
         }
-        // if (contentLength == 0 )
-        //     lineLocation = END_REQUEST;
     }
 }
