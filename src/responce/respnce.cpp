@@ -191,80 +191,105 @@ void Response::buildResponse (servcnf& conf, HttpRequest &reqStates, int clientF
 }
 
 
-void setupCGIenv(string &scriptPATH, string &QUERYstring , HttpRequest reqStates, vector <char *> &vec)
+
+string strUpper(string str)
 {
-    vector <string> envcgi;
-    envcgi.push_back("GATEWAY_INTERFACE=CGI/1.1");
-    envcgi.push_back("SERVER_PROTOCOL=HTTP/1.1");
-    envcgi.push_back("REQUEST_METHOD=" + reqStates.method);
-    envcgi.push_back("QUERY_STRING=" + QUERYstring);
-    envcgi.push_back("SCRIPT_NAME=" + scriptPATH);
-    for (vector<string>::iterator it = envcgi.begin(); it != envcgi.end(); it++)
-        vec.push_back(const_cast <char*> (it->c_str())); 
-    vec.push_back(NULL);
+    string res;
+    for (size_t i = 0 ;i < str.size(); i++)
+    {
+        if (str[i] == '-')
+            res += "_";
+        else
+            res += toupper(str[i]);
+    }
+    return res;
 }
-
-void childCGI (HttpRequest &reqStates, int fds[2], int clientFd)
+void setupCGIenv(string &scriptPATH, HttpRequest reqStates, vector <char *> &vec, vector<string> &envVar)
 {
-    size_t indexQUERY = reqStates.uri.find("?");
-    string scriptPATH = "." + reqStates.uri.substr(0, indexQUERY);
-    if (access(scriptPATH.c_str(), X_OK) != 0)
-        throw HttpExcept(404, "Not Found");
-    string QUERYstring = (indexQUERY != string::npos) ? reqStates.uri.substr(indexQUERY + 1) : "";
+    map <string, string > env;
+    env["GATEWAY_INTERFACE"] = "CGI/1.1";
+    env["SERVER_PROTOCOL"] = "HTTP/1.1";
+    env["REQUEST_METHOD"] = reqStates.method;
+    if (reqStates.method == "GET")
+    {
+        size_t indexQUERY = reqStates.uri.find("?");
+        scriptPATH += (indexQUERY == string::npos) ? reqStates.uri : reqStates.uri.substr(0, indexQUERY);
+        string querystr = (indexQUERY != string::npos) ? reqStates.uri.substr(indexQUERY + 1) : "";
+        env["QUERY_STRING"] = querystr;
+    }
+    else
+    {
+        scriptPATH += reqStates.uri;
+        if (reqStates.headers.find("Content-Type") != reqStates.headers.end())
+            env["CONTENT_TYPE"] = reqStates.headers["Content-Type"];
+        if (reqStates.headers.find("Content-Length") != reqStates.headers.end())
+            env["CONTENT_LENGTH"] = reqStates.headers["Content-Length"];
+    }
+    env["SCRIPT_NAME"] = scriptPATH;
+    for (map<string,string>::iterator it = reqStates.headers.begin(); it != reqStates.headers.end(); it++)
+        env["HTTP_" + strUpper(it->first)] = it->second;
+    for (map<string, string>::iterator it = env.begin(); it != env.end(); it++)
+    {
+        envVar.push_back(it->first + "=" + it->second);
+        vec.push_back(const_cast<char *>(envVar.back().c_str())); 
+    }
+    vec.push_back(NULL);
+}   
+
+void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
+{
+    string path = ".";
     vector <char *> vec;
-    setupCGIenv(scriptPATH, QUERYstring, reqStates, vec);
-
-    close(fds[0]);
+    vector <string> envVar;
+    setupCGIenv(path, reqStates, vec, envVar);
     close (clientFd);
-    dup2(fds[1], STDOUT_FILENO);
-    close(fds[1]);
+    close(stdoutFd[0]);
+    close(stdinFd[1]);
+    dup2(stdoutFd[1], STDOUT_FILENO);
+    dup2(stdinFd[0], STDIN_FILENO);
+    close(stdinFd[0]);
+    close(stdoutFd[1]);
 
-    const char *args[] = {scriptPATH.c_str(), NULL}; // cant change charcter
-    execve(scriptPATH.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
+    const char *args[] = {path.c_str(), NULL}; // cant change charcter
+    execve(path.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
     cerr << "Fail" << endl;
     exit(1);
 }
 
 int HandleCGI (int clientFd, HttpRequest &reqStates)
 {
-    int fds[2];
-    if (pipe(fds) == -1)
-    {
-        perror("pipe"); 
-        return -1; 
-    }
+    int stdoutFd[2], stdinFd[2];
+    if (pipe(stdinFd) == -1 || pipe(stdoutFd) == -1)
+        return (perror("pipe"), -1); 
     pid_t pid = fork();
     if (pid == -1)
-    {
-        perror("fork");
-        return -1;
-    }
+        return (perror("fork"), -1);
     if (pid == 0)
-        childCGI(reqStates, fds, clientFd);
+        childCGI(reqStates, stdoutFd, stdinFd,clientFd);
     else
     {
-        close (fds[1]);
+        close (stdoutFd[1]);
+        close(stdinFd[0]);
         string output_cgi;
         char buff[1024];
-        while (ssize_t recvBytes = read(fds[0], buff, sizeof(buff)))
+        write(stdinFd[1], reqStates.body.c_str(), reqStates.body.size());
+        close(stdinFd[1]);
+        while (ssize_t recvBytes = read(stdoutFd[0], buff, sizeof(buff)))
         {
             if (recvBytes == -1)
-            {
-                perror("read");
-                return -1;
-            }
+                return (perror("read"), -1);
             output_cgi.append(buff, recvBytes);
         }
-        close(fds[0]);
+        close(stdoutFd[0]);
         int status;
         waitpid(pid, &status, 0);
         if (WEXITSTATUS(status) != 0) 
         {
             std::cerr << "CGI process failed" << std::endl;
-            return -1;
+            exit(1);
         }
-        string starterline = "HTTP/1.1, 200 OK\r\n";
-        send(clientFd, starterline.c_str(),  starterline.length(), 0);
+        cout << output_cgi << endl;
+        output_cgi = "HTTP/1.1 200 OK\r\n" + output_cgi;
         send(clientFd, output_cgi.c_str(),  output_cgi.length(), 0);
         close(clientFd);
     }

@@ -3,7 +3,7 @@
 #include "string.hpp"
 #include "config.hpp"
 
-#define BUFFER_SIZE 2024
+#define BUFFER_SIZE 8000
 #define MAX_LINE 1024
 
 class HttpExcept : public exception {

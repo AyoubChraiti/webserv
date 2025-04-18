@@ -1,36 +1,28 @@
 #!/usr/bin/env python3
 
 import cgi
-import cgitb
-import os
-
-# Enable CGI traceback for debugging
-cgitb.enable()
 
 # Generate HTML content
 html_content = """\
 <html>
-<head><title>GET Request Test</title></head>
+<head><title>CGI Test</title></head>
 <body>
-<h1>GET Request CGI Test</h1>
+<h1>Hello, CGI!</h1>
 """
 
-# Get query parameters from GET request
+# Get form data
 form = cgi.FieldStorage()
-param1 = form.getvalue("param1", "default_value1")
-param2 = form.getvalue("param2", "default_value2")
+name = form.getvalue("name", "Guest")
 
-html_content += f"<p>Parameter 1: {param1}</p>"
-html_content += f"<p>Parameter 2: {param2}</p>"
-html_content += "<p>Try adding ?param1=value1&param2=value2 to the URL</p>"
+html_content += f"<p>Welcome, {name}!</p>"
 html_content += "</body></html>"
 
 # Compute content length
-content_length = len(html_content.encode('utf-8'))
+content_length = len(html_content.encode())  # Encode to bytes before measuring
 
 # Print headers
-print("Content-Type: text/html; charset=utf-8")
-print(f"Content-Length: {content_length}")
+print("Content-Type: text/html")
+print(f"Content-Length: {content_length}")  # Set Content-Length
 print()  # Empty line to separate headers from body
 
 # Print content

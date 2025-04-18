@@ -117,7 +117,7 @@ void HttpRequest::parseBody()
         buffer.clear();
         if (contentLength == 0)
             lineLocation = END_REQUEST;
-    }  
+    }   
     // still need updates (chunked Body)
     else
     {
