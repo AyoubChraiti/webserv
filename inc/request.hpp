@@ -47,6 +47,7 @@ public:
     bool isPostKeys;
     bool isChunked;
     bool isCGI;
+    ofstream bodyFile;
 
     HttpRequest ();
     HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false), isCGI(false) ,conf(config) {};

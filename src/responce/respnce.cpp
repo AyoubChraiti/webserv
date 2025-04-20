@@ -204,7 +204,7 @@ string strUpper(string str)
     }
     return res;
 }
-void setupCGIenv(string &scriptPATH, HttpRequest reqStates, vector <char *> &vec, vector<string> &envVar)
+void setupCGIenv(string &scriptPATH, HttpRequest &reqStates, vector <char *> &vec, vector<string> &envVar)
 {
     map <string, string > env;
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
@@ -272,7 +272,8 @@ int HandleCGI (int clientFd, HttpRequest &reqStates)
         close(stdinFd[0]);
         string output_cgi;
         char buff[1024];
-        write(stdinFd[1], reqStates.body.c_str(), reqStates.body.size());
+        cout << reqStates.body << endl;
+        write(stdinFd[1], reqStates.bodyFile, reqStates.body.size());
         close(stdinFd[1]);
         while (ssize_t recvBytes = read(stdoutFd[0], buff, sizeof(buff)))
         {
@@ -288,7 +289,6 @@ int HandleCGI (int clientFd, HttpRequest &reqStates)
             std::cerr << "CGI process failed" << std::endl;
             exit(1);
         }
-        cout << output_cgi << endl;
         output_cgi = "HTTP/1.1 200 OK\r\n" + output_cgi;
         send(clientFd, output_cgi.c_str(),  output_cgi.length(), 0);
         close(clientFd);
@@ -321,7 +321,7 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
         struct epoll_event ev;
         ev.data.fd = clientFd;
         if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, &ev) == -1)
-            cout << "epoll ctl error in the client write\n";
+            cerr << "epoll ctl error in the client write\n";
         close(clientFd);
         return;
     }

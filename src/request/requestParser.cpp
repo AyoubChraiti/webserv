@@ -3,7 +3,6 @@
 
 void HttpRequest::HandleUri()
 {
-    // check this http://localhost:8080/abc/dsadsadas/kapouet/
     map<string , routeCnf>::iterator it = conf.routes.begin();
     size_t prevLength = 0;
     string key;
@@ -95,6 +94,9 @@ void HttpRequest::parseHeader()
     else
     {
         buffer.erase(0, 2);
+        bodyFile.open("file.txt");
+        if (!bodyFile.is_open())
+            cerr << "Fail file open " << endl;
         lineLocation = BODY;
     }
 }
@@ -113,28 +115,36 @@ void HttpRequest::parseBody()
     if (!isChunked)
     {
         contentLength -= buffer.size();
-        body.append(buffer.c_str(), buffer.size());
+        bodyFile.write(buffer.c_str(), buffer.size());
         buffer.clear();
         if (contentLength == 0)
-            lineLocation = END_REQUEST;
-    }   
-    // still need updates (chunked Body)
-    else
-    {
-        size_t index;
-        while (buffer.size())
         {
-            index = buffer.find("\r\n");
-            contentLength =  hexToInt(buffer.substr(0, index));
-            if (contentLength == 0)
-            {
-                lineLocation = END_REQUEST;
-                return ;
-            }
-            buffer.erase(0, index + 2);
-            for (size_t i = 0; i < contentLength ; i++)
-                bodyChunked.push_back(buffer[i]);
-            buffer.erase(0, contentLength + 2);
+            lineLocation = END_REQUEST;
+            bodyFile.close();
         }
     }
+    else
+        return ;
+
+    // else
+    // {
+    //     size_t index;
+    //     while (buffer.size())
+    //     {
+    //         index = buffer.find("\r\n");
+    //         contentLength =  hexToInt(buffer.substr(0, index));
+    //         if (contentLength == 0)
+    //         {
+    //             lineLocation = END_REQUEST;
+    //             return ;
+    //         }
+    //         buffer.erase(0, index + 2);
+    //         for (size_t i = 0; i < contentLength ; i++)
+    //             bodyChunked.push_back(buffer[i]);
+    //         buffer.erase(0, contentLength + 2);
+    //     }
+    // }
+    // still need updates (chunked Body)
+
 }
+

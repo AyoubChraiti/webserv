@@ -1,29 +1,22 @@
 #!/usr/bin/env python3
 
 import cgi
+import cgitb
+cgitb.enable()  # Show errors in the browser
 
-# Generate HTML content
-html_content = """\
-<html>
-<head><title>CGI Test</title></head>
-<body>
-<h1>Hello, CGI!</h1>
-"""
+# Required response headers
+print("Content-Type: text/html\n")
 
-# Get form data
+# Get the POST data
 form = cgi.FieldStorage()
-name = form.getvalue("name", "Guest")
 
-html_content += f"<p>Welcome, {name}!</p>"
-html_content += "</body></html>"
+# Extract individual fields
+name = form.getvalue("name")
+email = form.getvalue("email")
 
-# Compute content length
-content_length = len(html_content.encode())  # Encode to bytes before measuring
-
-# Print headers
-print("Content-Type: text/html")
-print(f"Content-Length: {content_length}")  # Set Content-Length
-print()  # Empty line to separate headers from body
-
-# Print content
-print(html_content)
+# Return the response
+print(f"<html><body>")
+print(f"<h2>Received POST data:</h2>")
+print(f"<p>Name: {name}</p>")
+print(f"<p>Email: {email}</p>")
+print(f"</body></html>")
