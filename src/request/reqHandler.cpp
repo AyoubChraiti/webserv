@@ -17,7 +17,7 @@ string HttpRequest::get(const string& key, const string& defaultValue) const {
     return (it != headers.end()) ? it->second : defaultValue;
 }
 
-void HttpRequest::initFromHeader() { // check somthing sus here..
+void HttpRequest::initFromHeader() {
     host = headers["Host"];
     size_t pos = host.find(":");
     string ip = host.substr(0, pos) + ":" + host.substr(pos + 1);;
@@ -38,10 +38,8 @@ string CheckServer(int fd) {
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     
-    if (getsockname(fd, (struct sockaddr*)&addr, &addrlen) == -1) {
-        cout << "we failing here?\n";
+    if (getsockname(fd, (struct sockaddr*)&addr, &addrlen) == -1)
         sysCallFail();
-    }
     
     char ip_str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(addr.sin_addr), ip_str, INET_ADDRSTRLEN);
@@ -52,6 +50,7 @@ string CheckServer(int fd) {
 
 int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp) {
     map<int, HttpRequest>::iterator it = getReqFrmMap(fd, requestmp);
+
     string sockHost = CheckServer(fd);
     HttpRequest& req = it->second;
     req.conf = conf.servers[sockHost];
@@ -63,7 +62,8 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
             parseChecking(req.conf, req, fd);
             return 1;
         }
-        return 0; // still reading
+        cout << "Request not complete yet" << endl;
+        return 0;
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what(), req.conf);
@@ -74,16 +74,15 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
             perror("epoll_ctl failed");
             cout << "epollFd: " << epollFd << ", fd: " << fd << endl;
         }
-        close(fd);
+        if (close(fd) == -1)
+            perror("close failed");
         return -1;
     }
 }
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
-    cout << "fd: " << clientFd << " is reading\n";
     int stat = request(clientFd, conf, epollFd, requestmp);
-    // cout << "client host: " << 
-    if (stat == 1) { // chunked over
+    if (stat == 1) {
         struct epoll_event ev;
         ev.events = EPOLLOUT;
         ev.data.fd = clientFd;

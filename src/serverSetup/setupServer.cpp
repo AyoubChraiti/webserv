@@ -31,10 +31,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
         if (numEvents == -1) {
             if (errno != EINTR) {
-                cout << "epoll fail\n";
+                cout << "epoll wait fail\n";
                 sysCallFail();
             }
-            cout << "epoll fail\n";
+            cout << "epoll wait fail\n";
         }
 
         for (int i = 0; i < numEvents; i++) {

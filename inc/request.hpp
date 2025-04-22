@@ -1,6 +1,5 @@
 #pragma once
 
-#include "string.hpp"
 #include "config.hpp"
 
 #define BUFFER_SIZE 8192
@@ -43,6 +42,8 @@ public:
     int bytesRead;
     servcnf conf;
     routeCnf mtroute;
+    fstream bodyFile;
+    string BodyPath;
 
     HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};
     string get(const string& key, const string& defaultValue) const;
