@@ -210,7 +210,7 @@ void setupCGIenv(string &scriptPATH, HttpRequest &reqStates, vector <char *> &ve
     map <string, string > env;
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
-    // env["REQUEST_METHOD"] = reqStates.method;
+    env["REQUEST_METHOD"] = reqStates.method;
     env["REDIRECT_STATUS"] = "200";
     env["SCRIPT_FILENAME"] = "cgi-bin/script.php"; 
 
