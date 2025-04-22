@@ -169,7 +169,7 @@ int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest
 
 
 
-
+#define BUFFER_BYTES 1050
 void Response::buildResponse (servcnf& conf, HttpRequest &reqStates, int clientFd)
 {
     ifstream file("index.html");
@@ -200,17 +200,21 @@ string strUpper(string str)
         if (str[i] == '-')
             res += "_";
         else
-            res += toupper(str[i]);
+            res += static_cast<char>(toupper(str[i]));
     }
     return res;
 }
+
 void setupCGIenv(string &scriptPATH, HttpRequest &reqStates, vector <char *> &vec, vector<string> &envVar)
 {
     map <string, string > env;
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
-    env["REQUEST_METHOD"] = reqStates.method;
-    if (reqStates.method == "GET")
+    // env["REQUEST_METHOD"] = reqStates.method;
+    env["REDIRECT_STATUS"] = "200";
+    env["SCRIPT_FILENAME"] = "cgi-bin/script.php"; 
+
+    if (reqStates.method == "GET") 
     {
         size_t indexQUERY = reqStates.uri.find("?");
         scriptPATH += (indexQUERY == string::npos) ? reqStates.uri : reqStates.uri.substr(0, indexQUERY);
@@ -225,9 +229,12 @@ void setupCGIenv(string &scriptPATH, HttpRequest &reqStates, vector <char *> &ve
         if (reqStates.headers.find("Content-Length") != reqStates.headers.end())
             env["CONTENT_LENGTH"] = reqStates.headers["Content-Length"];
     }
-    env["SCRIPT_NAME"] = scriptPATH;
+    env["SCRIPT_NAME"] =scriptPATH;
     for (map<string,string>::iterator it = reqStates.headers.begin(); it != reqStates.headers.end(); it++)
-        env["HTTP_" + strUpper(it->first)] = it->second;
+    {
+        if (it->first != "Content-Length" && it->first != "Content-Type")
+            env["HTTP_" + strUpper(it->first)] = it->second;
+    }
     for (map<string, string>::iterator it = env.begin(); it != env.end(); it++)
     {
         envVar.push_back(it->first + "=" + it->second);
@@ -246,13 +253,15 @@ void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clien
     close(stdoutFd[0]);
     close(stdinFd[1]);
     dup2(stdoutFd[1], STDOUT_FILENO);
-    dup2(stdinFd[0], STDIN_FILENO);
+    if (reqStates.method == "POST")
+        dup2(stdinFd[0], STDIN_FILENO);
     close(stdinFd[0]);
     close(stdoutFd[1]);
 
     const char *args[] = {path.c_str(), NULL}; // cant change charcter
-    execve(path.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
-    cerr << "Fail" << endl;
+    execve(path.c_str(), const_cast<char* const*>(args), NULL); // cast (cant change string)
+    cerr <<"yes" << endl;
+    perror("cgi execve failed");
     exit(1);
 }
 
@@ -271,9 +280,18 @@ int HandleCGI (int clientFd, HttpRequest &reqStates)
         close (stdoutFd[1]);
         close(stdinFd[0]);
         string output_cgi;
-        char buff[1024];
-        cout << reqStates.body << endl;
-        write(stdinFd[1], reqStates.bodyFile, reqStates.body.size());
+        char buff[BUFFER_BYTES];
+        if (reqStates.method == "POST")
+        {
+            while (reqStates.bodyFile.read(buff, BUFFER_BYTES))
+            {
+                size_t bytesRead = reqStates.bodyFile.gcount();
+                write(stdinFd[1], buff, bytesRead);
+            }
+            if (reqStates.bodyFile.gcount() > 0)
+                write(stdinFd[1], buff, reqStates.bodyFile.gcount());
+        }
+        reqStates.bodyFile.close();
         close(stdinFd[1]);
         while (ssize_t recvBytes = read(stdoutFd[0], buff, sizeof(buff)))
         {
@@ -289,6 +307,7 @@ int HandleCGI (int clientFd, HttpRequest &reqStates)
             std::cerr << "CGI process failed" << std::endl;
             exit(1);
         }
+        cout << output_cgi << endl;
         output_cgi = "HTTP/1.1 200 OK\r\n" + output_cgi;
         send(clientFd, output_cgi.c_str(),  output_cgi.length(), 0);
         close(clientFd);

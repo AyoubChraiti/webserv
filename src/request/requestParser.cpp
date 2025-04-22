@@ -94,9 +94,12 @@ void HttpRequest::parseHeader()
     else
     {
         buffer.erase(0, 2);
-        bodyFile.open("file.txt");
+        bodyFile.open("bigfile.txt",ios::in | ios::out |  ios::binary | ios::trunc);
         if (!bodyFile.is_open())
+        {
             cerr << "Fail file open " << endl;
+            return ;
+        }
         lineLocation = BODY;
     }
 }
@@ -119,8 +122,9 @@ void HttpRequest::parseBody()
         buffer.clear();
         if (contentLength == 0)
         {
+            bodyFile.clear();
+            bodyFile.seekg(0, ios::beg);
             lineLocation = END_REQUEST;
-            bodyFile.close();
         }
     }
     else

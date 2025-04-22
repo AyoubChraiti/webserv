@@ -38,8 +38,6 @@ public:
     string buffer;
     ParseState lineLocation;
     string method, uri, host, connection, version;
-    string body; // change
-    vector<char> bodyChunked;
     map<string, string> headers;
     size_t contentLength;
     servcnf conf;
@@ -47,7 +45,7 @@ public:
     bool isPostKeys;
     bool isChunked;
     bool isCGI;
-    ofstream bodyFile;
+    fstream bodyFile;
 
     HttpRequest ();
     HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false), isCGI(false) ,conf(config) {};
