@@ -209,7 +209,7 @@ void setupCGIenv(string &scriptPATH, HttpRequest &reqStates, vector <char *> &ve
 {
     map <string, string > env;
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
-    env["SERVER_PROTOCOL"] = "HTTP/1.1";
+    env["SERVER_PROTOCOL"] = reqStates.version;
     env["REQUEST_METHOD"] = reqStates.method;
     env["REDIRECT_STATUS"] = "200";
     env["SCRIPT_FILENAME"] = "cgi-bin/script.php"; 
@@ -229,7 +229,7 @@ void setupCGIenv(string &scriptPATH, HttpRequest &reqStates, vector <char *> &ve
         if (reqStates.headers.find("Content-Length") != reqStates.headers.end())
             env["CONTENT_LENGTH"] = reqStates.headers["Content-Length"];
     }
-    env["SCRIPT_NAME"] =scriptPATH;
+    env["SCRIPT_NAME"] = scriptPATH;
     for (map<string,string>::iterator it = reqStates.headers.begin(); it != reqStates.headers.end(); it++)
     {
         if (it->first != "Content-Length" && it->first != "Content-Type")

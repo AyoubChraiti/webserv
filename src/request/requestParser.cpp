@@ -135,13 +135,12 @@ void HttpRequest::parseBody()
             crlf_pos = buffer.find("\r\n");
             if (crlf_pos == std::string::npos) 
                 throw HttpExcept(400 ,"Bad Request");
-        }
-        if (remaining == 0) {
             contentLength = hexToInt(buffer.substr(0, crlf_pos));
             buffer.erase(0, crlf_pos + 2);
         }
         else
             contentLength = remaining;
+        remaining = 0;
         if (contentLength == 0)
         {
             buffer.clear();
@@ -149,23 +148,11 @@ void HttpRequest::parseBody()
             bodyFile.seekg(0, ios::beg);
             lineLocation = END_REQUEST;
         }
-        
-        if (buffer.size() >= contentLength)
-        {
-            bodyFile.write(buffer.c_str(), contentLength);
-            buffer.erase(0, contentLength  + 2);
-            remaining -= buffer.size();
-        }
-        else
-        {
-            bodyFile.write(buffer.c_str(), buffer.size());
-            remaining = contentLength - buffer.size(); 
-            buffer.erase(0, buffer.size());
-        }
-   }
-   // 1- body can be big that contentlength should read just content length 
-   // 2- body can be small that contentlength
+        size_t bytesTowrite = min(contentLength, buffer.size());
+        bodyFile.write(buffer.c_str(), bytesTowrite);
+        (contentLength > buffer.size()) ? buffer.erase(0, buffer.size()) : buffer.erase(0, contentLength + 2);
+        remaining = contentLength - bytesTowrite;
+    }
+   // 1- body big than content(hex) (give you next hex)
+   // 2- body small than content(hex) (remaning)
 }
-///
-
-

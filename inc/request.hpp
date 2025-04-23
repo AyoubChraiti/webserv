@@ -50,7 +50,8 @@ public:
     size_t remaining;
 
     HttpRequest ();
-    HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false), isCGI(false) ,conf(config) {};
+    HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false), 
+    isCGI(false) ,conf(config),  remaining(0) {};
     // method of reqeust
     bool request(int clientFd);
     void parseRequestLine ();
