@@ -47,6 +47,8 @@ public:
     bool isCGI;
     fstream bodyFile;
 
+    size_t remaining;
+
     HttpRequest ();
     HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false), isCGI(false) ,conf(config) {};
     // method of reqeust
