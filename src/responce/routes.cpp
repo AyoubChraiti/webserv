@@ -23,7 +23,7 @@ RouteResult handleRouting(int fd, HttpRequest& req) {
         }
         if (req.mtroute.index.empty()) {
             if (req.mtroute.autoindex) {
-                result.contentType = "text/html";
+                result.contentType = "text/html"; 
                 if (reqPath.empty())
                     reqPath = "/";
                 result.responseBody = generateAutoIndex(fullPath, reqPath);
