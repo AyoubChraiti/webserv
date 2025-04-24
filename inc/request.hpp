@@ -45,7 +45,7 @@ public:
     int bodyFileFd;
     string BodyPath;
 
-    HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};
+    HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0), bodyFileFd(-1) {};
     string get(const string& key, const string& defaultValue) const;
     bool parseRequestLineByLine(int fd, servcnf& conf);
     void initFromHeader();

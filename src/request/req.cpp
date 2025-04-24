@@ -59,23 +59,13 @@ void HttpRequest::HeadersParsing(const string& line) {
     }
 }
 
-// void HttpRequest::bodyPart(const char* data, size_t length, servcnf& conf) {
-//     size_t remaining = contentLength - bytesRead;
-//     size_t toWrite = min(remaining, length);
-//     body.insert(body.end(), data, data + toWrite);
-//     bytesRead += toWrite;
-
-//     if (bytesRead >= contentLength) {
-//         state = COMPLETE;
-//     }
-// }
-
 void HttpRequest::bodyPart(const char* data, size_t length, servcnf& conf) {
+    cout << "bodyPart function" << endl;
     size_t remaining = contentLength - bytesRead;
     size_t toWrite = min(remaining, length);
 
     if (bodyFileFd == -1) {
-        string filePath = "upload/" + to_string(time(nullptr)) + ".bin";
+        string filePath = "upload/uploaded_file.bin";
         bodyFileFd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
         if (bodyFileFd == -1)
             throw HttpExcept(500, string("Failed to open file: ") + strerror(errno));
@@ -92,6 +82,7 @@ void HttpRequest::bodyPart(const char* data, size_t length, servcnf& conf) {
         close(bodyFileFd);
         bodyFileFd = -1;
         state = COMPLETE;
+        cout << "WE ARE DONE WITH THE BODY" << endl;
     }
 }
 
@@ -136,6 +127,7 @@ bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
                 return true;
         }
         else if (state == READING_BODY) {
+            // parsing here..
             bodyPart(buffer.data(), buffer.size(), conf);
             buffer.clear();
             if (state == COMPLETE)
