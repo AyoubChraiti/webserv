@@ -24,3 +24,4 @@ string generateAutoIndex(const string& fullPath, const string& uriPath);
 RouteResult handleRouting(int fd, HttpRequest& req);
 bool fileExists(const string& path);
 bool isDirectory(const string& path);
+void RDR(int fd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp);

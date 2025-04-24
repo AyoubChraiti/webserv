@@ -11,7 +11,9 @@ void sendRedirect(int fd, const string& location, HttpRequest& req) {
     response << "\r\n";
 
     string responseStr = response.str();
-    send(fd, responseStr.c_str(), responseStr.size(), 0);
+    size_t bytes = send(fd, responseStr.c_str(), responseStr.size(), 0);
+
+    cout << "bytes sent: " << bytes << endl;
 }
 
 size_t getContentLength(const string& path) {
@@ -69,14 +71,20 @@ int sendFileInChunks(int clientFd, std::ifstream& fileStream, off_t fileSize) {
 int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
     RouteResult routeResult = handleRouting(clientFd, req);
 
+    if (routeResult.shouldRDR) {
+        cout << "Redirecting to: " << routeResult.redirectLocation << endl;
+        sendRedirect(clientFd, routeResult.redirectLocation, req);
+        return 0;
+    }
+
     stringstream response;
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
     response << "Content-Type: " << routeResult.contentType << "\r\n";
 
     if (routeResult.resFd != -1) {
         response << "Content-Length: " << getContentLength(routeResult.fullPath) << "\r\n";
-        // response << "Accept-Ranges: bytes\r\n";
-    } else {
+    }
+    else {
         response << "Content-Length: " << routeResult.responseBody.size() << "\r\n";
     }
 
@@ -85,7 +93,7 @@ int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest
 
     string headerStr = response.str();
     if (send(clientFd, headerStr.c_str(), headerStr.size(), 0) == -1) {
-        perror("send headers");
+        cout << "Send failed: " << strerror(errno) << endl;
         return -1;
     }
 
@@ -121,13 +129,12 @@ int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest
         while (totalSent < (ssize_t)body.size()) {
             ssize_t sent = send(clientFd, body.c_str() + totalSent, body.size() - totalSent, 0);
             if (sent == -1) {
-                perror("int send body (string)");
+                cout << "Send failed: " << strerror(errno) << endl;
                 return -1;
             }
             totalSent += sent;
         }
     }
-
     return 0;
 }
 

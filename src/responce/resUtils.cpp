@@ -94,8 +94,10 @@ string getContentType(const string& filepath) {
 void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
     // if (req.connection != "keep-alive") {
         requestmp.erase(clientFd);
-        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1)
-            cout << "epoll ctl issue\n";
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1) {
+            cout << "epoll ctl issue here\n";
+            perror("epoll_ctl");
+        }
         close(clientFd);
     // }
     // else {
