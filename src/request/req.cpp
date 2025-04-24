@@ -114,7 +114,7 @@ bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
     memset(temp, 0, sizeof(temp));
     ssize_t bytes = recv(fd, temp, sizeof(temp), 0);
 
-    cout << temp << endl;
+    // cout << temp << endl;
 
     if (bytes == 0)
         return true;

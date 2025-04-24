@@ -1,7 +1,6 @@
 #include "../../inc/request.hpp"
 
 void checkMethod(const string& method) {
-    // cout << "methodes = " << method << endl;
     if (method != "GET" && method != "POST" && method != "DELETE") {
         throw HttpExcept(405, "Unsupported method: " + method);
     }

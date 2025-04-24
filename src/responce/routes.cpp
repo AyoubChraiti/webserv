@@ -10,10 +10,15 @@ RouteResult handleRouting(int fd, HttpRequest& req) {
     reqPath.erase(reqPath.begin(), reqPath.begin() + bestMatch.size());
     string fullPath = req.mtroute.alias + reqPath;
 
-    // cout << "the route: " << req.mtroute.root << endl;
-    // cout << "the full path: " << fullPath << endl;
+    cout << "the route: " << req.mtroute.root << endl;
+    cout << "the full path: " << fullPath << endl;
 
     if (isDirectory(fullPath)) {
+        // if (fullPath.back() != '/') {
+        //     fullPath += '/';
+        //     sendRedirect(fd, fullPath, req);
+        //     closeOrSwitch(fd, epollFd, req, requestmp); // i need to re arrange the code, maybe ........
+        // }
         if (req.mtroute.index.empty()) {
             if (req.mtroute.autoindex) {
                 result.contentType = "text/html";
@@ -26,6 +31,8 @@ RouteResult handleRouting(int fd, HttpRequest& req) {
         }
         fullPath += req.mtroute.index;
     }
+
+    // cout << "the full path: " << fullPath << endl;
     
     if (!fileExists(fullPath)) {
         throw HttpExcept(404, "Not Found");

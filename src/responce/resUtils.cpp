@@ -121,7 +121,7 @@ string generateAutoIndex(const string& fullPath, const string& uriPath) {
     }
 
     struct dirent* entry;
-    while ((entry = readdir(dir)) != nullptr) {
+    while ((entry = readdir(dir)) != NULL) {
         string name = entry->d_name;
 
         if (name == ".")
