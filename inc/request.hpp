@@ -42,7 +42,7 @@ public:
     int bytesRead;
     servcnf conf;
     routeCnf mtroute;
-    fstream bodyFile;
+    int bodyFileFd;
     string BodyPath;
 
     HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};

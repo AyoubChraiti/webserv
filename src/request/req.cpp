@@ -52,8 +52,9 @@ void HttpRequest::HeadersParsing(const string& line) {
         key.erase(remove_if(key.begin(), key.end(), ::isspace), key.end());
         value.erase(0, value.find_first_not_of(" \t"));
 
-        if (key.empty() || value.empty())
+        if (key.empty() || value.empty()) {
             throw HttpExcept(400, "Malformed header: " + line);
+        }
         headers[key] = value;
     }
 }
@@ -73,22 +74,23 @@ void HttpRequest::bodyPart(const char* data, size_t length, servcnf& conf) {
     size_t remaining = contentLength - bytesRead;
     size_t toWrite = min(remaining, length);
 
-    if (!bodyFile.is_open()) {
+    if (bodyFileFd == -1) {
         string filePath = "upload/" + to_string(time(nullptr)) + ".bin";
-        bodyFile.open(filePath, ios::binary | ios::out);
-        if (!bodyFile)
-            throw HttpExcept(500, "Failed to open file for writing body");
+        bodyFileFd = open(filePath.c_str(), O_CREAT | O_WRONLY | O_TRUNC, 0644);
+        if (bodyFileFd == -1)
+            throw HttpExcept(500, string("Failed to open file: ") + strerror(errno));
         BodyPath = filePath;
     }
 
-    bodyFile.write(data, toWrite);
-    if (!bodyFile)
-        throw HttpExcept(500, "Failed to write to body file");
-
-    bytesRead += toWrite;
+    ssize_t written = write(bodyFileFd, data, toWrite);
+    if (written == -1)
+        throw HttpExcept(500, string("Failed to write to file: ") + strerror(errno));
+    
+    bytesRead += written;
 
     if (bytesRead >= contentLength) {
-        bodyFile.close();
+        close(bodyFileFd);
+        bodyFileFd = -1;
         state = COMPLETE;
     }
 }
@@ -108,10 +110,11 @@ int HttpRequest::Parser(const char* data, size_t length) {
 }
 
 bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
-    cout << "lininggggg" << endl;
     char temp[BUFFER_SIZE];
     memset(temp, 0, sizeof(temp));
     ssize_t bytes = recv(fd, temp, sizeof(temp), 0);
+
+    cout << temp << endl;
 
     if (bytes == 0)
         return true;
@@ -121,7 +124,7 @@ bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
     buffer.append(temp, bytes);
     while (!buffer.empty()) {
         if (state == READING_REQUEST_LINE || state == READING_HEADERS) {
-            size_t newlinePos = buffer.find("\r\n");
+            size_t newlinePos = buffer.find("\n");
             if (newlinePos == string::npos) {
                 throw HttpExcept(400, "Invalid line in the request");
             }
