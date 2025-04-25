@@ -48,6 +48,7 @@ public:
     fstream bodyFile;
 
     size_t remaining;
+    string boundary; 
     HttpRequest();
     HttpRequest(servcnf config);
     // method of reqeust

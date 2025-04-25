@@ -79,6 +79,12 @@ void HttpRequest::parseHeader()
             throw HttpExcept(400 ,"Bad Request");
         string key = trim(headerline.substr(0, indexColon));
         string value = trim(headerline.substr(indexColon + 1));
+        if (key == "Content-Type") // trying boundray
+        {
+            size_t pos;
+            if ((pos = value.find("boundary="))!= string::npos)
+                cout << value.substr(pos + 9) << endl;
+        }
         if (key == "Content-Length" || key == "Transfer-Encoding")
         {
             if (key == "Transfer-Encoding")

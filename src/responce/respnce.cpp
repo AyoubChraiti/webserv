@@ -296,7 +296,7 @@ int HandleCGI (int clientFd, HttpRequest &reqStates)
         if (WEXITSTATUS(status) != 0) 
         {
             std::cerr << "CGI process failed" << std::endl;
-            exit(1);
+            return -1;
         }
         cout << output_cgi << endl;
         output_cgi = "HTTP/1.1 200 OK\r\n" + output_cgi;
