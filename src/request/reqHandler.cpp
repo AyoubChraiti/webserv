@@ -1,8 +1,5 @@
 #include "../../inc/request.hpp"
-HttpRequest::HttpRequest()
-{
 
-}
 string getInfoClient(int clientFd)
 {
     struct sockaddr_in addr;

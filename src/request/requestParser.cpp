@@ -3,6 +3,15 @@
 
 void HttpRequest::HandleUri()
 {
+    if (method == "GET" || method == "DELETE")
+    {
+        size_t indexQUERY = uri.find("?");
+        if (indexQUERY != string::npos)
+        {
+            querystring =  uri.substr(indexQUERY + 1);
+            uri.erase(indexQUERY);
+        }
+    }
     map<string , routeCnf>::iterator it = conf.routes.begin();
     size_t prevLength = 0;
     string key;
@@ -42,7 +51,7 @@ void HttpRequest::parseRequestLine () // 4. URI path normalization
         throw HttpExcept(505, "HTTP Version Not Supported");
     buffer.erase(0, index + 2);
     HandleUri();
-    if (mtroute.root == "/cgi-bin/")
+    if (mtroute.root == "/cgi-bin/") // check later
         isCGI = true;
     if (find(mtroute.methodes.begin(), mtroute.methodes.end(), method) == mtroute.methodes.end() && !isCGI)
         throw HttpExcept(405, "Method Not Allowed");
@@ -94,7 +103,7 @@ void HttpRequest::parseHeader()
     else
     {
         buffer.erase(0, 2);
-        bodyFile.open("bigfile.txt",ios::in | ios::out |  ios::binary | ios::trunc);
+        bodyFile.open("bigfile.txt", ios::in | ios::out |  ios::binary | ios::trunc);
         if (!bodyFile.is_open())
         {
             cerr << "Fail file open " << endl;
@@ -112,6 +121,37 @@ size_t hexToInt (string str)
     ss >> hex >> result;
     return result;
 }
+void HttpRequest::HandleChunkedBody()
+{
+    while (!buffer.empty())
+    {
+        size_t crlf_pos;
+        if (remaining == 0)
+        {
+            crlf_pos = buffer.find("\r\n");
+            if (crlf_pos == std::string::npos) 
+                throw HttpExcept(400 ,"Bad Request");
+            contentLength = hexToInt(buffer.substr(0, crlf_pos));
+            buffer.erase(0, crlf_pos + 2);
+        }
+        else
+            contentLength = remaining;
+        if (contentLength == 0)
+        {
+            buffer.clear();
+            bodyFile.clear();
+            bodyFile.seekg(0, ios::beg);
+            lineLocation = END_REQUEST;
+            break;
+        }
+        size_t bytesTowrite = min(contentLength, buffer.size());
+        bodyFile.write(buffer.c_str(), bytesTowrite);
+        (contentLength > buffer.size()) ? buffer.erase(0, buffer.size()) : buffer.erase(0, contentLength);
+        remaining = contentLength - bytesTowrite;
+        if (!remaining)
+            (buffer.find("\r\n") == string::npos) ? throw HttpExcept(400 ,"Bad Request") : buffer.erase(0, 2);
+    }
+}
 
 void HttpRequest::parseBody()
 {
@@ -128,31 +168,5 @@ void HttpRequest::parseBody()
         }
     }
     else
-   {
-        size_t crlf_pos;
-        if (remaining == 0)
-        {
-            crlf_pos = buffer.find("\r\n");
-            if (crlf_pos == std::string::npos) 
-                throw HttpExcept(400 ,"Bad Request");
-            contentLength = hexToInt(buffer.substr(0, crlf_pos));
-            buffer.erase(0, crlf_pos + 2);
-        }
-        else
-            contentLength = remaining;
-        remaining = 0;
-        if (contentLength == 0)
-        {
-            buffer.clear();
-            bodyFile.clear();
-            bodyFile.seekg(0, ios::beg);
-            lineLocation = END_REQUEST;
-        }
-        size_t bytesTowrite = min(contentLength, buffer.size());
-        bodyFile.write(buffer.c_str(), bytesTowrite);
-        (contentLength > buffer.size()) ? buffer.erase(0, buffer.size()) : buffer.erase(0, contentLength + 2);
-        remaining = contentLength - bytesTowrite;
-    }
-   // 1- body big than content(hex) (give you next hex)
-   // 2- body small than content(hex) (remaning)
+        HandleChunkedBody();
 }

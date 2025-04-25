@@ -5,7 +5,7 @@ import cgitb
 cgitb.enable()  # Show errors in the browser
 
 # Required response headers
-print("Content-Type: text/html\n")
+# print("Content-Type: text/html\n")
 
 # Get the POST data
 form = cgi.FieldStorage()

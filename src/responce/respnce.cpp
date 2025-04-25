@@ -205,31 +205,23 @@ string strUpper(string str)
     return res;
 }
 
-void setupCGIenv(string &scriptPATH, HttpRequest &reqStates, vector <char *> &vec, vector<string> &envVar)
+void setupCGIenv(string &scriptname, HttpRequest &reqStates, vector <char *> &vec, vector<string> &envVar)
 {
     map <string, string > env;
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_PROTOCOL"] = reqStates.version;
     env["REQUEST_METHOD"] = reqStates.method;
     env["REDIRECT_STATUS"] = "200";
-    env["SCRIPT_FILENAME"] = "cgi-bin/script.php"; 
-
-    if (reqStates.method == "GET") 
+    env["SCRIPT_FILENAME"] = "cgi-bin/script.php"; // edit 
+    env["SCRIPT_NAME"] = scriptname;
+    env["QUERY_STRING"] = reqStates.querystring;
+    if (reqStates.method == "POST") 
     {
-        size_t indexQUERY = reqStates.uri.find("?");
-        scriptPATH += (indexQUERY == string::npos) ? reqStates.uri : reqStates.uri.substr(0, indexQUERY);
-        string querystr = (indexQUERY != string::npos) ? reqStates.uri.substr(indexQUERY + 1) : "";
-        env["QUERY_STRING"] = querystr;
-    }
-    else
-    {
-        scriptPATH += reqStates.uri;
         if (reqStates.headers.find("Content-Type") != reqStates.headers.end())
             env["CONTENT_TYPE"] = reqStates.headers["Content-Type"];
         if (reqStates.headers.find("Content-Length") != reqStates.headers.end())
             env["CONTENT_LENGTH"] = reqStates.headers["Content-Length"];
     }
-    env["SCRIPT_NAME"] = scriptPATH;
     for (map<string,string>::iterator it = reqStates.headers.begin(); it != reqStates.headers.end(); it++)
     {
         if (it->first != "Content-Length" && it->first != "Content-Type")
@@ -245,7 +237,7 @@ void setupCGIenv(string &scriptPATH, HttpRequest &reqStates, vector <char *> &ve
 
 void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
 {
-    string path = ".";
+    string path = "." + reqStates.uri;
     vector <char *> vec;
     vector <string> envVar;
     setupCGIenv(path, reqStates, vec, envVar);
@@ -260,7 +252,6 @@ void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clien
 
     const char *args[] = {path.c_str(), NULL}; // cant change charcter
     execve(path.c_str(), const_cast<char* const*>(args), NULL); // cast (cant change string)
-    cerr <<"yes" << endl;
     perror("cgi execve failed");
     exit(1);
 }

@@ -37,7 +37,7 @@ public:
     // int bytesRead;
     string buffer;
     ParseState lineLocation;
-    string method, uri, host, connection, version;
+    string method, uri, host, connection, version, querystring;
     map<string, string> headers;
     size_t contentLength;
     servcnf conf;
@@ -48,16 +48,15 @@ public:
     fstream bodyFile;
 
     size_t remaining;
-
-    HttpRequest ();
-    HttpRequest(servcnf config) : lineLocation(REQUEST_LINE) , isPostKeys(false) , isChunked(false), 
-    isCGI(false) ,conf(config),  remaining(0) {};
+    HttpRequest();
+    HttpRequest(servcnf config);
     // method of reqeust
     bool request(int clientFd);
     void parseRequestLine ();
     void parseHeader();
     void parseBody();
     void HandleUri();
+    void HandleChunkedBody();
 };
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
