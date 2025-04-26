@@ -68,15 +68,7 @@ int sendFileInChunks(int clientFd, std::ifstream& fileStream, off_t fileSize) {
     return 0;  // Success
 }
 
-int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
-    RouteResult routeResult = handleRouting(clientFd, req);
-
-    if (routeResult.shouldRDR) {
-        cout << "Redirecting to: " << routeResult.redirectLocation << endl;
-        sendRedirect(clientFd, routeResult.redirectLocation, req);
-        return 0;
-    }
-
+void sendHeaders(int clientFd, RouteResult& routeResult) {
     stringstream response;
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
     response << "Content-Type: " << routeResult.contentType << "\r\n";
@@ -92,13 +84,20 @@ int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest
     response << "\r\n";
 
     string headerStr = response.str();
-    if (send(clientFd, headerStr.c_str(), headerStr.size(), 0) == -1) {
-        cout << "Send failed: " << strerror(errno) << endl;
-        return -1;
+    send(clientFd, headerStr.c_str(), headerStr.size(), 0);
+}
+
+int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
+    RouteResult routeResult = handleRouting(clientFd, req);
+
+    if (routeResult.shouldRDR) {
+        cout << "Redirecting to: " << routeResult.redirectLocation << endl;
+        sendRedirect(clientFd, routeResult.redirectLocation, req);
+        return 0;
     }
 
+    sendHeaders(clientFd, routeResult);
 
-    
     if (routeResult.resFd != -1) {
         char buffer[BUFFER_SIZE];
 
