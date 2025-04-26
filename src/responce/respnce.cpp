@@ -97,6 +97,8 @@ int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest
         return -1;
     }
 
+
+    
     if (routeResult.resFd != -1) {
         char buffer[BUFFER_SIZE];
 
