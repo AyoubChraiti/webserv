@@ -33,7 +33,6 @@ bool HttpRequest::request(int clientFd)
     if (recvBytes > 0)
     {
         buff[recvBytes] = '\0';
-        // cout << buff << endl;
         buffer.append(buff, recvBytes);
         if (lineLocation == REQUEST_LINE)
             parseRequestLine();

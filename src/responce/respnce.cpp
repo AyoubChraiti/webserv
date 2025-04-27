@@ -191,7 +191,6 @@ void Response::buildResponse (servcnf& conf, HttpRequest &reqStates, int clientF
 }
 
 
-
 string strUpper(string str)
 {
     string res;
@@ -251,7 +250,7 @@ void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clien
     close(stdoutFd[1]);
 
     const char *args[] = {path.c_str(), NULL}; // cant change charcter
-    execve(path.c_str(), const_cast<char* const*>(args), NULL); // cast (cant change string)
+    execve(path.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
     perror("cgi execve failed");
     exit(1);
 }
@@ -298,7 +297,6 @@ int HandleCGI (int clientFd, HttpRequest &reqStates)
             std::cerr << "CGI process failed" << std::endl;
             return -1;
         }
-        cout << output_cgi << endl;
         output_cgi = "HTTP/1.1 200 OK\r\n" + output_cgi;
         send(clientFd, output_cgi.c_str(),  output_cgi.length(), 0);
         close(clientFd);
@@ -310,6 +308,7 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
 {   
     try
     {
+        // cout << "here" << endl;
         string URI = requestmp[clientFd].uri;
         if (URI.find("/cgi-bin/") != string::npos)
         {

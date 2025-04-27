@@ -3,7 +3,7 @@
 #include "string.hpp"
 #include "config.hpp"
 
-#define BUFFER_SIZE 8000
+#define BUFFER_SIZE 8192
 #define MAX_LINE 1024
 
 class HttpExcept : public exception {
@@ -48,7 +48,9 @@ public:
     fstream bodyFile;
 
     size_t remaining;
-    string boundary; 
+    string Boundary ; 
+    bool startBoundFlag;
+
     HttpRequest();
     HttpRequest(servcnf config);
     // method of reqeust
@@ -58,6 +60,8 @@ public:
     void parseBody();
     void HandleUri();
     void HandleChunkedBody();
+    void HandleBoundary() ;
+    bool openFile (string filename);
 };
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
@@ -65,6 +69,7 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
 void modifyState(int epollFd ,int clientFd, uint32_t events);
 string getInfoClient(int clientFd);
+
 /* requestParser file */
 // void checkBody(const servcnf& server, const HttpRequest& req);
 // void checkAllowed(routeCnf route, const string& method, const string& path);

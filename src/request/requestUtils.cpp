@@ -9,6 +9,8 @@ HttpRequest::HttpRequest(servcnf config)
     conf = config;
     remaining = 0;
     querystring = "";
+    Boundary = "";
+    startBoundFlag= false;
 }
 HttpRequest::HttpRequest()
 {

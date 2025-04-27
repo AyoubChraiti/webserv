@@ -79,11 +79,11 @@ void HttpRequest::parseHeader()
             throw HttpExcept(400 ,"Bad Request");
         string key = trim(headerline.substr(0, indexColon));
         string value = trim(headerline.substr(indexColon + 1));
-        if (key == "Content-Type") // trying boundray
+        if (key == "Content-Type")
         {
             size_t pos;
-            if ((pos = value.find("boundary="))!= string::npos)
-                cout << value.substr(pos + 9) << endl;
+            if ((pos = value.find("boundary=")) != string::npos)
+                Boundary =  value.substr(pos + 9);
         }
         if (key == "Content-Length" || key == "Transfer-Encoding")
         {
@@ -108,17 +108,12 @@ void HttpRequest::parseHeader()
         lineLocation = END_REQUEST;
     else
     {
-        buffer.erase(0, 2);
-        bodyFile.open("bigfile.txt", ios::in | ios::out |  ios::binary | ios::trunc);
-        if (!bodyFile.is_open())
-        {
-            cerr << "Fail file open " << endl;
-            return ;
-        }
         lineLocation = BODY;
+        buffer.erase(0, 2);
+        if (Boundary.empty())
+            openFile("bigfile.txt");
     }
 }
-
 
 size_t hexToInt (string str)
 {
@@ -127,6 +122,7 @@ size_t hexToInt (string str)
     ss >> hex >> result;
     return result;
 }
+
 void HttpRequest::HandleChunkedBody()
 {
     while (!buffer.empty())
@@ -159,13 +155,98 @@ void HttpRequest::HandleChunkedBody()
     }
 }
 
+string getFileName(string buff)
+{
+    size_t header_end = buff.find("\r\n\r\n");
+    if (header_end == string::npos)
+        throw HttpExcept(400 ,"Bad Request1");
+    size_t start_filename = buff.find ("filename=\"");
+    if (start_filename == string::npos)
+        throw HttpExcept(400, "Bad Request2");
+    start_filename += 10;
+    size_t end_filename = buff.find("\r\n");
+    if (end_filename == string::npos)
+        throw HttpExcept(400, "Bad Request3");   
+    return (buff.substr(start_filename , end_filename - start_filename - 1));   
+}
+
+bool HttpRequest::openFile(string filename)
+{
+    bodyFile.open(filename, ios::in | ios::out | ios::binary | ios::trunc);
+    if (!bodyFile.is_open())
+    {
+        cerr << "Fail openning File" << endl;
+        lineLocation = END_REQUEST;
+        return false;
+    }
+    return true;
+}
+void writebody(fstream &bodyFile , string &buffer)
+{
+    bodyFile.write(buffer.c_str(), buffer.size());
+    buffer.clear();
+}
+void HttpRequest::HandleBoundary() 
+{
+    contentLength -= buffer.size();
+    string start_bound = "--" + Boundary + "\r\n";
+    string part_bound = "\r\n--" + Boundary + "\r\n";
+    string end_bound = "\r\n--" + Boundary + "--" + "\r\n";
+    if (!startBoundFlag && buffer.substr(0, start_bound.size()) == start_bound)
+    {
+        startBoundFlag = true;
+        string filename =  getFileName(buffer.substr(start_bound.size()));
+        buffer.erase(0, buffer.find("\r\n\r\n") + 4);
+        openFile(filename);
+        return writebody(bodyFile, buffer);  
+    }
+    else if (!startBoundFlag)
+        throw HttpExcept(400 ,"Bad Request5");
+    size_t posBound = buffer.find("\r\n--");
+    if (posBound == string::npos)
+        return writebody(bodyFile, buffer);
+    else if (buffer.substr(posBound, part_bound.size()) == part_bound)
+    {
+        if (bodyFile.is_open())
+        {
+            bodyFile.clear();// check later those 3
+            bodyFile.seekg(0, ios::beg);
+            bodyFile.close ();
+        }
+        string filename =  getFileName(buffer.substr(posBound + end_bound.size()));
+        buffer.erase(0, buffer.find("\r\n\r\n") + 4);
+        openFile(filename);
+        return writebody(bodyFile, buffer);  
+    }
+    else if (buffer.substr(posBound, end_bound.size()) == end_bound)
+    {
+        buffer.erase(posBound, end_bound.size());
+        writebody(bodyFile, buffer); 
+    }
+    else
+    {
+        if (posBound)
+            bodyFile.write(buffer.substr(0, posBound).c_str(), posBound);
+        contentLength += buffer.size() - posBound;
+    }
+}
 void HttpRequest::parseBody()
 {
-    if (!isChunked)
+    if (!isChunked && Boundary.empty())
     {
         contentLength -= buffer.size();
         bodyFile.write(buffer.c_str(), buffer.size());
         buffer.clear();
+        if (contentLength == 0)
+        {
+            bodyFile.clear();
+            bodyFile.seekg(0, ios::beg);
+            lineLocation = END_REQUEST;
+        }
+    }
+    else if (!Boundary.empty())
+    {
+        HandleBoundary();
         if (contentLength == 0)
         {
             bodyFile.clear();
