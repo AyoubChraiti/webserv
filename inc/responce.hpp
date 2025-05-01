@@ -4,16 +4,7 @@
 #include "header.hpp"
 #include "request.hpp"
 
-struct RouteResult {
-    int statusCode;
-    string statusText;
-    string responseBody;
-    string contentType;
-    string redirectLocation;
-    bool shouldRDR;
-    int resFd;
-    string fullPath;
-};
+
 
 void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp);
 void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp);

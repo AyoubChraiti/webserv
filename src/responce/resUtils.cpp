@@ -95,7 +95,6 @@ void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpReq
     // if (req.connection != "keep-alive") {
         requestmp.erase(clientFd);
         if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1) {
-            cout << "epoll ctl issue here\n";
             perror("epoll_ctl");
         }
         close(clientFd);
@@ -106,7 +105,7 @@ void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpReq
     //     ev.events = EPOLLIN;
     //     ev.data.fd = clientFd;
     //     if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
-    //         cout << "epoll ctl issue\n";
+    //         perror("epoll_ctl");
     //     }
     // }
 }

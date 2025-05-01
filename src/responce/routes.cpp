@@ -10,8 +10,7 @@ RouteResult handleRouting(int fd, HttpRequest& req) {
     reqPath.erase(reqPath.begin(), reqPath.begin() + bestMatch.size());
     string fullPath = req.mtroute.alias + reqPath;
 
-    cout << "the route: " << req.mtroute.root << endl;
-    cout << "the full path: " << fullPath << endl;
+    cout << "fullPath: " << fullPath << endl;
 
     if (isDirectory(fullPath)) {
         if (fullPath.back() != '/') {

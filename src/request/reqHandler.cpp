@@ -51,8 +51,11 @@ string CheckServer(int fd) {
 int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp) {
     map<int, HttpRequest>::iterator it = getReqFrmMap(fd, requestmp);
 
-    string sockHost = CheckServer(fd);
     HttpRequest& req = it->second;
+    string sockHost = CheckServer(fd);
+    if (conf.servers.find(sockHost) == conf.servers.end()) {
+        throw HttpExcept(400, "No server for this socket");
+    }
     req.conf = conf.servers[sockHost];
     req.key = sockHost;
 
@@ -60,9 +63,10 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
         if (req.parseRequestLineByLine(fd, req.conf)) {
             req.initFromHeader();
             parseChecking(req.conf, req, fd);
+            req.routeResult = handleRouting(fd, req);
             return 1;
         }
-        cout << "Request not complete yet" << endl;
+        cout << "still reading body" << endl;
         return 0;
     }
     catch (const HttpExcept& e) {

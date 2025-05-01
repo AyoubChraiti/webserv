@@ -2,7 +2,7 @@
 
 #include "config.hpp"
 
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE 8192 // <----------------
 #define MAX_LINE 1024
 
 class HttpExcept : public exception {
@@ -29,6 +29,17 @@ enum ParseState {
     COMPLETE
 };
 
+struct RouteResult {
+    int statusCode;
+    string statusText;
+    string responseBody;
+    string contentType;
+    string redirectLocation;
+    bool shouldRDR;
+    int resFd;
+    string fullPath;
+};
+
 class HttpRequest {
 public:
     string key;
@@ -44,8 +55,14 @@ public:
     routeCnf mtroute;
     int bodyFileFd;
     string BodyPath;
+    RouteResult routeResult;
+    bool sendingFile = false;
+    size_t bytesSentSoFar = 0;
 
-    HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0) {};
+
+
+
+    HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0), sendingFile(false), bytesSentSoFar(0) {};
     string get(const string& key, const string& defaultValue) const;
     bool parseRequestLineByLine(int fd, servcnf& conf);
     void initFromHeader();
@@ -67,3 +84,5 @@ void getRoute(const servcnf& server, const string& path, string& matched, HttpRe
 void checkHeaders(const HttpRequest& req);
 void checkURI(const string& path);
 void checkMethod(const string& method);
+
+RouteResult handleRouting(int fd, HttpRequest& req);

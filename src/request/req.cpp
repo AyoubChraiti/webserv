@@ -11,7 +11,7 @@ void HttpRequest::firstLineParser(const string& line) {
 
     size_t secondSpace = trimmedLine.find(' ', firstSpace + 1);
     if (secondSpace == string::npos || secondSpace <= firstSpace + 1)
-        throw HttpExcept(400, "Invalid request line: missing uri or version");
+        throw HttpExcept(400, "Invalid request line: missing URI or version");
 
     method = trimmedLine.substr(0, firstSpace);
     uri = trimmedLine.substr(firstSpace + 1, secondSpace - firstSpace - 1);
@@ -24,26 +24,27 @@ void HttpRequest::firstLineParser(const string& line) {
 }
 
 void HttpRequest::HeadersParsing(const string& line) {
-    if (line.empty() || line == "\r") {
+    if (line.empty()) {
         if (headers.find("Host") == headers.end())
             throw HttpExcept(400, "Host header is required");
 
         if (method == "POST") {
             auto it = headers.find("Content-Length");
-            if (it == headers.end()) {
+            if (it == headers.end())
                 throw HttpExcept(411, "Content-Length required for POST");
-            }
+
             contentLength = stoul(it->second);
-            if (contentLength == 0) {
+            if (contentLength == 0)
                 throw HttpExcept(400, "Invalid Content-Length");
-            }
+
             state = READING_BODY;
         }
-        else
+        else {
             state = COMPLETE;
+        }
     }
     else {
-        size_t pos = line.find(":");
+        size_t pos = line.find(':');
         if (pos == string::npos)
             throw HttpExcept(400, "Malformed header: " + line);
 
@@ -52,23 +53,12 @@ void HttpRequest::HeadersParsing(const string& line) {
         key.erase(remove_if(key.begin(), key.end(), ::isspace), key.end());
         value.erase(0, value.find_first_not_of(" \t"));
 
-        if (key.empty() || value.empty()) {
+        if (key.empty() || value.empty())
             throw HttpExcept(400, "Malformed header: " + line);
-        }
+
         headers[key] = value;
     }
 }
-
-// void HttpRequest::bodyPart(const char* data, size_t length, servcnf& conf) {
-//     size_t remaining = contentLength - bytesRead;
-//     size_t toWrite = min(remaining, length);
-//     body.insert(body.end(), data, data + toWrite);
-//     bytesRead += toWrite;
-
-//     if (bytesRead >= contentLength) {
-//         state = COMPLETE;
-//     }
-// }
 
 void HttpRequest::bodyPart(const char* data, size_t length, servcnf& conf) {
     size_t remaining = contentLength - bytesRead;
@@ -85,7 +75,7 @@ void HttpRequest::bodyPart(const char* data, size_t length, servcnf& conf) {
     ssize_t written = write(bodyFileFd, data, toWrite);
     if (written == -1)
         throw HttpExcept(500, string("Failed to write to file: ") + strerror(errno));
-    
+
     bytesRead += written;
 
     if (bytesRead >= contentLength) {
@@ -103,31 +93,34 @@ int HttpRequest::Parser(const char* data, size_t length) {
         case READING_HEADERS:
             HeadersParsing(string(data, length));
             break;
+        case READING_BODY:
+            bodyPart(data, length, conf);
+            break;
         default:
             return 1;
     }
     return state == COMPLETE ? 1 : 0;
 }
 
-bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
+bool HttpRequest::parseRequestLineByLine(int fd, servcnf& confRef) {
+    this->conf = confRef;
+
     char temp[BUFFER_SIZE];
-    memset(temp, 0, sizeof(temp));
     ssize_t bytes = recv(fd, temp, sizeof(temp), 0);
 
-    // cout << temp << endl;
-
     if (bytes == 0)
-        return true;
+        return true; // connection closed
     else if (bytes < 0)
-        throw HttpExcept(400, "Empty or invalid request");
+        throw HttpExcept(400, "recv failed");
 
     buffer.append(temp, bytes);
-    while (!buffer.empty()) {
+
+    while (true) {
         if (state == READING_REQUEST_LINE || state == READING_HEADERS) {
-            size_t newlinePos = buffer.find("\n");
-            if (newlinePos == string::npos) {
-                throw HttpExcept(400, "Invalid line in the request");
-            }
+            size_t newlinePos = buffer.find('\n');
+            if (newlinePos == string::npos)
+                break;
+
             string line = buffer.substr(0, newlinePos);
             buffer.erase(0, newlinePos + 1);
             line.erase(remove(line.begin(), line.end(), '\r'), line.end());
@@ -136,11 +129,21 @@ bool HttpRequest::parseRequestLineByLine(int fd, servcnf& conf) {
                 return true;
         }
         else if (state == READING_BODY) {
-            bodyPart(buffer.data(), buffer.size(), conf);
-            buffer.clear();
+            size_t remaining = contentLength - bytesRead;
+            size_t toWrite = min(remaining, buffer.size());
+
+            bodyPart(buffer.data(), toWrite, conf);
+            buffer.erase(0, toWrite);
+
             if (state == COMPLETE)
                 return true;
+            else
+                break;
+        }
+        else {
+            break;
         }
     }
+
     return false;
 }
