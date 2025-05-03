@@ -57,18 +57,61 @@ void HttpRequest::parseRequestLine () // 4. URI path normalization
         throw HttpExcept(405, "Method Not Allowed");
     lineLocation = HEAD;
 }
-size_t StringStream(string string)
-{
-    size_t num;
-    stringstream ss (string);
-    ss >> num;
-    return num;
-}
+bool isValidHost(const string& host) {
+    size_t colonPos = host.find(':');
+    string hostname = (colonPos == string::npos) ? host : host.substr(0, colonPos);
+    string port = (colonPos == string::npos) ? "" : host.substr(colonPos + 1);
 
-void HttpRequest::parseHeader()
+    // Validate hostname (basic check for alphanumeric and dots)
+    for (char c : hostname) {
+        if (!isalnum(c) && c != '.' && c != '-') {
+            return false;
+        }
+    }
+
+    // Validate port (if present)
+    if (!port.empty() && !all_of(port.begin(), port.end(), ::isdigit)) {
+        return false;
+    }
+
+    return true;
+}
+void HttpRequest::ParseHeaders()
+{
+    // Validate Host 
+    if (!headers.count("Host") || isValidHost(headers["Host"]))
+        throw HttpExcept(400, "Bad Request");
+    host = headers["Host"];
+
+    // Validate Content-Type 
+    if (headers.count("Content-Type") > 0)// check not there 
+    {
+        size_t pos = headers["Content-Type"].find("boundary=");
+        if (pos != string::npos)
+            Boundary = headers["Content-Type"].substr(pos + 9);
+    }
+    else if (method == "POST")
+        throw HttpExcept(400, "Bad Request");
+    
+    // Validate Content-Length or Transfer-Encoding for POST
+    if (headers.count("Transfer-Encoding") > 0 && headers["Transfer-Encoding"].find("Chunked") != string::npos)
+        isChunked = true; 
+    else if (headers.count("Content-Length") > 0 && isValidContentLength(headers["Content-Length"])) //isValidContentLength
+        contentLength = StringStream(headers["Content-Length"]);
+    else if (method == "POST")
+        isPostKeys = false;
+
+    // Validate connection
+    if (!headers.count("Connection") || (headers["Connection"] != "keep-alive" && headers["Connection"] != "close"))
+        throw HttpExcept(400 ,"Bad Request");
+    connection = headers["Connection"];
+
+    if (method == "POST" && !isPostKeys)
+        throw HttpExcept(400 ,"Bad Request");
+}
+void HttpRequest::HandleHeaders()
 {
     size_t index;
-    index = 0;
     while ((index = buffer.find("\r\n")) != string::npos)
     {
         if (index == 0)
@@ -77,51 +120,25 @@ void HttpRequest::parseHeader()
         size_t indexColon;
         if ((indexColon = headerline.find(':')) == string::npos)
             throw HttpExcept(400 ,"Bad Request");
-        string key = trim(headerline.substr(0, indexColon));
-        string value = trim(headerline.substr(indexColon + 1));
-        if (key == "Content-Type")
-        {
-            size_t pos;
-            if ((pos = value.find("boundary=")) != string::npos)
-                Boundary =  value.substr(pos + 9);
-        }
-        if (key == "Content-Length" || key == "Transfer-Encoding")
-        {
-            if (key == "Transfer-Encoding")
-                isChunked = true;
-            else
-                contentLength = StringStream(value);
-            isPostKeys = true;
-        }
-        if (key == "Host")
-            host = value;
-        if (key == "Connection")
-            connection = value;
+        string key = trim(headerline.substr(0, indexColon)); // check later
+        string value = trim(headerline.substr(indexColon + 1)); // check later
         headers.insert(make_pair(key, value));
         buffer.erase(0, index + 2);
     }
-    if (headers.empty() || headers.find("Host") == headers.end())
-            throw HttpExcept(400 ,"Bad Request");
-    if (method == "POST" && !isPostKeys)
-            throw HttpExcept(400 ,"Bad Request");
-    if ((method == "GET" || method == "DELETE") && buffer == "\r\n")
+    if (index == string::npos)
+        return ;
+    ParseHeaders();
+    if (method == "GET" || method == "DELETE")
         lineLocation = END_REQUEST;
     else
     {
         lineLocation = BODY;
         buffer.erase(0, 2);
         if (Boundary.empty())
-            openFile("bigfile.txt");
+            openFile("bigfile.txt"); // edit to tmp after 
     }
 }
 
-size_t hexToInt (string str)
-{
-    size_t result;
-    stringstream ss (str) ;
-    ss >> hex >> result;
-    return result;
-}
 
 void HttpRequest::HandleChunkedBody()
 {
@@ -155,20 +172,7 @@ void HttpRequest::HandleChunkedBody()
     }
 }
 
-string getFileName(string buff)
-{
-    size_t header_end = buff.find("\r\n\r\n");
-    if (header_end == string::npos)
-        throw HttpExcept(400 ,"Bad Request1");
-    size_t start_filename = buff.find ("filename=\"");
-    if (start_filename == string::npos)
-        throw HttpExcept(400, "Bad Request2");
-    start_filename += 10;
-    size_t end_filename = buff.find("\r\n");
-    if (end_filename == string::npos)
-        throw HttpExcept(400, "Bad Request3");   
-    return (buff.substr(start_filename , end_filename - start_filename - 1));   
-}
+
 
 bool HttpRequest::openFile(string filename)
 {
@@ -181,11 +185,7 @@ bool HttpRequest::openFile(string filename)
     }
     return true;
 }
-void writebody(fstream &bodyFile , string &buffer)
-{
-    bodyFile.write(buffer.c_str(), buffer.size());
-    buffer.clear();
-}
+
 void HttpRequest::HandleBoundary() 
 {
     contentLength -= buffer.size();
@@ -235,8 +235,7 @@ void HttpRequest::parseBody()
     if (!isChunked && Boundary.empty())
     {
         contentLength -= buffer.size();
-        bodyFile.write(buffer.c_str(), buffer.size());
-        buffer.clear();
+        writebody(bodyFile,  buffer);
         if (contentLength == 0)
         {
             bodyFile.clear();

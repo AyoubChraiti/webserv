@@ -3,7 +3,7 @@
 #include "string.hpp"
 #include "config.hpp"
 
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE 2
 #define MAX_LINE 1024
 
 class HttpExcept : public exception {
@@ -56,7 +56,8 @@ public:
     // method of reqeust
     bool request(int clientFd);
     void parseRequestLine ();
-    void parseHeader();
+    void HandleHeaders();
+    void ParseHeaders();
     void parseBody();
     void HandleUri();
     void HandleChunkedBody();
@@ -69,6 +70,11 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
 void modifyState(int epollFd ,int clientFd, uint32_t events);
 string getInfoClient(int clientFd);
+string getFileName(string buff);
+size_t hexToInt (const string &str);
+size_t StringStream(const string &string);
+bool isValidContentLength (const string &value);
+void writebody(fstream &bodyFile , string &buffer);
 
 /* requestParser file */
 // void checkBody(const servcnf& server, const HttpRequest& req);

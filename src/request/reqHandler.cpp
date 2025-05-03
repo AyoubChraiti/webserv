@@ -21,19 +21,29 @@ void modifyState(int epollFd ,int clientFd, uint32_t events)
     if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) 
         return ;
 }
-
+void checkRequestLine(string buff)
+{
+   return  ; 
+}
 bool HttpRequest::request(int clientFd)
 {
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = recv(clientFd, buff, BUFFER_SIZE - 1, 0);
     if (recvBytes == 0)
+    {
+        if (lineLocation != END_REQUEST && !buffer.empty())
+            throw HttpExcept(400, "Bad Request 000");
         return true;
+    }
     else if (recvBytes < 0)
         throw HttpExcept(500, "Internal Server Error");
     if (recvBytes > 0)
     {
         buff[recvBytes] = '\0';
         buffer.append(buff, recvBytes);
+        cout << buffer << endl;
+        if (buffer.find("\r\n") == string::npos)
+            return false;
         if (lineLocation == REQUEST_LINE)
             parseRequestLine();
         if (lineLocation == HEAD)
