@@ -74,6 +74,7 @@ string getFileName(string buff);
 size_t hexToInt (const string &str);
 size_t StringStream(const string &string);
 bool isValidContentLength (const string &value);
+bool isValidHostHeader(const string& host) ;
 void writebody(fstream &bodyFile , string &buffer);
 
 /* requestParser file */

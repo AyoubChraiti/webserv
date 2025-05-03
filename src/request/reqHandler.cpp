@@ -47,7 +47,7 @@ bool HttpRequest::request(int clientFd)
         if (lineLocation == REQUEST_LINE)
             parseRequestLine();
         if (lineLocation == HEAD)
-            parseHeader();
+            HandleHeaders();
         if (lineLocation == BODY)
             parseBody();
         if (lineLocation == END_REQUEST)

@@ -57,7 +57,7 @@ void HttpRequest::parseRequestLine () // 4. URI path normalization
         throw HttpExcept(405, "Method Not Allowed");
     lineLocation = HEAD;
 }
-bool isValidHost(const string& host) {
+bool isValidHostHeader(const string& host) {
     size_t colonPos = host.find(':');
     string hostname = (colonPos == string::npos) ? host : host.substr(0, colonPos);
     string port = (colonPos == string::npos) ? "" : host.substr(colonPos + 1);
@@ -79,7 +79,7 @@ bool isValidHost(const string& host) {
 void HttpRequest::ParseHeaders()
 {
     // Validate Host 
-    if (!headers.count("Host") || isValidHost(headers["Host"]))
+    if (!headers.count("Host") || !isValidHostHeader(headers["Host"])) // edit func
         throw HttpExcept(400, "Bad Request");
     host = headers["Host"];
 
@@ -96,7 +96,7 @@ void HttpRequest::ParseHeaders()
     // Validate Content-Length or Transfer-Encoding for POST
     if (headers.count("Transfer-Encoding") > 0 && headers["Transfer-Encoding"].find("Chunked") != string::npos)
         isChunked = true; 
-    else if (headers.count("Content-Length") > 0 && isValidContentLength(headers["Content-Length"])) //isValidContentLength
+    else if (headers.count("Content-Length") > 0 && isValidContentLength(headers["Content-Length"]))
         contentLength = StringStream(headers["Content-Length"]);
     else if (method == "POST")
         isPostKeys = false;
