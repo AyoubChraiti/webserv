@@ -41,10 +41,7 @@ bool HttpRequest::request(int clientFd)
         if (lineLocation != BODY && buffer.find("\r\n") == string::npos)
             return false;
         if (lineLocation == REQUEST_LINE)
-        {
-            cout << buffer << endl;
             parseRequestLine();
-        }
         if (lineLocation == HEAD)
             HandleHeaders();
         if (lineLocation == BODY)

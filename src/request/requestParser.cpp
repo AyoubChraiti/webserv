@@ -222,7 +222,6 @@ void HttpRequest::HandleBoundary()
             return ;
         }
         // content type too 
-        cout << "mid bound"  << posBound << endl;
         if (bodyFile.is_open())
         {
             bodyFile.clear(); // check later those 3
@@ -236,13 +235,11 @@ void HttpRequest::HandleBoundary()
     }
     else if (buffer.substr(posBound, end_bound.size()) == end_bound)
     {
-        cout << "last pound -> " << posBound << endl;
         buffer.erase(posBound, end_bound.size());
         return writebody(bodyFile, buffer); 
     }
     else
     {
-        cout << "else -> " << posBound << endl;
         if (posBound)
             bodyFile.write(buffer.substr(0, posBound).c_str(), posBound);
         contentLength += (buffer.size() - posBound);
