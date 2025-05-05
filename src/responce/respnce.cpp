@@ -308,7 +308,6 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
 {   
     try
     {
-        // cout << "here" << endl;
         string URI = requestmp[clientFd].uri;
         if (URI.find("/cgi-bin/") != string::npos)
         {

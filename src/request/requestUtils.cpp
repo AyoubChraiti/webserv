@@ -38,7 +38,7 @@ string getFileName(string buff)
 {
     size_t header_end = buff.find("\r\n\r\n");
     if (header_end == string::npos)
-        throw HttpExcept(400 ,"Bad Request1");
+        throw HttpExcept(400, "Bad Request1");
     size_t start_filename = buff.find ("filename=\"");
     if (start_filename == string::npos)
         throw HttpExcept(400, "Bad Request2");

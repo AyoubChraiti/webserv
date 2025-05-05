@@ -21,10 +21,7 @@ void modifyState(int epollFd ,int clientFd, uint32_t events)
     if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) 
         return ;
 }
-void checkRequestLine(string buff)
-{
-   return  ; 
-}
+
 bool HttpRequest::request(int clientFd)
 {
     char buff[BUFFER_SIZE];
@@ -32,7 +29,7 @@ bool HttpRequest::request(int clientFd)
     if (recvBytes == 0)
     {
         if (lineLocation != END_REQUEST && !buffer.empty())
-            throw HttpExcept(400, "Bad Request 000");
+            throw HttpExcept(400, "Bad Request");
         return true;
     }
     else if (recvBytes < 0)
@@ -41,11 +38,13 @@ bool HttpRequest::request(int clientFd)
     {
         buff[recvBytes] = '\0';
         buffer.append(buff, recvBytes);
-        cout << buffer << endl;
-        if (buffer.find("\r\n") == string::npos)
+        if (lineLocation != BODY && buffer.find("\r\n") == string::npos)
             return false;
         if (lineLocation == REQUEST_LINE)
+        {
+            cout << buffer << endl;
             parseRequestLine();
+        }
         if (lineLocation == HEAD)
             HandleHeaders();
         if (lineLocation == BODY)

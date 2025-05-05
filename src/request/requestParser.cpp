@@ -1,9 +1,8 @@
 #include "../../inc/request.hpp"
-#define MAX_URI_LENGTH 2000
 
 void HttpRequest::HandleUri()
 {
-    if (method == "GET" || method == "DELETE")
+    if (method == "GET")
     {
         size_t indexQUERY = uri.find("?");
         if (indexQUERY != string::npos)
@@ -57,6 +56,7 @@ void HttpRequest::parseRequestLine () // 4. URI path normalization
         throw HttpExcept(405, "Method Not Allowed");
     lineLocation = HEAD;
 }
+
 bool isValidHostHeader(const string& host) {
     size_t colonPos = host.find(':');
     string hostname = (colonPos == string::npos) ? host : host.substr(0, colonPos);
@@ -76,6 +76,7 @@ bool isValidHostHeader(const string& host) {
 
     return true;
 }
+
 void HttpRequest::ParseHeaders()
 {
     // Validate Host 
@@ -84,7 +85,7 @@ void HttpRequest::ParseHeaders()
     host = headers["Host"];
 
     // Validate Content-Type 
-    if (headers.count("Content-Type") > 0)// check not there 
+    if (headers.count("Content-Type") > 0)
     {
         size_t pos = headers["Content-Type"].find("boundary=");
         if (pos != string::npos)
@@ -94,8 +95,12 @@ void HttpRequest::ParseHeaders()
         throw HttpExcept(400, "Bad Request");
     
     // Validate Content-Length or Transfer-Encoding for POST
-    if (headers.count("Transfer-Encoding") > 0 && headers["Transfer-Encoding"].find("Chunked") != string::npos)
+    if (headers.count("Transfer-Encoding") > 0)
+    {
+        if (headers["Transfer-Encoding"].find("Chunked") == string::npos)
+            throw HttpExcept(501, "Not Implemented");
         isChunked = true; 
+    }  
     else if (headers.count("Content-Length") > 0 && isValidContentLength(headers["Content-Length"]))
         contentLength = StringStream(headers["Content-Length"]);
     else if (method == "POST")
@@ -109,6 +114,7 @@ void HttpRequest::ParseHeaders()
     if (method == "POST" && !isPostKeys)
         throw HttpExcept(400 ,"Bad Request");
 }
+
 void HttpRequest::HandleHeaders()
 {
     size_t index;
@@ -192,24 +198,34 @@ void HttpRequest::HandleBoundary()
     string start_bound = "--" + Boundary + "\r\n";
     string part_bound = "\r\n--" + Boundary + "\r\n";
     string end_bound = "\r\n--" + Boundary + "--" + "\r\n";
-    if (!startBoundFlag && buffer.substr(0, start_bound.size()) == start_bound)
+    if (!startBoundFlag)
     {
-        startBoundFlag = true;
+        if (buffer.find("\r\n\r\n") == string::npos) {
+            if (contentLength == 0)
+                throw HttpExcept(400, "Bad Request");
+            return ; 
+        }
+        startBoundFlag = true;  
         string filename =  getFileName(buffer.substr(start_bound.size()));
         buffer.erase(0, buffer.find("\r\n\r\n") + 4);
         openFile(filename);
         return writebody(bodyFile, buffer);  
     }
-    else if (!startBoundFlag)
-        throw HttpExcept(400 ,"Bad Request5");
     size_t posBound = buffer.find("\r\n--");
     if (posBound == string::npos)
         return writebody(bodyFile, buffer);
     else if (buffer.substr(posBound, part_bound.size()) == part_bound)
     {
+        if (buffer.find("\r\n\r\n") == string::npos) {
+            if (contentLength == 0)
+                throw HttpExcept(400, "Bad Request");
+            return ;
+        }
+        // content type too 
+        cout << "mid bound"  << posBound << endl;
         if (bodyFile.is_open())
         {
-            bodyFile.clear();// check later those 3
+            bodyFile.clear(); // check later those 3
             bodyFile.seekg(0, ios::beg);
             bodyFile.close ();
         }
@@ -220,34 +236,33 @@ void HttpRequest::HandleBoundary()
     }
     else if (buffer.substr(posBound, end_bound.size()) == end_bound)
     {
+        cout << "last pound -> " << posBound << endl;
         buffer.erase(posBound, end_bound.size());
-        writebody(bodyFile, buffer); 
+        return writebody(bodyFile, buffer); 
     }
     else
     {
+        cout << "else -> " << posBound << endl;
         if (posBound)
             bodyFile.write(buffer.substr(0, posBound).c_str(), posBound);
-        contentLength += buffer.size() - posBound;
+        contentLength += (buffer.size() - posBound);
     }
 }
 void HttpRequest::parseBody()
 {
-    if (!isChunked && Boundary.empty())
+    if (!isChunked)
     {
-        contentLength -= buffer.size();
-        writebody(bodyFile,  buffer);
-        if (contentLength == 0)
+        cout << contentLength << endl;
+        if (contentLength > StringStream(conf.maxBodySize))
+            throw HttpExcept(413 , "Request Entity too large");
+        if (Boundary.empty()) 
         {
-            bodyFile.clear();
-            bodyFile.seekg(0, ios::beg);
-            lineLocation = END_REQUEST;
+            contentLength -= buffer.size();
+            writebody(bodyFile,  buffer);
         }
-    }
-    else if (!Boundary.empty())
-    {
-        HandleBoundary();
-        if (contentLength == 0)
-        {
+        else
+            HandleBoundary();
+        if (contentLength == 0) {
             bodyFile.clear();
             bodyFile.seekg(0, ios::beg);
             lineLocation = END_REQUEST;

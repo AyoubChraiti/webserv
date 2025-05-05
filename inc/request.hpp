@@ -5,6 +5,8 @@
 
 #define BUFFER_SIZE 2
 #define MAX_LINE 1024
+#define MAX_URI_LENGTH 2048
+
 
 class HttpExcept : public exception {
 private:
@@ -76,6 +78,7 @@ size_t StringStream(const string &string);
 bool isValidContentLength (const string &value);
 bool isValidHostHeader(const string& host) ;
 void writebody(fstream &bodyFile , string &buffer);
+
 
 /* requestParser file */
 // void checkBody(const servcnf& server, const HttpRequest& req);
