@@ -3,7 +3,7 @@
 #include "string.hpp"
 #include "config.hpp"
 
-#define BUFFER_SIZE 2
+#define BUFFER_SIZE 8010
 #define MAX_LINE 1024
 #define MAX_URI_LENGTH 2048
 

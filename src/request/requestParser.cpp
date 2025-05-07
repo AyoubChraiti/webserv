@@ -79,7 +79,7 @@ bool isValidHostHeader(const string& host) {
 
 void HttpRequest::ParseHeaders()
 {
-    // Validate Host 
+    // Validate Host
     if (!headers.count("Host") || !isValidHostHeader(headers["Host"])) // edit func
         throw HttpExcept(400, "Bad Request");
     host = headers["Host"];
@@ -148,14 +148,17 @@ void HttpRequest::HandleHeaders()
 
 void HttpRequest::HandleChunkedBody()
 {
-    while (!buffer.empty())
+    // check errors \r\n
+    while (!buffer.empty()) 
     {
         size_t crlf_pos;
         if (remaining == 0)
         {
+            if (buffer.substr(0,2) == "\r\n")
+                buffer.erase(0, 2); 
             crlf_pos = buffer.find("\r\n");
             if (crlf_pos == std::string::npos) 
-                throw HttpExcept(400 ,"Bad Request");
+                return ;
             contentLength = hexToInt(buffer.substr(0, crlf_pos));
             buffer.erase(0, crlf_pos + 2);
         }
@@ -163,18 +166,17 @@ void HttpRequest::HandleChunkedBody()
             contentLength = remaining;
         if (contentLength == 0)
         {
-            buffer.clear();
             bodyFile.clear();
             bodyFile.seekg(0, ios::beg);
             lineLocation = END_REQUEST;
-            break;
+            return;
         }
         size_t bytesTowrite = min(contentLength, buffer.size());
         bodyFile.write(buffer.c_str(), bytesTowrite);
         (contentLength > buffer.size()) ? buffer.erase(0, buffer.size()) : buffer.erase(0, contentLength);
         remaining = contentLength - bytesTowrite;
-        if (!remaining)
-            (buffer.find("\r\n") == string::npos) ? throw HttpExcept(400 ,"Bad Request") : buffer.erase(0, 2);
+        if (!remaining && buffer.size() >= 2 && buffer.find("\r\n") == string::npos)
+            throw HttpExcept(400 ,"Bad Request");
     }
 }
 
@@ -221,7 +223,6 @@ void HttpRequest::HandleBoundary()
                 throw HttpExcept(400, "Bad Request");
             return ;
         }
-        // content type too 
         if (bodyFile.is_open())
         {
             bodyFile.clear(); // check later those 3
@@ -249,7 +250,6 @@ void HttpRequest::parseBody()
 {
     if (!isChunked)
     {
-        cout << contentLength << endl;
         if (contentLength > StringStream(conf.maxBodySize))
             throw HttpExcept(413 , "Request Entity too large");
         if (Boundary.empty()) 
