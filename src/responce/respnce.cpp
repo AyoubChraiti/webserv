@@ -37,7 +37,7 @@ void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest& req) {
         response << "Content-Length: " << routeResult.responseBody.size() << "\r\n";
     }
 
-    response << "Connection: " << "close" << "\r\n";
+    response << "Connection: " << req.connection << "\r\n";
     response << "\r\n";
 
     string headerStr = response.str();

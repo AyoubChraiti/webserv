@@ -100,7 +100,6 @@ void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpReq
         close(clientFd);
     }
     else {
-        cerr << "cnx want to keep the cnx" << endl;
         requestmp.erase(clientFd);
         struct epoll_event ev;
         ev.events = EPOLLIN;
