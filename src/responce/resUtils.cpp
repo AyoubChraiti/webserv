@@ -92,22 +92,23 @@ string getContentType(const string& filepath) {
 }
 
 void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
-    // if (req.connection != "keep-alive") {
+    if (req.connection != "keep-alive") {
         requestmp.erase(clientFd);
         if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1) {
             perror("epoll_ctl");
         }
         close(clientFd);
-    // }
-    // else {
-    //     requestmp.erase(clientFd);
-    //     struct epoll_event ev;
-    //     ev.events = EPOLLIN;
-    //     ev.data.fd = clientFd;
-    //     if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
-    //         perror("epoll_ctl");
-    //     }
-    // }
+    }
+    else {
+        cerr << "cnx want to keep the cnx" << endl;
+        requestmp.erase(clientFd);
+        struct epoll_event ev;
+        ev.events = EPOLLIN;
+        ev.data.fd = clientFd;
+        if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
+            perror("epoll_ctl");
+        }
+    }
 }
 
 string generateAutoIndex(const string& fullPath, const string& uriPath) {

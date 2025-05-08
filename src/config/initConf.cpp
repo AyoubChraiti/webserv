@@ -107,6 +107,8 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
             route.fileUpload = (value == "true");
         else if (key == "upload_directory")
             route.uploadStore = value;
+        else
+            throw runtime_error("Error: syntax issue in the config file.");
 
         server.routes[routePath] = route;
     }

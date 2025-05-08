@@ -56,13 +56,15 @@ public:
     int bodyFileFd;
     string BodyPath;
     RouteResult routeResult;
-    bool sendingFile = false;
-    size_t bytesSentSoFar = 0;
+    bool sendingFile;
+    size_t bytesSentSoFar;
+    bool headerSent;
 
 
 
 
-    HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0), sendingFile(false), bytesSentSoFar(0) {};
+    HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0),
+        sendingFile(false), bytesSentSoFar(0), headerSent(false) {};
     string get(const string& key, const string& defaultValue) const;
     bool parseRequestLineByLine(int fd, servcnf& conf);
     void initFromHeader();

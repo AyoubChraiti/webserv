@@ -42,57 +42,48 @@ void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest& req) {
 
     string headerStr = response.str();
     send(clientFd, headerStr.c_str(), headerStr.size(), 0);
+    req.headerSent = true;
 }
 
 int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
     RouteResult& routeResult = req.routeResult;
 
+    if (!req.headerSent) {
+        sendHeaders(clientFd, routeResult, req);
+        return 0;
+    }
+
     if (!req.sendingFile) {
         if (routeResult.shouldRDR) {
             sendRedirect(clientFd, routeResult.redirectLocation, req);
             return 1;
-        }
-
-        sendHeaders(clientFd, routeResult, req);
+        }    
 
         if (routeResult.resFd == -1) {
             const string& body = routeResult.responseBody;
             ssize_t sent = send(clientFd, body.c_str(), body.size(), 0);
             return 1;
-        } else {
+        }
+        else {
             req.sendingFile = true;
             req.bytesSentSoFar = 0;
         }
     }
-
     char buffer[BUFFER_SIZE];
+
     ssize_t bytesRead = pread(routeResult.resFd, buffer, BUFFER_SIZE, req.bytesSentSoFar);
-    if (bytesRead <= 0) {
-        if (bytesRead == -1)
-            cout << "Error reading file: " << strerror(errno) << endl;
-        return 1;
-    }
 
     ssize_t sent = send(clientFd, buffer, bytesRead, 0);
-    if (sent == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
-        perror("send");
-        return 1;
-    }
 
     req.bytesSentSoFar += sent;
-    cout << "bytes sent: " << sent << endl;
 
-    if ((size_t)sent < (size_t)bytesRead) {
-        // Partial send, wait for next EPOLLOUT
+    if ((size_t)sent < (size_t)bytesRead)
         return 0;
-    }
 
-    if (req.bytesSentSoFar >= getContentLength(routeResult.fullPath)) {
-        return 1; // Done sending
-    }
+    if (req.bytesSentSoFar >= getContentLength(routeResult.fullPath))
+        return 1;
 
-    return 0; // Still more to send
+    return 0;
 }
 
 

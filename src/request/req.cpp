@@ -104,13 +104,16 @@ int HttpRequest::Parser(const char* data, size_t length) {
 
 bool HttpRequest::parseRequestLineByLine(int fd, servcnf& confRef) {
     this->conf = confRef;
-
     char temp[BUFFER_SIZE];
+
+    memset(temp, 0, sizeof(temp));
     ssize_t bytes = recv(fd, temp, sizeof(temp), 0);
 
-    if (bytes == 0)
-        return true; // connection closed
-    else if (bytes < 0)
+    cout << '|' << temp << '|' << endl;
+
+    cout << "bytess = " << bytes << endl;
+
+    if (bytes <= 0)
         throw HttpExcept(400, "recv failed");
 
     buffer.append(temp, bytes);
@@ -144,6 +147,5 @@ bool HttpRequest::parseRequestLineByLine(int fd, servcnf& confRef) {
             break;
         }
     }
-
     return false;
 }

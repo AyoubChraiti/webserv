@@ -2,6 +2,7 @@
 
 void checkMethod(const string& method) {
     if (method != "GET" && method != "POST" && method != "DELETE") {
+        cout << "issue here?" << endl;
         throw HttpExcept(405, "Unsupported method: " + method);
     }
 }
