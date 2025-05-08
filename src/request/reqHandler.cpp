@@ -22,55 +22,58 @@ void modifyState(int epollFd ,int clientFd, uint32_t events)
         return ;
 }
 
-string  HttpRequest::getMethod () const
-{
-    return method;
-}
-string HttpRequest::getURI () const
-{
-    return uri;
-}
-bool HttpRequest::request(int clientFd, servcnf &reqConfig)
+bool HttpRequest::request(int clientFd)
 {
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = recv(clientFd, buff, BUFFER_SIZE - 1, 0);
+    cout << recvBytes << endl;
     if (recvBytes == 0)
+    {
+        if (lineLocation != END_REQUEST && !buffer.empty())
+            throw HttpExcept(400, "Bad Request");
         return true;
+    }
     else if (recvBytes < 0)
-        throw RequestException("Internal Server Error", 500);
+        throw HttpExcept(500, "Internal Server Error");
     if (recvBytes > 0)
     {
         buff[recvBytes] = '\0';
-        cout << buff << endl;
         buffer.append(buff, recvBytes);
+        if (lineLocation != BODY && buffer.find("\r\n") == string::npos)
+            return false;
         if (lineLocation == REQUEST_LINE)
-            parseRequestLine(reqConfig); 
+            parseRequestLine();
         if (lineLocation == HEAD)
-            parseHeader(reqConfig);
+            HandleHeaders();
         if (lineLocation == BODY)
-            parseBody(reqConfig);
+            parseBody();
         if (lineLocation == END_REQUEST)
             return true;
     }
     return false;
 }
 
-void handleClientRequest(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates)
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates)
 {
+    string host = getInfoClient(clientFd);
     map<int, HttpRequest>::iterator it = reqStates.find(clientFd);
     if (it == reqStates.end())
-        reqStates.insert(make_pair(clientFd, HttpRequest()));
-    string host = getInfoClient(clientFd);
-    servcnf reqConfig = conf.servers[host];
+        reqStates.insert(make_pair(clientFd, HttpRequest(conf.servers[host])));
     try 
     {
-        if (reqStates[clientFd].request(clientFd, reqConfig))
+        if (reqStates[clientFd].request(clientFd))
+        {
+            int tmp;
+            if (reqStates[clientFd].uri.find("/cgi-bin/") != string::npos)
+                tmp = HandleCGI(epollFd, clientFd, reqStates);
+            cout << "-> " << reqStates[tmp].method  << endl;
+            exit(1);
             modifyState(epollFd, clientFd, EPOLLOUT);
+        }
     }
-    catch(const std::exception& e)
+    catch(const HttpExcept& e)
     {
-        modifyState(epollFd, clientFd, EPOLLOUT);
-        cerr << sendErrorResponse(e.what(), clientFd) << endl;
+        sendErrorResponse(clientFd, e.getStatusCode(),e.what(), conf.servers[host]);
         reqStates.erase(clientFd);
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL); 
         close(clientFd);

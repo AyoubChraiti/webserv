@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServerPulse - Test Your Web Server</title>
+    <style>
+        body {
+            background-color: #1A1A1A;
+            color: #FFFFFF;
+            font-family: 'Roboto Mono', monospace;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #00FFFF;
+            text-shadow: 0 0 10px #00FFFF;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .input-group {
+            margin: 20px 0;
+        }
+        input, textarea {
+            background-color: #333;
+            border: 2px solid #00FFFF;
+            color: #FFF;
+            padding: 10px;
+            width: 100%;
+            max-width: 500px;
+            font-family: 'Roboto Mono', monospace;
+        }
+        button {
+            background-color: #00FFFF;
+            color: #1A1A1A;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background-color: #FF00FF;
+            color: #FFF;
+            box-shadow: 0 0 15px #FF00FF;
+        }
+        #response {
+            background-color: #333;
+            border: 2px solid #FF00FF;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ServerPulse</h1>
+        <p>Test Your Server’s Heartbeat</p>
+
+        <div class="input-group">
+            <input type="text" id="url" placeholder="Enter your server URL (e.g., http://localhost:3000/api)">
+            <textarea id="data" placeholder="Enter POST data (JSON format)" rows="4" style="display: none;"></textarea>
+        </div>
+
+        <div>
+            <button onclick="sendRequest('GET')">GET Test</button>
+            <button onclick="toggleDataField(); sendRequest('POST')">POST Test</button>
+            <button onclick="sendRequest('DELETE')">DELETE Test</button>
+        </div>
+
+        <div id="response">Response will appear here...</div>
+    </div>
+
+    <script>
+        function toggleDataField() {
+            const dataField = document.getElementById('data');
+            dataField.style.display = dataField.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function sendRequest(method) {
+            const url = document.getElementById('url').value;
+            const data = document.getElementById('data').value;
+            const responseDiv = document.getElementById('response');
+
+            if (!url) {
+                responseDiv.textContent = 'Error: Please enter a URL.';
+                return;
+            }
+
+            try {
+                let options = { method };
+                if (method === 'POST' && data) {
+                    options.headers = { 'Content-Type': 'application/json' };
+                    options.body = data;
+                }
+
+                const response = await fetch(url, options);
+                const responseText = await response.text();
+                const output = `Status: ${response.status} ${response.statusText}\n\nBody:\n${responseText}`;
+                responseDiv.textContent = output;
+            } catch (error) {
+                responseDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

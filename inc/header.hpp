@@ -19,31 +19,26 @@
 #include <algorithm>
 #include <sys/stat.h>
 #include <signal.h>
-#include <unordered_map>
+#include <sys/types.h>
+#include <dirent.h>
+#include <iomanip>
+#include <algorithm>
 #include <sys/wait.h>
 
-
 using namespace std;
+
+extern bool shutServer;
 
 struct mpserv;
 class HttpRequest;
 
-extern bool shutServer;
-
+/* error handling */
 void sysCallFail();
-void serverSetup(mpserv &conf, vector<int> &servrs);
+
+/* server setup */
 void webserver(mpserv &conf);
-void testConfigParser(const string &filePath);
-std::string trim(const std::string& str);
 
-string sendErrorResponse(const char *e, int clientSocket);
-
-bool isValidDirectory(const string &path);
-bool isValidFile(const string &path);
-
-
-void handle_client_write(int clientFd, int epollFd, mpserv& conf, std::map<int, HttpRequest>& requestStates);
-
+/* c++11 functions */
 template <typename T>
 string to_string(T value) {
     ostringstream oss;
@@ -51,5 +46,8 @@ string to_string(T value) {
     return oss.str();
 }
 
+void ctrl_C();
 
 string getIp(string hostname);
+string trim(const string& str);
+void add_fds_to_epoll(int epollFd, int fd, uint32_t events);

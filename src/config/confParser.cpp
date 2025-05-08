@@ -46,7 +46,7 @@ bool isValidMethod(const string &method) {
 }
 
 mpserv configChecking(const string &filePath) {
-    configFile parser(filePath); // all init for the struct.
+    configFile parser(filePath);
     mpserv config = parser.parseConfig();
 
     if (config.servers.empty())
@@ -67,6 +67,8 @@ mpserv configChecking(const string &filePath) {
 
         map<int, string>::const_iterator err_it;
         for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it) {
+            if (err_it->first < 100 && err_it->first > 599)
+                throw runtime_error("Error: invalid error code");
             if (!isValidFile(err_it->second))
                 throw runtime_error("Error: Error page file does not exist: " + err_it->second);
         }
@@ -77,13 +79,10 @@ mpserv configChecking(const string &filePath) {
             if (route_it->first.empty() || route_it->first[0] != '/')
                 throw runtime_error("Error: Route '" + route_it->first + "' has an invalid or missing URI.");
 
-            if (route.root.empty())
-                throw runtime_error("Error: Route '" + route_it->first + "' is missing root directory.");
-            if (!isValidDirectory(route.root))
-                throw runtime_error("Error: Root directory '" + route.root + "' does not exist.");
-
-            if (!route.index.empty() && !isValidFile(route.root + "/" + route.index))
-                throw runtime_error("Error: Index file '" + route.index + "' not found in root '" + route.root + "'.");
+            if (route.alias.empty())
+                throw runtime_error("Error: Route '" + route_it->first + "' is missing alias directory.");
+            if (!isValidDirectory(route.alias))
+                throw runtime_error("Error: alias directory '" + route.alias + "' does not exist.");
 
             vector<string>::const_iterator method_it;
             for (method_it = route.methodes.begin(); method_it != route.methodes.end(); ++method_it) {
@@ -93,9 +92,6 @@ mpserv configChecking(const string &filePath) {
 
             if (!route.uploadStore.empty() && !isValidDirectory(route.uploadStore))
                 throw runtime_error("Error: Upload directory '" + route.uploadStore + "' does not exist.");
-
-            if (route.autoindex != true && route.autoindex != false)
-                throw runtime_error("Error: Route '" + route_it->first + "' has an invalid autoindex value.");
         }
     }
     return config;

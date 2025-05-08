@@ -1,69 +1,74 @@
-#include "../../inc/request.hpp"
+#include "../../inc/header.hpp"
+#include "../../inc/config.hpp"
 
 void sysCallFail() {
     perror("syscall Error");
     exit(1);
 }
 
-std::string trim(const std::string& str) {
-    size_t start = str.find_first_not_of(" \t\r\n");
-    if (start == std::string::npos) return "";
-    size_t end = str.find_last_not_of(" \t\r\n");
-    return str.substr(start, end - start + 1);
-}
+void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig) {
+    string statusText;
+    string responseBody;
+    string contentType = "text/plain";
+    string filePath;
 
-// both of these are from the config parsing ..
+    switch (statusCode) {
+        case 400:
+            statusText = "Bad Request";
+            break;
+        case 404:
+            statusText = "Not Found";
+            break;
+        case 405:
+            statusText = "Method Not Allowed";
+            break;
+        case 411:
+            statusText = "Length Required";
+            break;
+        case 500:
+            statusText = "Internal Server Error";
+            break;
+        case 501:
+            statusText = "Not Implemented";
+            break;
+        case 505:
+            statusText = "HTTP Version Not Supported";
+            break;
+        default:
+            statusText = "Error";
+            break;
+    }
 
-bool isValidDirectory(const string &path) {
-    struct stat info;
-    return (stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode));
-}
-
-bool isValidFile(const string &path) {
-    return (access(path.c_str(), F_OK) == 0);
-}
-
-const char *HttpRequest::RequestException::what() const throw ()
-{
-    return errorResponse.c_str();
-}
-
-HttpRequest::RequestException::RequestException (string msg , int status) : errorStr(msg) , statusCode(status)
-{
-    errorResponse += errorStr + '\n' + to_string(statusCode);
-}
-
-string sendErrorResponse(const char *e, int clientSocket)
-{
-    string str = e;
-    size_t  pos = str.find_last_of("\n");
-    string errorMessage = str.substr(0, pos);
-    int statusCode = StringStream(str.substr(pos).c_str());
-    std::string response = 
-        "HTTP/1.1 " + std::to_string(statusCode) + " " + errorMessage + "\r\n"
-        "Content-Type: text/html\r\n"
+    if (serverConfig.error_pages.find(statusCode) != serverConfig.error_pages.end()) {
+        filePath = serverConfig.error_pages.at(statusCode);
+        ifstream errorFile(filePath);
+        if (errorFile.is_open()) {
+            stringstream buffer;
+            buffer << errorFile.rdbuf();
+            responseBody = buffer.str();
+            errorFile.close();
+            if (filePath.find(".html") != string::npos) {
+                contentType = "text/html";
+            }
+        } else {
+            cerr << "Warning: Could not open error page file: " << filePath << endl;
+            responseBody = message;
+        }
+    }
+    else {
+        responseBody = message;
+    }
+    string response =
+        "HTTP/1.1 " + to_string(statusCode) + " " + statusText + "\r\n"
+        "Content-Length: " + to_string(responseBody.length()) + "\r\n"
+        "Content-Type: " + contentType + "\r\n"
         "Connection: close\r\n"
-        "\r\n"
-        "<!DOCTYPE html>\n"
-        "<html>\n"
-        "<head><title>" + std::to_string(statusCode) + " " + errorMessage + "</title></head>\n"
-        "<body>\n"
-        "<h1>" + errorMessage + "</h1>\n"
-        "<p>Error code: " + std::to_string(statusCode) + "</p>\n"
-        "</body>\n"
-        "</html>";
-    
-    send(clientSocket, response.c_str(), response.length(), 0);
-    return "Client :" + errorMessage;
-}
+        "\r\n" + responseBody;
 
+    cerr << "Error: '" << statusText << "' sent to client (code: " << statusCode << ")" << endl;
 
-size_t StringStream(string string)
-{
-    size_t num;
-    stringstream ss (string);
-    ss >> num;
-    return num;
+    send(fd, response.c_str(), response.length(), 0);
+    close(fd);
 }
 
 string getIp(string hostname) {

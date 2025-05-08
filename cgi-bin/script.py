@@ -1,39 +1,29 @@
 #!/usr/bin/env python3
+
 import cgi
-import sys
 
-def main():
-    # HTTP Headers
-    print("Content-Type: text/html; charset=utf-8")  # HTML response
-    print()  # End of headers
+# Generate HTML content
+html_content = """\
+<html>
+<head><title>CGI Test</title></head>
+<body>
+<h1>Hello, CGI!</h1>
+"""
 
-    # HTML Content
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Python CGI Response</title>
-        <style>
-            body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-            h1 { color: #2c3e50; }
-            .message { font-size: 1.5em; color: #3498db; }
-        </style>
-    </head>
-    <body>
-        <h1>Python CGI Script</h1>
-        <p class="message">Hello, I am a CGI script!</p>
-        <p>Your request was processed successfully.</p>
-    </body>
-    </html>
-    """
-    print(html_content)
+# Get form data
+form = cgi.FieldStorage()
+name = form.getvalue("name", "Guest")
 
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        # Error handling (logs to server error log)
-        print("Content-Type: text/plain")
-        print()
-        print(f"CGI Script Error: {str(e)}", file=sys.stderr)
+html_content += f"<p>Welcome, {name}!</p>"
+html_content += "</body></html>"
+
+# Compute content length
+content_length = len(html_content.encode())  # Encode to bytes before measuring
+
+# Print headers
+print("Content-Type: text/html")
+print(f"Content-Length: {content_length}")  # Set Content-Length
+print()  # Empty line to separate headers from body
+
+# Print content
+print(html_content)
