@@ -83,6 +83,8 @@ bool isValidHostHeader(const string& host) ;
 void writebody(fstream &bodyFile , string &buffer);
 
 int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map);
+void handle_cgi_write(int Fd, int epollFd, HttpRequest *reqStates);
+void handle_cgi_read(int Fd, int epollFd, HttpRequest *reqStates);
 // int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map);
 /* requestParser file */
 // void checkBody(const servcnf& server, const HttpRequest& req);

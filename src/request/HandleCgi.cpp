@@ -109,6 +109,40 @@ void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clien
 //     }
     // return 0;
 // }
+void handle_cgi_write(int Fd, int epollFd, HttpRequest *reqStates)
+{
+    char buff[BUFFER_BYTES];
+    reqStates->bodyFile.read(buff, BUFFER_BYTES);
+    size_t bytesRead = reqStates->bodyFile.gcount();
+    if (bytesRead > 0)
+    {
+        write(Fd, buff, bytesRead);
+        if (reqStates->bodyFile.eof())
+        {
+            close(Fd);
+            reqStates->bodyFile.close();
+            epoll_ctl(epollFd, EPOLL_CTL_DEL, Fd, NULL);
+        }
+    }
+    else if (bytesRead == 0)
+    {
+        close(Fd);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, Fd, NULL);
+    } 
+}
+void handle_cgi_read(int Fd, int epollFd, HttpRequest *reqStates)
+{
+    char buff[BUFFER_BYTES];
+    ssize_t recvBytes = read(Fd, buff, sizeof(buff));
+    if (recvBytes == -1)
+        return (perror("read"), void());
+    reqStates->outputCGI.append(buff, recvBytes);
+    if (recvBytes == 0)
+    {
+        close(Fd);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, Fd, NULL);
+    }
+}
 
 int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map)
 {
