@@ -110,7 +110,7 @@ void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clien
     // return 0;
 // }
 
-int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates)
+int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map)
 {
     int stdoutFd[2], stdinFd[2];
     if (pipe(stdinFd) == -1 || pipe(stdoutFd) == -1)
@@ -128,13 +128,9 @@ int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates)
         close(stdinFd[0]);
         if (reqStates[clientFd].method == "POST")
             add_fds_to_epoll(epollFd, stdinFd[1], EPOLLOUT); // write on cgi
-        add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN); // read cgi    
-        std::map<int, HttpRequest*> reqStatesPtr;
-        HttpRequest* req = &reqStates[clientFd]; // original object stays in one place
-        reqStatesPtr[clientFd] = req;
-        reqStatesPtr[stdinFd[1]] = req;
-        reqStatesPtr[stdoutFd[0]] = req;
-        
+        add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN); // read cgi  
+        pipes_map[stdinFd[1]] = &reqStates[clientFd]; 
+        pipes_map[stdoutFd[0]] = &reqStates[clientFd];
     }
-    return stdinFd[1];
+    return 0;
 }

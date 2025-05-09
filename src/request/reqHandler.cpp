@@ -53,7 +53,7 @@ bool HttpRequest::request(int clientFd)
     return false;
 }
 
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates)
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates, map<int , HttpRequest *> &pipes_map)
 {
     string host = getInfoClient(clientFd);
     map<int, HttpRequest>::iterator it = reqStates.find(clientFd);
@@ -65,9 +65,8 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
         {
             int tmp;
             if (reqStates[clientFd].uri.find("/cgi-bin/") != string::npos)
-                tmp = HandleCGI(epollFd, clientFd, reqStates);
-            cout << "-> " << reqStates[tmp].method  << endl;
-            exit(1);
+                if (HandleCGI(epollFd, clientFd, reqStates, pipes_map) == -1)
+                    exit(1);
             modifyState(epollFd, clientFd, EPOLLOUT);
         }
     }

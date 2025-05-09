@@ -71,7 +71,7 @@ public:
     bool openFile (string filename);
 };
 
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates, map<int , HttpRequest *> &pipes_map);
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
 void modifyState(int epollFd ,int clientFd, uint32_t events);
 string getInfoClient(int clientFd);
@@ -82,7 +82,8 @@ bool isValidContentLength (const string &value);
 bool isValidHostHeader(const string& host) ;
 void writebody(fstream &bodyFile , string &buffer);
 
-int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates);
+int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map);
+// int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map);
 /* requestParser file */
 // void checkBody(const servcnf& server, const HttpRequest& req);
 // void checkAllowed(routeCnf route, const string& method, const string& path);
