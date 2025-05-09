@@ -65,106 +65,70 @@ void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clien
     exit(1);
 }
 
-// int HandleCGI (int epollFd, int clientFd, HttpRequest &reqStates)
-// {
-//     int stdoutFd[2], stdinFd[2];
-//     if (pipe(stdinFd) == -1 || pipe(stdoutFd) == -1)
-//         return (perror("pipe"), -1); 
-//     pid_t pid = fork();
-//     if (pid == -1)
-//         return (perror("fork"), -1);
-//     if (pid == 0)
-//         childCGI(reqStates, stdoutFd, stdinFd, clientFd);
-//     else
-//     {
-//         close (stdoutFd[1]);
-//         close(stdinFd[0]);
-//         char buff[BUFFER_BYTES];
-//         if (reqStates.method == "POST")
-//         {
-//             while (reqStates.bodyFile.read(buff, BUFFER_BYTES))
-//             {
-//                 size_t bytesRead = reqStates.bodyFile.gcount();
-//                 write(stdinFd[1], buff, bytesRead);
-//             }
-//             if (reqStates.bodyFile.gcount() > 0)
-//                 write(stdinFd[1], buff, reqStates.bodyFile.gcount());
-//         }
-//         reqStates.bodyFile.close();
-//         close(stdinFd[1]);
-//         while (ssize_t recvBytes = read(stdoutFd[0], buff, sizeof(buff)))
-//         {
-//             if (recvBytes == -1)
-//                 return (perror("read"), -1);
-//             reqStates.outputCGI.append(buff, recvBytes);
-//         }
-//         close(stdoutFd[0]);
-//         int status;
-//         waitpid(pid, &status, 0);
-//         if (WEXITSTATUS(status) != 0) 
-//         {
-//             std::cerr << "CGI process failed" << std::endl;
-//             return -1;
-//         }
-//     }
-    // return 0;
-// }
-void handle_cgi_write(int Fd, int epollFd, HttpRequest *reqStates)
-{
-    char buff[BUFFER_BYTES];
-    reqStates->bodyFile.read(buff, BUFFER_BYTES);
-    size_t bytesRead = reqStates->bodyFile.gcount();
-    if (bytesRead > 0)
-    {
-        write(Fd, buff, bytesRead);
-        if (reqStates->bodyFile.eof())
-        {
-            close(Fd);
-            reqStates->bodyFile.close();
-            epoll_ctl(epollFd, EPOLL_CTL_DEL, Fd, NULL);
-        }
-    }
-    else if (bytesRead == 0)
-    {
-        close(Fd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, Fd, NULL);
-    } 
-}
-void handle_cgi_read(int Fd, int epollFd, HttpRequest *reqStates)
-{
-    char buff[BUFFER_BYTES];
-    ssize_t recvBytes = read(Fd, buff, sizeof(buff));
-    if (recvBytes == -1)
-        return (perror("read"), void());
-    reqStates->outputCGI.append(buff, recvBytes);
-    if (recvBytes == 0)
-    {
-        close(Fd);
-        epoll_ctl(epollFd, EPOLL_CTL_DEL, Fd, NULL);
-    }
-}
 
 int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map)
 {
     int stdoutFd[2], stdinFd[2];
     if (pipe(stdinFd) == -1 || pipe(stdoutFd) == -1)
         return (perror("pipe"), -1); 
-
     pid_t pid = fork();
     if (pid == -1)
         return (perror("fork"), -1);
     if (pid == 0)
         childCGI(reqStates[clientFd], stdoutFd, stdinFd,clientFd);
-
     else
     {
         close (stdoutFd[1]);
-        close(stdinFd[0]);
+        close(stdinFd[0]); // post
         if (reqStates[clientFd].method == "POST")
+        {
             add_fds_to_epoll(epollFd, stdinFd[1], EPOLLOUT); // write on cgi
+            pipes_map[stdinFd[1]] = &reqStates[clientFd]; 
+        }
+        else
+            close(stdinFd[1]);
         add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN); // read cgi  
-        pipes_map[stdinFd[1]] = &reqStates[clientFd]; 
         pipes_map[stdoutFd[0]] = &reqStates[clientFd];
     }
     return 0;
+}
+
+void handle_cgi_read(int readFd, int epollFd, HttpRequest *reqStates)
+{
+    char buff[BUFFER_BYTES];
+    ssize_t recvBytes = read(readFd, buff, sizeof(buff));
+    cout << "readBytes" << recvBytes <<endl;
+    if (recvBytes == -1)
+        return (perror("read"), void());
+    reqStates->outputCGI.append(buff, recvBytes);
+}
+
+
+void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_map)
+{
+    HttpRequest *reqStates = pipes_map[writeFd];
+    char buff[BUFFER_BYTES];
+    reqStates->bodyFile.read(buff, BUFFER_BYTES);
+    size_t bytesRead = reqStates->bodyFile.gcount();
+    cout << "writeBytes " << bytesRead << endl;
+    if (bytesRead > 0)
+    {
+        write(writeFd, buff, bytesRead);
+        if (reqStates->bodyFile.eof())
+        {
+            close(writeFd);
+            reqStates->bodyFile.close();
+            epoll_ctl(epollFd, EPOLL_CTL_DEL, writeFd, NULL);
+            pipes_map.erase(writeFd);
+            cout << "end writing" << endl;
+        }
+    }
+    
+    // else if (bytesRead == 0)
+    // {
+    //     close(Fd);
+    //     epoll_ctl(epollFd, EPOLL_CTL_DEL, Fd, NULL);
+    //     pipes_map.erase(Fd);
+    //     cout << "end writing" << endl;
+    // }
 }

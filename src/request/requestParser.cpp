@@ -250,12 +250,8 @@ void HttpRequest::HandleBoundary()
 }
 void HttpRequest::parseBody()
 {
-    // if (buffer.empty())
-        // return ;
     if (!isChunked)
     {
-        cout << "buffer --- >" << buffer << endl;
-        cout << "---> length" << contentLength << endl;
         if (contentLength > StringStream(conf.maxBodySize))
             throw HttpExcept(413 , "Request Entity too large");
         if (Boundary.empty()) 
