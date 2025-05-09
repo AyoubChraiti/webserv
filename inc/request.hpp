@@ -78,6 +78,7 @@ public:
 int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
+RouteResult handleRouting(int fd, HttpRequest& req);
 
 /* requestParser file */
 void checkBody(const servcnf& server, const HttpRequest& req);
@@ -87,4 +88,3 @@ void checkHeaders(const HttpRequest& req);
 void checkURI(const string& path);
 void checkMethod(const string& method);
 
-RouteResult handleRouting(int fd, HttpRequest& req);

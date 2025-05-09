@@ -109,10 +109,6 @@ bool HttpRequest::parseRequestLineByLine(int fd, servcnf& confRef) {
     memset(temp, 0, sizeof(temp));
     ssize_t bytes = recv(fd, temp, sizeof(temp), 0);
 
-    cout << '|' << temp << '|' << endl;
-
-    cout << "bytess = " << bytes << endl;
-
     if (bytes <= 0)
         throw HttpExcept(400, "recv failed");
 
