@@ -55,7 +55,6 @@ public:
     int clientFd;
 
     string outputCGI;
-
     HttpRequest();
     HttpRequest(servcnf config);
     // method of reqeust

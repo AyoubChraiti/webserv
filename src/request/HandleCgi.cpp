@@ -64,7 +64,12 @@ void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clien
     perror("cgi execve failed");
     exit(1);
 }
-
+void sigchld_handler(int)
+{
+    cout << "Waiting" << endl;
+    // Reap all finished child processes
+    while (waitpid(-1, NULL, WNOHANG) > 0) {}
+}
 
 int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map)
 {
@@ -74,20 +79,21 @@ int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<
     pid_t pid = fork();
     if (pid == -1)
         return (perror("fork"), -1);
+    
     if (pid == 0)
         childCGI(reqStates[clientFd], stdoutFd, stdinFd,clientFd);
     else
     {
         close (stdoutFd[1]);
-        close(stdinFd[0]); // post
+        close(stdinFd[0]);
         if (reqStates[clientFd].method == "POST")
         {
-            add_fds_to_epoll(epollFd, stdinFd[1], EPOLLOUT); // write on cgi
+            add_fds_to_epoll(epollFd, stdinFd[1], EPOLLOUT);
             pipes_map[stdinFd[1]] = &reqStates[clientFd]; 
         }
         else
             close(stdinFd[1]);
-        add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN); // read cgi  
+        add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN); 
         pipes_map[stdoutFd[0]] = &reqStates[clientFd];
     }
     return 0;
@@ -119,16 +125,6 @@ void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_ma
             close(writeFd);
             reqStates->bodyFile.close();
             epoll_ctl(epollFd, EPOLL_CTL_DEL, writeFd, NULL);
-            pipes_map.erase(writeFd);
-            cout << "end writing" << endl;
         }
     }
-    
-    // else if (bytesRead == 0)
-    // {
-    //     close(Fd);
-    //     epoll_ctl(epollFd, EPOLL_CTL_DEL, Fd, NULL);
-    //     pipes_map.erase(Fd);
-    //     cout << "end writing" << endl;
-    // }
 }

@@ -54,7 +54,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             {
                 if (events[i].events & EPOLLOUT)
                     handle_cgi_write(eventFd, epollFd, pipes_map);
-                if (events[i].events & EPOLLIN)
+                else if (events[i].events & EPOLLIN)
                     handle_cgi_read(eventFd, epollFd, pipes_map[eventFd]);
                 else if (events[i].events & EPOLLHUP) 
                 {
