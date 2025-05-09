@@ -34,6 +34,7 @@ RouteResult handleRouting(int fd, HttpRequest& req) {
     }
     
     if (!fileExists(fullPath)) {
+        cout << "in the routing" << endl;
         throw HttpExcept(404, "Not Found");
     }
 

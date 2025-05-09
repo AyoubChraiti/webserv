@@ -38,9 +38,6 @@ void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest& req) {
     response << "Connection: " << req.connection << "\r\n";
     response << "\r\n";
 
-    if (req.method == "DELETE")
-        response << routeResult.responseBody;
-
     send(clientFd, response.str().c_str(), response.str().size(), 0);
     req.headerSent = true;
 }

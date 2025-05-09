@@ -63,7 +63,8 @@ int request(int fd, mpserv& conf, int epollFd, map<int, HttpRequest>& requestmp)
         if (req.parseRequestLineByLine(fd, req.conf)) {
             req.initFromHeader();
             parseChecking(req.conf, req, fd);
-            req.routeResult = handleRouting(fd, req);
+            if (req.method == "GET")
+                req.routeResult = handleRouting(fd, req);
             return 1;
         }
         cout << "still reading body" << endl;
