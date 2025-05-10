@@ -22,22 +22,19 @@ void setupCGIenv(string &scriptname, HttpRequest &reqStates, vector <char *> &ve
     env["REQUEST_METHOD"] = reqStates.method;
     env["REDIRECT_STATUS"] = "200";
     env["SCRIPT_FILENAME"] = "cgi-bin/script.php"; // edit 
-    env["SCRIPT_NAME"] = scriptname;
+    env["SCRIPT_NAME"] =  scriptname;
     env["QUERY_STRING"] = reqStates.querystring;
-    if (reqStates.method == "POST") 
-    {
+    if (reqStates.method == "POST") {
         if (reqStates.headers.find("Content-Type") != reqStates.headers.end())
             env["CONTENT_TYPE"] = reqStates.headers["Content-Type"];
         if (reqStates.headers.find("Content-Length") != reqStates.headers.end())
             env["CONTENT_LENGTH"] = reqStates.headers["Content-Length"];
     }
-    for (map<string,string>::iterator it = reqStates.headers.begin(); it != reqStates.headers.end(); it++)
-    {
+    for (map<string,string>::iterator it = reqStates.headers.begin(); it != reqStates.headers.end(); it++) {
         if (it->first != "Content-Length" && it->first != "Content-Type")
             env["HTTP_" + strUpper(it->first)] = it->second;
     }
-    for (map<string, string>::iterator it = env.begin(); it != env.end(); it++)
-    {
+    for (map<string, string>::iterator it = env.begin(); it != env.end(); it++) {
         envVar.push_back(it->first + "=" + it->second);
         vec.push_back(const_cast<char *>(envVar.back().c_str())); 
     }
@@ -46,7 +43,7 @@ void setupCGIenv(string &scriptname, HttpRequest &reqStates, vector <char *> &ve
 
 void childCGI (HttpRequest &reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
 {
-    string path = "." + reqStates.uri;
+    string path = "./" + reqStates.uri;
     vector <char *> vec;
     vector <string> envVar;
     setupCGIenv(path, reqStates, vec, envVar);
@@ -70,12 +67,18 @@ void sigchld_handler(int)
     // Reap all finished child processes
     while (waitpid(-1, NULL, WNOHANG) > 0) {}
 }
-
+void parseCGIoutput (string &outputCGI)
+{
+    // size_t pos = outputCGI.find("\r\n\r\n");
+    // if (pos == string::npos)
+    //     exit(1);
+    // cout << "result :" << outputCGI.substr(0, pos) << endl;
+}
 void handle_cgi_read(int readFd, int epollFd, HttpRequest *reqStates)
 {
     char buff[BUFFER_BYTES];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));
-    cout << "readBytes" << recvBytes <<endl;
+    // cout << "readBytes" << recvBytes <<endl;
     if (recvBytes == -1)
         return (perror("read"), void());
     reqStates->outputCGI.append(buff, recvBytes);
@@ -87,7 +90,7 @@ void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_ma
     char buff[BUFFER_BYTES];
     reqStates->bodyFile.read(buff, BUFFER_BYTES);
     size_t bytesRead = reqStates->bodyFile.gcount();
-    cout << "writeBytes " << bytesRead << endl;
+    // cout << "writeBytes " << bytesRead << endl;
     if (bytesRead > 0)
     {
         write(writeFd, buff, bytesRead);

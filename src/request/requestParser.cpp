@@ -1,35 +1,49 @@
 #include "../../inc/request.hpp"
 
+
 void HttpRequest::HandleUri()
 {
-    if (method == "GET")
-    {
-        size_t indexQUERY = uri.find("?");
-        if (indexQUERY != string::npos)
-        {
-            querystring =  uri.substr(indexQUERY + 1);
-            uri.erase(indexQUERY);
-        }
+    const std::string allowed = "-._~:/?#[\\]@!$&'()*+,;=";
+    for (size_t i = 0; i < uri.size(); ++i) {
+        unsigned char ch = static_cast<unsigned char>(uri[i]);
+        if (!std::isalnum(ch) && allowed.find(ch) == std::string::npos)
+            throw HttpExcept(400, "Bad Request");
     }
-    map<string , routeCnf>::iterator it = conf.routes.begin();
+    size_t indexQUERY = uri.find("?");
+    if (indexQUERY != string::npos && method == "GET")
+    {
+        querystring =  uri.substr(indexQUERY + 1);
+        uri.erase(indexQUERY);
+    }
+    map <string , routeCnf>::iterator it = conf.routes.begin();
     size_t prevLength = 0;
     string key;
     bool flag = false; 
     for (; it != conf.routes.end(); it++)
     {
-        if (uri.find(it->first) != string::npos && it->first.length() > prevLength) 
+        const string route = it->first;
+        if (uri.size() >= route.size() && !uri.compare(0, route.size(), route)) 
         {
-            prevLength = it->first.length();
-            key = it->first;
-            flag = true;
+            if (route.back() != '/' && uri.size() != route.size() && uri[route.size()] != '/')
+                continue;
+            if (route.size() > prevLength)
+            {
+                prevLength = route.size();
+                key = route;
+                flag = true;
+            }
         }
     }
     if (!flag)
         throw HttpExcept(404, "No route for path: " + uri);
-    mtroute = conf.routes[key];
+    uri.erase(0, key.size());
+    uri = conf.routes[key].alias + uri;
+    // if (!is_file(uri))
+        // cerr << "File Not Found" << endl; If path doesn’t exist → return 404 Not Found // fix this later
+    mtroute = conf.routes[key]; 
 }
 
-void HttpRequest::parseRequestLine () // 4. URI path normalization
+void HttpRequest::parseRequestLine () 
 {
     size_t index = buffer.find("\r\n");
     if (index == string::npos)
@@ -145,7 +159,6 @@ void HttpRequest::HandleHeaders()
     }
 }
 
-
 void HttpRequest::HandleChunkedBody()
 {
     // check errors \r\n
@@ -180,8 +193,6 @@ void HttpRequest::HandleChunkedBody()
     }
 }
 
-
-
 bool HttpRequest::openFile(string filename)
 {
     bodyFile.open(filename, ios::in | ios::out | ios::binary | ios::trunc);
@@ -206,7 +217,7 @@ void HttpRequest::HandleBoundary()
             if (contentLength == 0)
                 throw HttpExcept(400, "Bad Request");
             contentLength += buffer.size();
-            return ; 
+            return ;
         }
         startBoundFlag = true;  
         string filename =  getFileName(buffer.substr(start_bound.size()));
@@ -248,6 +259,7 @@ void HttpRequest::HandleBoundary()
         contentLength += (buffer.size() - posBound);
     }
 }
+
 void HttpRequest::parseBody()
 {
     if (!isChunked)
@@ -262,6 +274,7 @@ void HttpRequest::parseBody()
         else
             HandleBoundary();
         if (contentLength == 0) {
+            cout << "End reading File" << endl;
             bodyFile.clear();
             bodyFile.seekg(0, ios::beg);
             lineLocation = END_REQUEST;

@@ -55,7 +55,6 @@ bool HttpRequest::request(int clientFd)
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates, map<int , HttpRequest *> &pipes_map)
 {
-
     string host = getInfoClient(clientFd);
     map<int, HttpRequest>::iterator it = reqStates.find(clientFd);
     if (it == reqStates.end())
@@ -64,7 +63,7 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
     {
         if (reqStates[clientFd].request(clientFd))
         {
-            if (reqStates[clientFd].uri.find("/cgi-bin/") != string::npos)
+            if (reqStates[clientFd].isCGI)
             {
                 if (HandleCGI(epollFd, clientFd, reqStates, pipes_map) == -1)
                     throw HttpExcept(500, "Internal Server Error");

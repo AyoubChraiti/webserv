@@ -83,11 +83,5 @@ void writebody(fstream &bodyFile , string &buffer);
 int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map);
 void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_map);
 void handle_cgi_read(int readFd, int epollFd, HttpRequest *reqStates);
-// int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map);
-/* requestParser file */
-// void checkBody(const servcnf& server, const HttpRequest& req);
-// void checkAllowed(routeCnf route, const string& method, const string& path);
-// void getRoute(const servcnf& server, const string& path, string& matched, HttpRequest& req);
-// void checkHeaders(const HttpRequest& req);
-// void checkURI(const string& path);
-// void checkMethod(const string& method);
+void parseCGIoutput (string &outputCGI);
+bool is_file(const std::string& path) ;

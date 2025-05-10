@@ -24,6 +24,15 @@ size_t StringStream(const string &string)
     ss >> num;
     return num;
 }
+
+bool is_file(const std::string& path) {
+    struct stat buffer;
+    if (stat(path.c_str(), &buffer) != 0) {
+        return false;
+    }
+    return S_ISREG(buffer.st_mode); // True if it's a regular file
+}
+
 bool isValidContentLength (const string &value)
 {
     return all_of(value.begin(), value.end(), ::isdigit);

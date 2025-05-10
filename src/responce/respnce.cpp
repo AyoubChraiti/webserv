@@ -200,8 +200,7 @@ void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpR
 {   
     try
     {
-        string URI = requestmp[clientFd].uri;
-        if (URI.find("/cgi-bin/") != string::npos)
+        if (requestmp[clientFd].isCGI)
             sendCGI(clientFd, requestmp[clientFd]);
         else
         {
