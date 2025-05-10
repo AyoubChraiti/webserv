@@ -67,17 +67,17 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
             if (reqStates[clientFd].uri.find("/cgi-bin/") != string::npos)
             {
                 if (HandleCGI(epollFd, clientFd, reqStates, pipes_map) == -1)
-                    exit(1);
-                return ;
+                    throw HttpExcept(500, "Internal Server Error");
             }
-            modifyState(epollFd, clientFd, EPOLLOUT);
+            else
+                modifyState(epollFd, clientFd, EPOLLOUT);
         }
     }
     catch(const HttpExcept& e)
     {
         sendErrorResponse(clientFd, e.getStatusCode(),e.what(), conf.servers[host]);
-        reqStates.erase(clientFd);
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL); 
+        reqStates.erase(clientFd);
         close(clientFd);
     }
 }

@@ -59,10 +59,9 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 else if (events[i].events & EPOLLHUP) 
                 {
                     modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
-                    close(eventFd);
                     epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
                     pipes_map.erase(eventFd);
-                    cout << "end reading" << endl;
+                    close(eventFd);
                 }
             }
             else {
