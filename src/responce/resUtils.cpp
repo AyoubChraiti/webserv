@@ -94,8 +94,9 @@ string getContentType(const string& filepath) {
 void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
     if (req.connection != "keep-alive") {
         requestmp.erase(clientFd);
-        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1)
-            cout << "epoll ctl issue\n";
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1) {
+            perror("epoll_ctl");
+        }
         close(clientFd);
     }
     else {
@@ -104,7 +105,7 @@ void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpReq
         ev.events = EPOLLIN;
         ev.data.fd = clientFd;
         if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
-            cout << "epoll ctl issue\n";
+            perror("epoll_ctl");
         }
     }
 }
@@ -121,7 +122,7 @@ string generateAutoIndex(const string& fullPath, const string& uriPath) {
     }
 
     struct dirent* entry;
-    while ((entry = readdir(dir)) != nullptr) {
+    while ((entry = readdir(dir)) != NULL) {
         string name = entry->d_name;
 
         if (name == ".")

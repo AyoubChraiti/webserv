@@ -68,7 +68,6 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
     cerr << "Error: '" << statusText << "' sent to client (code: " << statusCode << ")" << endl;
 
     send(fd, response.c_str(), response.length(), 0);
-    close(fd);
 }
 
 string getIp(string hostname) {

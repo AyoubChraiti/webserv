@@ -50,3 +50,4 @@ void ctrl_C();
 
 string getIp(string hostname);
 string trim(const string& str);
+void add_fds_to_epoll(int epollFd, int fd, uint32_t events);

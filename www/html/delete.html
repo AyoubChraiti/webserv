@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DELETE Method Test</title>
+</head>
+<body>
+  <h1>Test DELETE Request</h1>
+  <button onclick="deleteResource()">Send DELETE Request</button>
+
+  <script>
+    function deleteResource() {
+      fetch('/test-resource', {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (response.ok) {
+          alert('DELETE request sent successfully!');
+        } else {
+          alert('DELETE request failed. Status: ' + response.status);
+        }
+      })
+      .catch(error => {
+        alert('Error sending DELETE request: ' + error);
+      });
+    }
+  </script>
+</body>
+</html>

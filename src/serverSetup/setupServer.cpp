@@ -17,6 +17,7 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
 
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     map<int, HttpRequest> requestmp;
+    map<int, HttpRequest*> pipes_map;
     int epollFd = epoll_create1(0);
     if (epollFd == -1)
         sysCallFail();
@@ -50,9 +51,24 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 }
                 add_fds_to_epoll(epollFd, clientFd, EPOLLIN);
             }
+            else if (pipes_map.find(eventFd) != pipes_map.end())
+            {
+                if (events[i].events & EPOLLOUT)
+                    handle_cgi_write(eventFd, epollFd, pipes_map);
+                else if (events[i].events & EPOLLIN)
+                    handle_cgi_read(eventFd, epollFd, pipes_map[eventFd]);
+                else if (events[i].events & EPOLLHUP) 
+                {
+                    parseCGIoutput(pipes_map[eventFd]->outputCGI);
+                    modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
+                    epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
+                    pipes_map.erase(eventFd);
+                    close(eventFd);
+                }
+            }
             else {
                 if (events[i].events & EPOLLIN) {
-                    handle_client_read(eventFd, epollFd, conf, requestmp); // request
+                    handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map); // request
                 }
                 else if (events[i].events & EPOLLOUT) {
                     handle_client_write(eventFd, epollFd, conf, requestmp); // responce

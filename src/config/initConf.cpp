@@ -89,9 +89,8 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
         }
         else if (key == "alias")
             route.alias = value;
-        else if (key == "index") {
+        else if (key == "index")
             route.index = value;
-        }
         else if (key == "directory_listing")
             route.autoindex = (value == "on");
         else if (key == "redirect") {
@@ -108,6 +107,8 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
             route.fileUpload = (value == "true");
         else if (key == "upload_directory")
             route.uploadStore = value;
+        else
+            throw runtime_error("Error: syntax issue in the config file.");
 
         server.routes[routePath] = route;
     }
