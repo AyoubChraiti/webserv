@@ -1,6 +1,10 @@
 #include "../../inc/header.hpp"
 #include "../../inc/config.hpp"
 
+char back(string& str) {
+    return str[str.size() - 1];
+}
+
 void sysCallFail() {
     perror("syscall Error");
     exit(1);
