@@ -46,6 +46,16 @@ void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest
     HttpRequest& req = requestmp[fd];
 
     try {
+        if(req.isCGI)
+        {
+            send(fd, req.outputCGI.c_str(),  req.outputCGI.length(), 0);
+            requestmp.erase(fd);
+            if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL) == -1) {
+                perror("epoll_ctl");
+            }
+            close(fd);
+            return;
+        }
         if (!req.mtroute.redirect.empty()) {
             sendRedirect(fd, req.mtroute.redirect, req);
             closeOrSwitch(fd, epollFd, req, requestmp);

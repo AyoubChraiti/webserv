@@ -5,16 +5,17 @@ CPP = c++
 SRC =  src/main.cpp \
 	src/config/initConf.cpp src/config/confParser.cpp \
 	src/serverSetup/setupServer.cpp \
-	src/request/reqHandler.cpp src/request/req.cpp src/request/requestParser.cpp src/request/routes.cpp \
+	src/request/reqHandler.cpp src/request/req.cpp src/request/requestParser.cpp src/request/routes.cpp src/request/cgiHandler.cpp src/request/reqUtils.cpp \
 	src/responce/respnce.cpp src/responce/post.cpp src/responce/resUtils.cpp src/responce/deleteMethode.cpp src/responce/getMethode.cpp \
 	src/utils/utils.cpp src/utils/signals.cpp src/utils/conf.cpp \
 
 OBJDIR = obj
 OBJ = $(SRC:%.cpp=$(OBJDIR)/%.o)
 
-CPPFLAGS = -fsanitize=address #-Wall -Wextra -Werror -std=c++98
+# -Wall -Wextra -Werror
 
-# Rule to create obj directory and compile .cpp to .o inside it
+CPPFLAGS = -fsanitize=address #-std=c++98
+
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CPP) $(CPPFLAGS) -c $< -o $@

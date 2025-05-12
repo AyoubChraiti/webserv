@@ -5,6 +5,8 @@ RouteResult handleRouting(int fd, HttpRequest& req) {
     RouteResult result = {200, "OK", "", "text/plain", "", false, -1, ""};
     string bestMatch = req.mtroute.root;
     string reqPath = req.uri;
+
+
     bool routeFound = false;
 
     reqPath.erase(reqPath.begin(), reqPath.begin() + bestMatch.size());

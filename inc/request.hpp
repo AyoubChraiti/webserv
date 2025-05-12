@@ -3,7 +3,8 @@
 #include "config.hpp"
 
 #define BUFFER_SIZE 8192 // <----------------
-#define MAX_LINE 1024
+#define MAX_URI_LENGTH 1024
+
 
 class HttpExcept : public exception {
 private:
@@ -40,51 +41,82 @@ struct RouteResult {
     string fullPath;
 };
 
+// ParseState lineLocation;
+// bool isPostKeys;
+// bool isChunked;
+// bool isCGI;
+
+// size_t remaining;
+// string Boundary ; 
+// bool startBoundFlag;
+
 class HttpRequest {
 public:
     string key;
     string buffer;
     ParseState state;
-    ssize_t req_size;
-    string method, uri, host, connection, version;
-    vector<char> body;
+    // ssize_t req_size;
+    string method, uri, host, connection, version, querystring;
+    // vector<char> body;
     map<string, string> headers;
     size_t contentLength;
     int bytesRead;
     servcnf conf;
     routeCnf mtroute;
-    int bodyFileFd;
-    string BodyPath;
+    fstream bodyFile;
+    // int bodyFileFd;
+    // string BodyPath;
     RouteResult routeResult;
     bool sendingFile;
     size_t bytesSentSoFar;
     bool headerSent;
+    int clientFd;
+    string outputCGI;
 
+    bool isPostKeys;
+    bool isChunked;
+    bool isCGI;
 
+    size_t remaining;
+    string Boundary ; 
+    bool startBoundFlag;
+    HttpRequest() {};
+    // HttpRequest() : state(READING_REQUEST_LINE),
+    HttpRequest(servcnf config);
 
+        // method of reqeust
+    bool request(int clientFd);
+    void parseRequestLine ();
+    void HandleHeaders();
+    void ParseHeaders();
+    void parseBody();
+    void HandleUri();
+    void HandleChunkedBody();
+    void HandleBoundary() ;
+    bool openFile (string filename);
 
-    HttpRequest() : state(READING_REQUEST_LINE), contentLength(0), bytesRead(0),
-        sendingFile(false), bytesSentSoFar(0), headerSent(false) {};
-    string get(const string& key, const string& defaultValue) const;
-    bool parseRequestLineByLine(int fd, servcnf& conf);
-    void initFromHeader();
-
-    int Parser(const char* data, size_t length);
-    void firstLineParser(const string& line);
-    void HeadersParsing(const string& line);
-    void bodyPart(const char* data, size_t length, servcnf& conf);
 };
 
-int request(int fd, mpserv &conf, int epollFd, map<int, HttpRequest>& requestStates);
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestStates);
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
 RouteResult handleRouting(int fd, HttpRequest& req);
 
 /* requestParser file */
-void checkBody(const servcnf& server, const HttpRequest& req);
-void checkAllowed(routeCnf route, const string& method, const string& path);
-void getRoute(const servcnf& server, const string& path, string& matched, HttpRequest& req);
-void checkHeaders(const HttpRequest& req);
-void checkURI(const string& path);
-void checkMethod(const string& method);
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates, map<int , HttpRequest *> &pipes_map);
+void modifyState(int epollFd ,int clientFd, uint32_t events);
+string getInfoClient(int clientFd);
+string getFileName(string buff);
+size_t hexToInt (const string &str);
+size_t StringStream(const string &string);
+bool isValidContentLength (const string &value);
+bool isValidHostHeader(const string& host) ;
+void writebody(fstream &bodyFile , string &buffer);
+
+
+//CgiHandler headers
+
+int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map);
+void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_map);
+void handle_cgi_read(int readFd, int epollFd, HttpRequest *reqStates);
+void parseCGIoutput (string &outputCGI);
+
 
