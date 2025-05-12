@@ -90,17 +90,17 @@ void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_ma
 {
     HttpRequest *reqStates = pipes_map[writeFd];
     char buff[BUFFER_BYTES];
-    reqStates->bodyFile->read(buff, BUFFER_BYTES);
-    size_t bytesRead = reqStates->bodyFile->gcount();
+    reqStates->bodyFile.read(buff, BUFFER_BYTES);
+    size_t bytesRead = reqStates->bodyFile.gcount();
     if (bytesRead > 0)
     {
         write(writeFd, buff, bytesRead);
-        if (reqStates->bodyFile->eof())
+        if (reqStates->bodyFile.eof())
         {
             epoll_ctl(epollFd, EPOLL_CTL_DEL, writeFd, NULL);
             pipes_map.erase(writeFd);
             close(writeFd);
-            reqStates->bodyFile->close();
+            reqStates->bodyFile.close();
         }
     }
 }

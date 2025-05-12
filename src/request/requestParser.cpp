@@ -171,13 +171,13 @@ void HttpRequest::HandleChunkedBody()
             contentLength = remaining;
         if (contentLength == 0)
         {
-            bodyFile->clear();
-            bodyFile->seekg(0, ios::beg);
+            bodyFile.clear();
+            bodyFile.seekg(0, ios::beg);
             state = COMPLETE;
             return;
         }
         size_t bytesTowrite = min(contentLength, buffer.size());
-        bodyFile->write(buffer.c_str(), bytesTowrite);
+        bodyFile.write(buffer.c_str(), bytesTowrite);
         (contentLength > buffer.size()) ? buffer.erase(0, buffer.size()) : buffer.erase(0, contentLength);
         remaining = contentLength - bytesTowrite;
         if (!remaining && buffer.size() >= 2 && buffer.find("\r\n") == string::npos)
@@ -187,20 +187,11 @@ void HttpRequest::HandleChunkedBody()
 
 bool HttpRequest::openFile(string filename)
 {
-    if (bodyFile && bodyFile->is_open()) {
-        bodyFile->close();
-        delete bodyFile;
-    } else if (bodyFile) {
-        delete bodyFile;
-    }
-    bodyFile = new fstream(filename.c_str(), ios::in | ios::out | ios::binary | ios::trunc);
-    if (!bodyFile || !bodyFile->is_open())
+    bodyFile.open(filename.c_str(), ios::in | ios::out | ios::binary | ios::trunc);
+    if (!bodyFile.is_open())
     {
+        cerr << "Fail openning File" << endl;
         state = COMPLETE;
-        if (bodyFile) {
-            delete bodyFile;
-            bodyFile = NULL;
-        }
         return false;
     }
     return true;
@@ -224,11 +215,11 @@ void HttpRequest::HandleBoundary()
         string filename =  getFileName(buffer.substr(start_bound.size()));
         buffer.erase(0, buffer.find("\r\n\r\n") + 4);
         openFile(filename);
-        return writebody(*bodyFile, buffer);  
+        return writebody(bodyFile, buffer);  
     }
     size_t posBound = buffer.find("\r\n--");
     if (posBound == string::npos)
-        return writebody(*bodyFile, buffer);
+        return writebody(bodyFile, buffer);
     else if (buffer.substr(posBound, part_bound.size()) == part_bound)
     {
         if (buffer.find("\r\n\r\n") == string::npos) {
@@ -237,26 +228,26 @@ void HttpRequest::HandleBoundary()
             contentLength += buffer.size();
             return ;
         }
-        if (bodyFile->is_open())
+        if (bodyFile.is_open())
         {
-            bodyFile->clear(); // check later those 3
-            bodyFile->seekg(0, ios::beg);
-            bodyFile->close ();
+            bodyFile.clear(); // check later those 3
+            bodyFile.seekg(0, ios::beg);
+            bodyFile.close ();
         }
         string filename =  getFileName(buffer.substr(posBound + end_bound.size()));
         buffer.erase(0, buffer.find("\r\n\r\n") + 4);
         openFile(filename);
-        return writebody(*bodyFile, buffer);  
+        return writebody(bodyFile, buffer);  
     }
     else if (buffer.substr(posBound, end_bound.size()) == end_bound)
     {
         buffer.erase(posBound, end_bound.size());
-        return writebody(*bodyFile, buffer); 
+        return writebody(bodyFile, buffer); 
     }
     else
     {
         if (posBound)
-            bodyFile->write(buffer.substr(0, posBound).c_str(), posBound);
+            bodyFile.write(buffer.substr(0, posBound).c_str(), posBound);
         contentLength += (buffer.size() - posBound);
     }
 }
@@ -270,14 +261,14 @@ void HttpRequest::parseBody()
         if (Boundary.empty()) 
         {
             contentLength -= buffer.size();
-            writebody(*bodyFile,  buffer);
+            writebody(bodyFile,  buffer);
         }
         else
             HandleBoundary();
         if (contentLength == 0) {
             cout << "End reading File" << endl;
-            bodyFile->clear();
-            bodyFile->seekg(0, ios::beg);
+            bodyFile.clear();
+            bodyFile.seekg(0, ios::beg);
             state = COMPLETE;
         }
     }

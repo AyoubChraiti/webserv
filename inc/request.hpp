@@ -53,7 +53,7 @@ public:
     int bytesRead;
     servcnf conf;
     routeCnf mtroute;
-    fstream* bodyFile;
+    fstream bodyFile;
     RouteResult routeResult;
     bool sendingFile;
     size_t bytesSentSoFar;
