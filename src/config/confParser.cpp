@@ -92,6 +92,19 @@ mpserv configChecking(const string &filePath) {
 
             if (!route.uploadStore.empty() && !isValidDirectory(route.uploadStore))
                 throw runtime_error("Error: Upload directory '" + route.uploadStore + "' does not exist.");
+
+            if (route.cgi) {
+                if (route.cgi_map.empty())
+                    throw runtime_error("Error: Route '" + route_it->first + "' has CGI enabled but no CGI extensions defined.");
+                if (route.cgi_methods.empty())
+                    throw runtime_error("Error: Route '" + route_it->first + "' has CGI enabled but no CGI methods defined.");
+            }
+            else {
+                if (!route.cgi_map.empty())
+                    throw runtime_error("Error: Route '" + route_it->first + "' has CGI disabled but CGI extensions are defined.");
+                if (!route.cgi_methods.empty())
+                    throw runtime_error("Error: Route '" + route_it->first + "' has CGI disabled but CGI methods are defined.");
+            }
         }
     }
     return config;

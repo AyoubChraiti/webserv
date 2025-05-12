@@ -96,17 +96,25 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
         else if (key == "redirect") {
             route.redirect = value;
         }
-        else if (key == "cgi_exec") {
-            vector<string> cgiData = split(value, ':');
-            if (cgiData.size() == 2) {
-                route.cgi_extension = cgiData[0];
-                route.cgi_pass = cgiData[1];
-            }
-        }
         else if (key == "allow_upload")
             route.fileUpload = (value == "true");
         else if (key == "upload_directory")
             route.uploadStore = value;
+        else if (key == "cgi") {
+            route.cgi = (value == "on");
+        }
+        else if (key == "methodes_cgi") {
+            route.cgi_methods = split(value, ',');
+        }
+        else if (key == "cgi_extension") {
+            vector<string> extensions = split(value, ',');
+            for (size_t i = 0; i < extensions.size(); i++) {
+                vector<string> pair = split(extensions[i], ':');
+                if (pair.size() != 2)
+                    throw runtime_error("Error: invalid CGI extension format.");
+                route.cgi_map[trim(pair[0])] = trim(pair[1]);
+            }
+        }
         else
             throw runtime_error("Error: syntax issue in the config file.");
 

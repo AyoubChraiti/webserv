@@ -13,6 +13,9 @@ struct routeCnf {
     string cgi_extension;
     bool fileUpload;
     string uploadStore;
+    bool cgi;
+    vector<string> cgi_methods;
+    map<string, string> cgi_map;
 
     routeCnf() : autoindex(false), fileUpload(false) {}
 };
