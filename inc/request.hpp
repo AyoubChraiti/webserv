@@ -49,23 +49,24 @@ public:
     ParseState state;
     string method, uri, host, connection, version, querystring;
     map<string, string> headers;
+    RouteResult routeResult;
     size_t contentLength;
-    int bytesRead;
     servcnf conf;
     routeCnf mtroute;
     fstream bodyFile;
-    RouteResult routeResult;
-    bool sendingFile;
     size_t bytesSentSoFar;
-    bool headerSent;
-    int clientFd;
     string outputCGI;
+    size_t remaining;
+    string Boundary ; 
+    string fullPath;
+    int clientFd;
+    int bytesRead;
+    bool sendingFile;
+    bool startBoundFlag;
+    bool headerSent;
     bool isPostKeys;
     bool isChunked;
     bool isCGI;
-    size_t remaining;
-    string Boundary ; 
-    bool startBoundFlag;
 
     HttpRequest(servcnf config);
     ~HttpRequest();
@@ -79,6 +80,9 @@ public:
     void HandleChunkedBody();
     void HandleBoundary() ;
     bool openFile (string filename);
+    void checkIsCGI();
+
+
 
 };
 
@@ -95,6 +99,7 @@ size_t StringStream(const string &string);
 bool isValidContentLength (const string &value);
 bool isValidHostHeader(const string& host) ;
 void writebody(fstream &bodyFile , string &buffer);
+
 
 
 // CgiHandler headers

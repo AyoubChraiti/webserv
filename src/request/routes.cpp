@@ -3,19 +3,11 @@
 
 RouteResult handleRouting(int fd, HttpRequest& req) {
     RouteResult result = {200, "OK", "", "text/plain", "", false, -1, ""};
-    string bestMatch = req.mtroute.root;
     string reqPath = req.uri;
 
-
     bool routeFound = false;
-
-    reqPath.erase(reqPath.begin(), reqPath.begin() + bestMatch.size());
-    string fullPath = req.mtroute.alias + reqPath;
-
-    cout << "fullPath: " << fullPath << endl;
-
-    if (isDirectory(fullPath)) {
-        if (back(fullPath) != '/') {
+    if (isDirectory(req.fullPath)) {
+        if (back(req.fullPath) != '/') {
             result.shouldRDR = true;
             result.redirectLocation = req.uri + "/";
             result.statusCode = 301;
@@ -27,26 +19,26 @@ RouteResult handleRouting(int fd, HttpRequest& req) {
                 result.contentType = "text/html"; 
                 if (reqPath.empty())
                     reqPath = "/";
-                result.responseBody = generateAutoIndex(fullPath, reqPath);
+                result.responseBody = generateAutoIndex(req.fullPath, reqPath);
                 return result;
             }
             throw HttpExcept(403, "Forbiden: no index, no autoindex");
         }
-        fullPath += req.mtroute.index;
+        req.fullPath += req.mtroute.index;
     }
     
-    if (!fileExists(fullPath)) {
+    if (!fileExists(req.fullPath)) {
         cout << "in the routing" << endl;
         throw HttpExcept(404, "Not Found");
     }
 
-    result.fullPath = fullPath;
+    result.fullPath = req.fullPath;
 
-    result.resFd = open(fullPath.c_str(), ios::binary);
+    result.resFd = open(req.fullPath.c_str(), ios::binary);
 
     if (result.resFd == -1)
         throw HttpExcept(500, "Internal Server Error");
 
-    result.contentType = getContentType(fullPath);
+    result.contentType = getContentType(req.fullPath);
     return result;
 }

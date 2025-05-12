@@ -37,8 +37,17 @@ void HttpRequest::HandleUri()
     if (!flag)
         throw HttpExcept(404, "No route for path: " + uri);
     mtroute = conf.routes[key]; 
+    string bestMatch = mtroute.root;
+    uri.erase(uri.begin(), uri.begin() + bestMatch.size());
+    fullPath = mtroute.alias + uri;
 }
-
+void HttpRequest::checkIsCGI()
+{
+    if (!mtroute.cgi_extension.empty())
+        isCGI = true;
+    if (isCGI && find(mtroute.cgi_methods.begin(), mtroute.cgi_methods.end(), method) == mtroute.cgi_methods.end())
+        throw HttpExcept(405, "Method Not Allowed");
+}
 void HttpRequest::parseRequestLine () 
 {
     size_t index = buffer.find("\r\n");
@@ -60,8 +69,7 @@ void HttpRequest::parseRequestLine ()
         throw HttpExcept(505, "HTTP Version Not Supported");
     buffer.erase(0, index + 2);
     HandleUri();
-    if (mtroute.root == "/cgi-bin/") // check later
-        isCGI = true;
+    checkIsCGI();
     if (find(mtroute.methodes.begin(), mtroute.methodes.end(), method) == mtroute.methodes.end() && !isCGI)
         throw HttpExcept(405, "Method Not Allowed");
     state = READING_HEADERS;
