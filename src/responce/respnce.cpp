@@ -42,7 +42,7 @@ void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest& req) {
     req.headerSent = true;
 }
 
-void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
+void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest *>& requestmp) {
     map<int, HttpRequest>::iterator it = requestmp.find(fd);
     if (it == requestmp.end()) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);

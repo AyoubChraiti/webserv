@@ -16,7 +16,7 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
 }
 
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
-    map<int, HttpRequest> requestmp;
+    map<int, HttpRequest *> requestmp;
     map<int, HttpRequest*> pipes_map;
     int epollFd = epoll_create1(0);
     if (epollFd == -1)

@@ -50,34 +50,37 @@ bool HttpRequest::request(int clientFd) {
     return false;
 }
 
-void sendPostResponse(int clientFd, int statusCode, const string& statusMsg, HttpRequest& req) {
+void sendPostResponse(int clientFd, int statusCode, const string& statusMsg, HttpRequest* req) {
     string response = "HTTP/1.1 " + to_string(statusCode) + " " + statusMsg + "\r\n";
     response += "Content-Length: 0\r\n";
-    response += "Connection: " + req.connection + "\r\n";
+    response += "Connection: " + req->connection + "\r\n";
     response += "\r\n";
     send(clientFd, response.c_str(), response.size(), 0);
 }
 
 
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &req, map<int, HttpRequest *> &pipes_map) {
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest *> &req, map<int, HttpRequest *> &pipes_map) {
     string host = getInfoClient(clientFd);
-    map<int, HttpRequest>::iterator it = req.find(clientFd);
+    map<int, HttpRequest *>::iterator it = req.find(clientFd);
     if (it == req.end())
-        it = req.insert(map<int, HttpRequest>::value_type(clientFd, HttpRequest(conf.servers[host]))).first;
+    {
+        HttpRequest* newReq = new HttpRequest(conf.servers[host]);
+        it = req.insert(make_pair(clientFd, newReq)).first; 
+    }
     // hahiya b error 
     try  {
-        if (it->second.request(clientFd)) {
-            if (it->second.isCGI) {
+        if (it->second->request(clientFd)) {
+            if (it->second->isCGI) {
                 if (HandleCGI(epollFd, clientFd, req, pipes_map) == -1)
                     throw HttpExcept(500, "Internal Server Error");
                 return;
             }
-            if (it->second.method == "POST") {
+            if (it->second->method == "POST") {
                 sendPostResponse(clientFd, 201, "", it->second);
                 modifyState(epollFd, clientFd, EPOLLIN);
             }
-            else if (it->second.method == "GET") {
-                it->second.routeResult = handleRouting(clientFd, it->second);
+            else if (it->second->method == "GET") {
+                it->second->routeResult = handleRouting(clientFd, it->second);
                 modifyState(epollFd, clientFd, EPOLLOUT);
             }
         }
@@ -85,6 +88,7 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
     catch(const HttpExcept& e) {
         sendErrorResponse(clientFd, e.getStatusCode(), e.what(), conf.servers[host]);
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL); 
+        delete it->second;
         req.erase(clientFd);
         close(clientFd);
     }
