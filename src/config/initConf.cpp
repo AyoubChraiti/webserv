@@ -49,7 +49,7 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
     if (line.empty())
         return;
 
-    if (line[0] == '[' && line.back() == ']') {
+    if (line[0] == '[' && back(line) == ']') {
         section = line.substr(1, line.size() - 2);
         return;
     }
@@ -115,7 +115,7 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
 }
 
 const mpserv& configFile::parseConfig() {
-    cnf.open(fileName);
+    cnf.open(fileName.c_str());
     if (!cnf.is_open())
         throw runtime_error("Error opening the congif file.");
 

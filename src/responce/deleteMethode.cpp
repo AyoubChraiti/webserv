@@ -57,9 +57,8 @@ void deleteMethod(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequ
     struct stat st;
 
     if (S_ISDIR(st.st_mode)) {
-        if (!req.uri.empty() && req.uri.back() != '/')
+        if (!req.uri.empty() && back(req.uri) != '/')
             throw HttpExcept(409, "uri must end w /");
-
 
         if (!removeDirectoryRecursively(path.c_str()))
             throw HttpExcept(500, "failed to delete file");

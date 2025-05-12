@@ -21,6 +21,7 @@ public:
     const char* what() const throw() {
         return statusMessage.c_str();
     }
+    virtual ~HttpExcept() throw() {}
 };
 
 enum ParseState {
@@ -41,50 +42,34 @@ struct RouteResult {
     string fullPath;
 };
 
-// ParseState lineLocation;
-// bool isPostKeys;
-// bool isChunked;
-// bool isCGI;
-
-// size_t remaining;
-// string Boundary ; 
-// bool startBoundFlag;
-
 class HttpRequest {
 public:
     string key;
     string buffer;
     ParseState state;
-    // ssize_t req_size;
     string method, uri, host, connection, version, querystring;
-    // vector<char> body;
     map<string, string> headers;
     size_t contentLength;
     int bytesRead;
     servcnf conf;
     routeCnf mtroute;
-    fstream bodyFile;
-    // int bodyFileFd;
-    // string BodyPath;
+    fstream* bodyFile;
     RouteResult routeResult;
     bool sendingFile;
     size_t bytesSentSoFar;
     bool headerSent;
     int clientFd;
     string outputCGI;
-
     bool isPostKeys;
     bool isChunked;
     bool isCGI;
-
     size_t remaining;
     string Boundary ; 
     bool startBoundFlag;
-    HttpRequest() {};
-    // HttpRequest() : state(READING_REQUEST_LINE),
-    HttpRequest(servcnf config);
 
-        // method of reqeust
+    HttpRequest(servcnf config);
+    ~HttpRequest();
+
     bool request(int clientFd);
     void parseRequestLine ();
     void HandleHeaders();
@@ -100,7 +85,7 @@ public:
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
 RouteResult handleRouting(int fd, HttpRequest& req);
 
-/* requestParser file */
+// requestParser file
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates, map<int , HttpRequest *> &pipes_map);
 void modifyState(int epollFd ,int clientFd, uint32_t events);
 string getInfoClient(int clientFd);
@@ -112,8 +97,7 @@ bool isValidHostHeader(const string& host) ;
 void writebody(fstream &bodyFile , string &buffer);
 
 
-//CgiHandler headers
-
+// CgiHandler headers
 int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map);
 void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_map);
 void handle_cgi_read(int readFd, int epollFd, HttpRequest *reqStates);

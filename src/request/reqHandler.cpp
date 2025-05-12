@@ -98,8 +98,7 @@
 
 #include "../../inc/request.hpp"
 
-string getInfoClient(int clientFd)
-{
+string getInfoClient(int clientFd) {
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     if (getsockname(clientFd, (struct sockaddr*) &addr, &addrlen))
@@ -111,8 +110,7 @@ string getInfoClient(int clientFd)
     return host;
 }
 
-void modifyState(int epollFd ,int clientFd, uint32_t events)
-{
+void modifyState(int epollFd ,int clientFd, uint32_t events) {
     struct epoll_event ev;
     ev.events = events;
     ev.data.fd = clientFd;
@@ -120,13 +118,12 @@ void modifyState(int epollFd ,int clientFd, uint32_t events)
         return ;
 }
 
-bool HttpRequest::request(int clientFd)
-{
+bool HttpRequest::request(int clientFd) {
     this->clientFd = clientFd;
     char buff[BUFFER_SIZE];
-    ssize_t recvBytes = recv(clientFd, buff, BUFFER_SIZE - 1, 0);
-    if (recvBytes == 0)
-    {
+    memset(buff, 0, sizeof(buff));
+    ssize_t recvBytes = recv(clientFd, buff, BUFFER_SIZE, 0);
+    if (recvBytes == 0) {
         if (state != COMPLETE && !buffer.empty())
             throw HttpExcept(400, "Bad Request");
         return true;
@@ -151,8 +148,7 @@ bool HttpRequest::request(int clientFd)
     return false;
 }
 
-void sendPostResponse(int clientFd, int statusCode, const string& statusMsg, HttpRequest& req)
-{
+void sendPostResponse(int clientFd, int statusCode, const string& statusMsg, HttpRequest& req) {
     string response = "HTTP/1.1 " + to_string(statusCode) + " " + statusMsg + "\r\n";
     response += "Content-Length: 0\r\n";
     response += "Connection: " + req.connection + "\r\n";
@@ -160,38 +156,32 @@ void sendPostResponse(int clientFd, int statusCode, const string& statusMsg, Htt
     send(clientFd, response.c_str(), response.size(), 0);
 }
 
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &req, map<int , HttpRequest *> &pipes_map)
-{
+
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &req, map<int, HttpRequest *> &pipes_map) {
     string host = getInfoClient(clientFd);
     map<int, HttpRequest>::iterator it = req.find(clientFd);
     if (it == req.end())
-        req.insert(make_pair(clientFd, HttpRequest(conf.servers[host])));
-    try 
-    {
-        if (req[clientFd].request(clientFd))
-        {
-            if (req[clientFd].isCGI)
-            {
+        it = req.insert(map<int, HttpRequest>::value_type(clientFd, HttpRequest(conf.servers[host]))).first;
+
+    try  {
+        if (it->second.request(clientFd)) {
+            if (it->second.isCGI) {
                 if (HandleCGI(epollFd, clientFd, req, pipes_map) == -1)
                     throw HttpExcept(500, "Internal Server Error");
                 return;
             }
-            if (req[clientFd].method == "POST")
-            {
-                // SEND A 201 OR 204
-                sendPostResponse(clientFd, 201, "", req[clientFd]);
+            if (it->second.method == "POST") {
+                sendPostResponse(clientFd, 201, "", it->second);
                 modifyState(epollFd, clientFd, EPOLLIN);
             }
-            else if (req[clientFd].method == "GET") {
-                req[clientFd].routeResult = handleRouting(clientFd, req[clientFd]);
+            else if (it->second.method == "GET") {
+                it->second.routeResult = handleRouting(clientFd, it->second);
                 modifyState(epollFd, clientFd, EPOLLOUT);
-
-            }            
+            }
         }
     }
-    catch(const HttpExcept& e)
-    {
-        sendErrorResponse(clientFd, e.getStatusCode(),e.what(), conf.servers[host]);
+    catch(const HttpExcept& e) {
+        sendErrorResponse(clientFd, e.getStatusCode(), e.what(), conf.servers[host]);
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL); 
         req.erase(clientFd);
         close(clientFd);

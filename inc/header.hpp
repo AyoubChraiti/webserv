@@ -46,6 +46,8 @@ string to_string(T value) {
     return oss.str();
 }
 
+char back(string& str);
+
 void ctrl_C();
 
 string getIp(string hostname);

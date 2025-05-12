@@ -15,7 +15,7 @@ RouteResult handleRouting(int fd, HttpRequest& req) {
     cout << "fullPath: " << fullPath << endl;
 
     if (isDirectory(fullPath)) {
-        if (fullPath.back() != '/') {
+        if (back(fullPath) != '/') {
             result.shouldRDR = true;
             result.redirectLocation = req.uri + "/";
             result.statusCode = 301;

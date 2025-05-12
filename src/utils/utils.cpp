@@ -41,7 +41,7 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
 
     if (serverConfig.error_pages.find(statusCode) != serverConfig.error_pages.end()) {
         filePath = serverConfig.error_pages.at(statusCode);
-        ifstream errorFile(filePath);
+        ifstream errorFile(filePath.c_str());
         if (errorFile.is_open()) {
             stringstream buffer;
             buffer << errorFile.rdbuf();

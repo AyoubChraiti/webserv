@@ -14,10 +14,9 @@ HttpRequest::HttpRequest(servcnf config) :  contentLength(0), bytesRead(0),
     startBoundFlag = false;
     outputCGI = "HTTP/1.1 200 OK\r\n";
 }
-// HttpRequest::HttpRequest()
-// {
 
-// }
+HttpRequest::~HttpRequest() {}
+
 size_t StringStream(const string &string)
 {
     size_t num;
@@ -26,27 +25,31 @@ size_t StringStream(const string &string)
     return num;
 }
 
-bool is_file(const std::string& path) {
+bool is_file(const string& path) {
     struct stat buffer;
     if (stat(path.c_str(), &buffer) != 0) {
         return false;
     }
-    return S_ISREG(buffer.st_mode); // True if it's a regular file
+    return S_ISREG(buffer.st_mode);
 }
 
-bool isValidContentLength (const string &value)
-{
-    return all_of(value.begin(), value.end(), ::isdigit);
+bool isValidContentLength(const string &value) {
+    for (size_t i = 0; i < value.length(); ++i) {
+        if (!isdigit(value[i])) {
+            return false;
+        }
+    }
+    return true;
 }
-size_t hexToInt (const string &str)
-{
+
+size_t hexToInt (const string &str) {
     size_t result;
     stringstream ss (str) ;
     ss >> hex >> result;
     return result;
 }
-string getFileName(string buff)
-{
+
+string getFileName(string buff) {
     size_t header_end = buff.find("\r\n\r\n");
     if (header_end == string::npos)
         throw HttpExcept(400, "Bad Request1");
@@ -59,8 +62,8 @@ string getFileName(string buff)
         throw HttpExcept(400, "Bad Request3");   
     return (buff.substr(start_filename , end_filename - start_filename - 1));   
 }
-void writebody(fstream &bodyFile , string &buffer)
-{
+
+void writebody(fstream &bodyFile , string &buffer) {
     bodyFile.write(buffer.c_str(), buffer.size());
     buffer.clear();
 }

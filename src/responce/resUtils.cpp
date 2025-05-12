@@ -130,7 +130,7 @@ string generateAutoIndex(const string& fullPath, const string& uriPath) {
 
         string displayName = name;
         string href = uriPath;
-        if (href.back() != '/') href += "/";
+        if (back(href) != '/') href += "/";
         href += name;
 
         string fullEntryPath = fullPath + "/" + name;

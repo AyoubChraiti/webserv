@@ -43,12 +43,17 @@ void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest& req) {
 }
 
 void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp) {
-    HttpRequest& req = requestmp[fd];
-
+    map<int, HttpRequest>::iterator it = requestmp.find(fd);
+    if (it == requestmp.end()) {
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+        close(fd);
+        return;
+    }
+    
+    HttpRequest& req = it->second;
     try {
-        if(req.isCGI)
-        {
-            send(fd, req.outputCGI.c_str(),  req.outputCGI.length(), 0);
+        if (req.isCGI) {
+            send(fd, req.outputCGI.c_str(), req.outputCGI.length(), 0);
             requestmp.erase(fd);
             if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL) == -1) {
                 perror("epoll_ctl");
