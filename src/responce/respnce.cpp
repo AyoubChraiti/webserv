@@ -64,6 +64,7 @@ void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest
             return;
         }
         if (!req->mtroute.redirect.empty()) {
+            cout << "----------------> WE HEREEEEEEEEEEEEEEEEEEEE" << endl;
             sendRedirect(fd, req->mtroute.redirect, req);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;

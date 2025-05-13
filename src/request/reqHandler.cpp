@@ -34,7 +34,7 @@ bool HttpRequest::request(int clientFd) {
         throw HttpExcept(500, "Internal Server Error");
     if (recvBytes > 0)
     {
-        buff[recvBytes] = '\0';
+        cout << buff << endl;
         buffer.append(buff, recvBytes);
         if (state != READING_BODY && buffer.find("\r\n") == string::npos)
             return false;
@@ -62,12 +62,11 @@ void sendPostResponse(int clientFd, int statusCode, const string& statusMsg, Htt
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest *> &req, map<int, HttpRequest *> &pipes_map) {
     string host = getInfoClient(clientFd);
     map<int, HttpRequest *>::iterator it = req.find(clientFd);
-    if (it == req.end())
-    {
+    if (it == req.end()) {
         HttpRequest* newReq = new HttpRequest(conf.servers[host]);
-        it = req.insert(make_pair(clientFd, newReq)).first; 
+        it = req.insert(make_pair(clientFd, newReq)).first;
     }
-    // hahiya b error 
+
     try  {
         if (it->second->request(clientFd)) {
             if (it->second->isCGI) {

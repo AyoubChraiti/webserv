@@ -1,6 +1,5 @@
 #include "../../inc/request.hpp"
 
-
 void HttpRequest::HandleUri()
 {
     const string allowed = "-._~:/?#[\\]@!$&'()*+,;=";
@@ -10,8 +9,7 @@ void HttpRequest::HandleUri()
             throw HttpExcept(400, "Bad Request");
     }
     size_t indexQUERY = uri.find("?");
-    if (indexQUERY != string::npos && method == "GET")
-    {
+    if (indexQUERY != string::npos && method == "GET") {
         querystring =  uri.substr(indexQUERY + 1);
         uri.erase(indexQUERY);
     }
@@ -26,8 +24,7 @@ void HttpRequest::HandleUri()
         {
             if (back(route) != '/' && uri.size() != route.size() && uri[route.size()] != '/')
                 continue;
-            if (route.size() > prevLength)
-            {
+            if (route.size() > prevLength) {
                 prevLength = route.size();
                 key = route;
                 flag = true;
@@ -45,12 +42,17 @@ void HttpRequest::HandleUri()
 }
 void HttpRequest::checkIsCGI()
 {
-    if (mtroute.cgi == false)
+    if (mtroute.cgi_map.empty() || mtroute.cgi == false)
         return ;
+    if (mtroute.cgi) {
+        cout << mtroute.cgi_map[".py"] << endl;
+    }
     isCGI = true;
     if (find(mtroute.cgi_methods.begin(), mtroute.cgi_methods.end(), method) == mtroute.cgi_methods.end())
         throw HttpExcept(405, "Method Not Allowed");
     size_t extensionPos = uri.find(".");
+    if (extensionPos == string::npos)
+        return ;
     string extension_uri = uri.substr(extensionPos);
     if (!mtroute.cgi_map.count(extension_uri)) {
         cout << "cgi" << endl;
@@ -93,6 +95,7 @@ bool isValidHostHeader(const string& host) {
     string hostname = (colonPos == string::npos) ? host : host.substr(0, colonPos);
     string port = (colonPos == string::npos) ? "" : host.substr(colonPos + 1);
 
+
     for (size_t i = 0; i < hostname.length(); ++i) {
         char c = hostname[i];
         if (!isalnum(c) && c != '.' && c != '-') {
@@ -118,8 +121,9 @@ void HttpRequest::ParseHeaders()
     if (headers.count("Content-Type") > 0)
     {
         size_t pos = headers["Content-Type"].find("boundary=");
-        if (pos != string::npos)
+        if (pos != string::npos) {
             Boundary = headers["Content-Type"].substr(pos + 9);
+        }
     }
     else if (method == "POST")
         throw HttpExcept(400, "Bad Request");

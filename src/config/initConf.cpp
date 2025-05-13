@@ -83,7 +83,10 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
         string routePath = section.substr(6); 
         if (routePath.empty())
             throw runtime_error("Error: syntax issue in the config file.");
+
+        routeCnf& route = server.routes[routePath];
         route.root = routePath;
+
         if (key == "methodes") {
             route.methodes = split(value, ',');
         }
@@ -118,8 +121,6 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
         }
         else
             throw runtime_error("Error: syntax issue in the config file.");
-
-        server.routes[routePath] = route;
     }
 }
 
