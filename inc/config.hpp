@@ -13,11 +13,11 @@ struct routeCnf {
     string cgi_extension;
     bool fileUpload;
     string uploadStore;
-    bool cgi;
+    bool cgi;//7
     vector<string> cgi_methods;
     map<string, string> cgi_map;
 
-    routeCnf() : autoindex(false), fileUpload(false) {}
+    routeCnf() : autoindex(false), fileUpload(false), cgi(false) {}
 };
 
 struct servcnf {

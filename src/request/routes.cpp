@@ -5,6 +5,8 @@ RouteResult handleRouting(int fd, HttpRequest* req) {
     RouteResult result = {200, "OK", "", "text/plain", "", false, -1, ""};
     string reqPath = req->uri;
 
+    cout << "req = " << req->uri << endl;
+
     bool routeFound = false;
     if (isDirectory(req->fullPath)) {
         if (back(req->fullPath) != '/') {

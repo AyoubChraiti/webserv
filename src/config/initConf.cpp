@@ -101,7 +101,8 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
         else if (key == "upload_directory")
             route.uploadStore = value;
         else if (key == "cgi") {
-            route.cgi = (value == "on");
+            if (value == "on")
+                route.cgi = true;
         }
         else if (key == "methodes_cgi") {
             route.cgi_methods = split(value, ',');

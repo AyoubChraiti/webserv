@@ -46,6 +46,7 @@ void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest
     map<int, HttpRequest*>::iterator it = requestmp.find(fd);
     if (it == requestmp.end()) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+        delete requestmp[fd];
         close(fd);
         return;
     }
@@ -85,6 +86,7 @@ void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what(), req->conf);
+        delete requestmp[fd];
         requestmp.erase(fd);
         struct epoll_event ev;
         ev.data.fd = fd;

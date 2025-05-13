@@ -92,7 +92,8 @@ mpserv configChecking(const string &filePath) {
 
             if (!route.uploadStore.empty() && !isValidDirectory(route.uploadStore))
                 throw runtime_error("Error: Upload directory '" + route.uploadStore + "' does not exist.");
-
+                
+            // to do : fix thissssssssssssssssssssssssssssss ..... 
             if (route.cgi) {
                 if (route.cgi_map.empty())
                     throw runtime_error("Error: Route '" + route_it->first + "' has CGI enabled but no CGI extensions defined.");

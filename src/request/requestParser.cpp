@@ -36,22 +36,27 @@ void HttpRequest::HandleUri()
     }
     if (!flag)
         throw HttpExcept(404, "No route for path: " + uri);
-    mtroute = conf.routes[key]; 
+    string tmpUri = uri;
+    mtroute = conf.routes[key];
     string bestMatch = mtroute.root;
-    uri.erase(uri.begin(), uri.begin() + bestMatch.size());
-    fullPath = mtroute.alias + uri;
+    tmpUri.erase(tmpUri.begin(), tmpUri.begin() + bestMatch.size());
+    fullPath = mtroute.alias + tmpUri;
+    cout << "ful path simo = " << fullPath << endl;
 }
 void HttpRequest::checkIsCGI()
 {
-    if (mtroute.cgi_map.empty())
+    if (mtroute.cgi == false)
         return ;
     isCGI = true;
     if (find(mtroute.cgi_methods.begin(), mtroute.cgi_methods.end(), method) == mtroute.cgi_methods.end())
         throw HttpExcept(405, "Method Not Allowed");
     size_t extensionPos = uri.find(".");
     string extension_uri = uri.substr(extensionPos);
-    if (!mtroute.cgi_map.count(extension_uri))
+    if (!mtroute.cgi_map.count(extension_uri)) {
+        cout << "cgi" << endl;
+        exit(1);
         throw HttpExcept(501, "CGI Extension Not Implemented");
+    }
     _extensionCGI = mtroute.cgi_map[extension_uri];
 }
 void HttpRequest::parseRequestLine () 
@@ -69,8 +74,10 @@ void HttpRequest::parseRequestLine ()
         throw HttpExcept(400, "Bad Request");
     if (method.empty() || uri.empty() || version.empty())
         throw HttpExcept(400, "Bad Request");
-    if (method != "GET" && method != "POST" && method != "DELETE")
+    if (method != "GET" && method != "POST" && method != "DELETE") {
+        cout << '1' << endl;
         throw HttpExcept(501, "Not Implemented");
+    }
     if (version != "HTTP/1.1")
         throw HttpExcept(505, "HTTP Version Not Supported");
     buffer.erase(0, index + 2);
@@ -119,8 +126,10 @@ void HttpRequest::ParseHeaders()
     
     if (headers.count("Transfer-Encoding") > 0)
     {
-        if (headers["Transfer-Encoding"].find("Chunked") == string::npos)
+        if (headers["Transfer-Encoding"].find("Chunked") == string::npos) {
+            cout << "2" << endl;
             throw HttpExcept(501, "Not Implemented");
+        }
         isChunked = true; 
     }  
     else if (headers.count("Content-Length") > 0 && isValidContentLength(headers["Content-Length"]))
