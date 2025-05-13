@@ -91,12 +91,13 @@ string getContentType(const string& filepath) {
     return "application/octet-stream";
 }
 
-void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
-    if (req.connection != "keep-alive") {
+void closeOrSwitch(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *>& requestmp) {
+    if (req->connection != "keep-alive") {
         requestmp.erase(clientFd);
         if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1) {
             perror("epoll_ctl");
         }
+        delete requestmp[clientFd];
         close(clientFd);
     }
     else {

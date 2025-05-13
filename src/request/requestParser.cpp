@@ -43,10 +43,16 @@ void HttpRequest::HandleUri()
 }
 void HttpRequest::checkIsCGI()
 {
-    if (!mtroute.cgi_extension.empty())
-        isCGI = true;
-    if (isCGI && find(mtroute.cgi_methods.begin(), mtroute.cgi_methods.end(), method) == mtroute.cgi_methods.end())
+    if (mtroute.cgi_map.empty())
+        return ;
+    isCGI = true;
+    if (find(mtroute.cgi_methods.begin(), mtroute.cgi_methods.end(), method) == mtroute.cgi_methods.end())
         throw HttpExcept(405, "Method Not Allowed");
+    size_t extensionPos = uri.find(".");
+    string extension_uri = uri.substr(extensionPos);
+    if (!mtroute.cgi_map.count(extension_uri))
+        throw HttpExcept(501, "CGI Extension Not Implemented");
+    _extensionCGI = mtroute.cgi_map[extension_uri];
 }
 void HttpRequest::parseRequestLine () 
 {
@@ -129,7 +135,16 @@ void HttpRequest::ParseHeaders()
     if (method == "POST" && !isPostKeys)
         throw HttpExcept(400 ,"Bad Request");
 }
-
+void HttpRequest::checkPost()// heere
+{
+    state = READING_BODY;
+    if (mtroute.fileUpload == false)
+        throw HttpExcept(405 ,"Upload Not Supported"); 
+    buffer.erase(0, 2);
+    if (Boundary.empty())
+        openFile("bigfile.txt"); // edit to tmp after 
+    
+}
 void HttpRequest::HandleHeaders()
 {
     size_t index;
@@ -152,12 +167,7 @@ void HttpRequest::HandleHeaders()
     if (method == "GET" || method == "DELETE")
         state = COMPLETE;
     else
-    {
-        state = READING_BODY;
-        buffer.erase(0, 2);
-        if (Boundary.empty())
-            openFile("bigfile.txt"); // edit to tmp after 
-    }
+        checkPost();
 }
 
 void HttpRequest::HandleChunkedBody()

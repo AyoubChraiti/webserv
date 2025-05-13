@@ -34,30 +34,30 @@ bool removeDirectoryRecursively(const char* path) {
     return true;
 }
 
-void sendDeleteResponse(int clientFd, int statusCode, const string& statusMsg, HttpRequest& req) {
+void sendDeleteResponse(int clientFd, int statusCode, const string& statusMsg, HttpRequest* req) {
     string response = "HTTP/1.1 " + to_string(statusCode) + " " + statusMsg + "\r\n";
     response += "Content-Length: " + to_string(0) + "\r\n";
     response += "Content-Type: text/plain\r\n";
-    response += "Connection: " + req.connection + "\r\n";
+    response += "Connection: " + req->connection + "\r\n";
     response += "\r\n";
     response += "";
 
     send(clientFd, response.c_str(), response.size(), 0);
 }
 
-void deleteMethod(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
-    string bestMatch = req.mtroute.root;
-    string reqPath = req.uri;
+void deleteMethod(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *>& requestmp) {
+    string bestMatch = req->mtroute.root;
+    string reqPath = req->uri;
 
     reqPath.erase(reqPath.begin(), reqPath.begin() + bestMatch.size());
-    const string& path = req.mtroute.alias + reqPath;
+    const string& path = req->mtroute.alias + reqPath;
 
     if (path.find("..") != string::npos || path.empty())
         throw HttpExcept(400, "invalid path");
     struct stat st;
 
     if (S_ISDIR(st.st_mode)) {
-        if (!req.uri.empty() && back(req.uri) != '/')
+        if (!req->uri.empty() && back(req->uri) != '/')
             throw HttpExcept(409, "uri must end w /");
 
         if (!removeDirectoryRecursively(path.c_str()))

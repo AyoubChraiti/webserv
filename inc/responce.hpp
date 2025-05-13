@@ -6,17 +6,17 @@
 
 
 
-void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest>& requestmp);
-void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp);
-void sendRedirect(int clientFd, const string& location, HttpRequest& req);
+void handle_client_write(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest *>& requestmp);
+void closeOrSwitch(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *>& requestmp);
+void sendRedirect(int clientFd, const string& location, HttpRequest* req);
 bool isDirectory(const string& path);
 string getContentType(const string& filepath);
 string generateAutoIndex(const string& fullPath, const string& uriPath);
 bool fileExists(const string& path);
 bool isDirectory(const string& path);
 
-void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest& req);
-void deleteMethod(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp);
-int getMethode(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp);
+void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest* req);
+void deleteMethod(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *>& requestmp);
+int getMethode(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *>& requestmp);
 size_t getContentLength(const string& path);
 // void RDR(int fd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp);

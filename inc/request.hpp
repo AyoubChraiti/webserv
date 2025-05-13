@@ -59,6 +59,7 @@ public:
     size_t remaining;
     string Boundary ; 
     string fullPath;
+    string _extensionCGI;
     int clientFd;
     int bytesRead;
     bool sendingFile;
@@ -81,9 +82,7 @@ public:
     void HandleBoundary() ;
     bool openFile (string filename);
     void checkIsCGI();
-
-
-
+    void checkPost();
 };
 
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);

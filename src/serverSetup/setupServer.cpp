@@ -59,7 +59,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     handle_cgi_read(eventFd, epollFd, pipes_map[eventFd]);
                 else if (events[i].events & EPOLLHUP) 
                 {
-                    parseCGIoutput(pipes_map[eventFd]->outputCGI);
+                    // parseCGIoutput(pipes_map[eventFd]->outputCGI);
                     modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
                     epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
                     pipes_map.erase(eventFd);

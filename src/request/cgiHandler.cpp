@@ -21,8 +21,9 @@ void setupCGIenv(string &scriptname, HttpRequest *reqStates, vector <char *> &ve
     env["SERVER_PROTOCOL"] = reqStates->version;
     env["REQUEST_METHOD"] = reqStates->method;
     env["REDIRECT_STATUS"] = "200";
-    env["SCRIPT_FILENAME"] = "cgi-bin/script.php"; // edit 
-    env["SCRIPT_NAME"] =  scriptname;
+    env["SCRIPT_FILENAME"] = scriptname; // edit 
+    cout << scriptname << endl;
+    env["SCRIPT_NAME"] = scriptname;
     env["QUERY_STRING"] = reqStates->querystring;
     if (reqStates->method == "POST") {
         if (reqStates->headers.find("Content-Type") != reqStates->headers.end())
@@ -43,10 +44,10 @@ void setupCGIenv(string &scriptname, HttpRequest *reqStates, vector <char *> &ve
 
 void childCGI (HttpRequest *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
 {
-    string path = "./" + reqStates->uri;
+    cout << reqStates->_extensionCGI << endl;
     vector <char *> vec;
     vector <string> envVar;
-    setupCGIenv(path, reqStates, vec, envVar);
+    setupCGIenv(reqStates->fullPath, reqStates, vec, envVar);
     close (clientFd);
     close(stdoutFd[0]);
     close(stdinFd[1]);
@@ -56,8 +57,8 @@ void childCGI (HttpRequest *reqStates, int stdoutFd[2],int stdinFd[2], int clien
     close(stdinFd[0]);
     close(stdoutFd[1]);
 
-    const char *args[] = {path.c_str(), NULL}; // cant change charcter
-    execve(path.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
+    const char *args[] = {reqStates->_extensionCGI.c_str(), reqStates->fullPath.c_str(), NULL}; // cant change charcter
+    execve(reqStates->_extensionCGI.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
     perror("cgi execve failed");
     exit(1);
 }
@@ -68,19 +69,19 @@ void sigchld_handler(int)
     while (waitpid(-1, NULL, WNOHANG) > 0) {}
 }
 
-void parseCGIoutput (string &outputCGI)
-{
+// void parseCGIoutput (string &outputCGI)
+// {
+//     return ;
     // size_t pos = outputCGI.find("\r\n\r\n");
     // if (pos == string::npos)
-    //     exit(1);
-    // cout << "result :" << outputCGI.substr(0, pos) << endl;
-}
+    //     throw HttpExcept(400, "bdlaha");
+    // find
+// }
 
 void handle_cgi_read(int readFd, int epollFd, HttpRequest *reqStates)
 {
     char buff[BUFFER_BYTES];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));
-    // cout << "readBytes" << recvBytes <<endl;
     if (recvBytes == -1)
         return (perror("read"), void());
     reqStates->outputCGI.append(buff, recvBytes);
@@ -108,26 +109,25 @@ void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_ma
 
 int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map<int, HttpRequest *> &pipes_map)
 {
+
     map<int, HttpRequest *>::iterator it = reqStates.find(clientFd);
     if (it == reqStates.end()) {
         return -1;
     }
-
     int stdoutFd[2], stdinFd[2];
     if (pipe(stdinFd) == -1 || pipe(stdoutFd) == -1) {
         perror("pipe");
         return -1;
     }
-
     pid_t pid = fork();
     if (pid == -1) {
         perror("fork");
         return -1;
     }
-
     if (pid == 0) {
         childCGI(it->second, stdoutFd, stdinFd, clientFd);
     } else {
+   
         close(stdoutFd[1]);
         close(stdinFd[0]);
         if (it->second->method == "POST") {
@@ -136,8 +136,10 @@ int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map
         } else {
             close(stdinFd[1]);
         }
+   
         add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN);
         pipes_map[stdoutFd[0]] = it->second;
+
     }
     return 0;
 }
