@@ -42,7 +42,7 @@ string remove_comment(string line) {
     return line;
 }
 
-void configFile::parseLine(string &line, servcnf &server, routeCnf &route, string &section) {
+void configFile::parseLine(string &line, servcnf &server, string &section) {
     line = remove_comment(line);
     line = trim(line);
 
@@ -131,11 +131,10 @@ const mpserv& configFile::parseConfig() {
 
     string line, section;
     servcnf server;
-    routeCnf route;
     bool inserver = false;
 
     while (getline(cnf, line)) {
-        parseLine(line, server, route, section);
+        parseLine(line, server, section);
 
         if (line == "[server]") {
             if (inserver) {

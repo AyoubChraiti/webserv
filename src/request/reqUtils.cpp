@@ -1,8 +1,11 @@
 #include "../../inc/request.hpp"
 
-HttpRequest::HttpRequest(servcnf config) :  contentLength(0), bytesRead(0),
-    sendingFile(false), bytesSentSoFar(0), headerSent(false)
-{
+HttpRequest::HttpRequest(servcnf config) {
+    contentLength = 0;
+    bytesRead = 0;
+    sendingFile = false;
+    bytesSentSoFar = 0;
+    headerSent = 0;
     state = READING_REQUEST_LINE;
     isPostKeys = true;
     isChunked = false;

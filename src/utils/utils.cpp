@@ -89,8 +89,7 @@ string getIp(string hostname) {
     addr = (struct sockaddr_in *)res->ai_addr;
     char ip_str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
-
-    in_addr_t ip = addr->sin_addr.s_addr; // will i need this later?
+    // in_addr_t ip = addr->sin_addr.s_addr; // will i need this later?
     freeaddrinfo(res);
     return string(ip_str);
 }

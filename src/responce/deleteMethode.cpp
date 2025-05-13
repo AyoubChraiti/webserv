@@ -45,7 +45,7 @@ void sendDeleteResponse(int clientFd, int statusCode, const string& statusMsg, H
     send(clientFd, response.c_str(), response.size(), 0);
 }
 
-void deleteMethod(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *>& requestmp) {
+void deleteMethod(int clientFd, HttpRequest* req) {
     string bestMatch = req->mtroute.root;
     string reqPath = req->uri;
 

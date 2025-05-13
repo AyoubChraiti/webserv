@@ -42,7 +42,7 @@ void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest* req) {
     req->headerSent = true;
 }
 
-void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest *>& requestmp) {
+void handle_client_write(int fd, int epollFd, map<int, HttpRequest *>& requestmp) {
     map<int, HttpRequest*>::iterator it = requestmp.find(fd);
     if (it == requestmp.end()) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
@@ -64,13 +64,12 @@ void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest
             return;
         }
         if (!req->mtroute.redirect.empty()) {
-            cout << "----------------> WE HEREEEEEEEEEEEEEEEEEEEE" << endl;
             sendRedirect(fd, req->mtroute.redirect, req);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
         }
         if (req->method == "GET") {
-            int get = getMethode(fd, epollFd, req, requestmp);
+            int get = getMethode(fd, req);
             if (get) {
                 int file_fd = req->routeResult.resFd;
                 closeOrSwitch(fd, epollFd, req, requestmp);
@@ -80,7 +79,7 @@ void handle_client_write(int fd, int epollFd, mpserv& conf, map<int, HttpRequest
             }
         }
         if (req->method == "DELETE") {
-            deleteMethod(fd, epollFd, req, requestmp);
+            deleteMethod(fd, req);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
         }

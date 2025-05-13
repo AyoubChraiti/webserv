@@ -1,11 +1,10 @@
 #include "../../inc/request.hpp"
 #include "../../inc/responce.hpp"
 
-RouteResult handleRouting(int fd, HttpRequest* req) {
+RouteResult handleRouting(HttpRequest* req) {
     RouteResult result = {200, "OK", "", "text/plain", "", false, -1, ""};
     string reqPath = req->uri;
 
-    bool routeFound = false;
     if (isDirectory(req->fullPath)) {
         if (back(req->fullPath) != '/') {
             result.shouldRDR = true;
@@ -28,7 +27,6 @@ RouteResult handleRouting(int fd, HttpRequest* req) {
     }
     
     if (!fileExists(req->fullPath)) {
-        cout << "in the routing" << endl;
         throw HttpExcept(404, "Not Found");
     }
 

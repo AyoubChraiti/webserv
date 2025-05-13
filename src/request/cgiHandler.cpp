@@ -78,7 +78,7 @@ void sigchld_handler(int)
     // find
 // }
 
-void handle_cgi_read(int readFd, int epollFd, HttpRequest *reqStates)
+void handle_cgi_read(int readFd, HttpRequest *reqStates)
 {
     char buff[BUFFER_BYTES];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));

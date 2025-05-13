@@ -1,7 +1,7 @@
 #include "../../inc/responce.hpp"
 #include "../../inc/request.hpp"
 
-int getMethode(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *>& requestmp) {
+int getMethode(int clientFd, HttpRequest* req) {
     RouteResult& routeResult = req->routeResult;
 
     if (!req->headerSent) {
@@ -16,7 +16,7 @@ int getMethode(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest
         }    
 
         if (routeResult.resFd == -1) {
-            ssize_t sent = send(clientFd, routeResult.responseBody.c_str(), routeResult.responseBody.size(), 0);
+            send(clientFd, routeResult.responseBody.c_str(), routeResult.responseBody.size(), 0);
             return 1;
         }
         else {

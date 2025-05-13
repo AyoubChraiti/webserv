@@ -12,9 +12,9 @@ SRC =  src/main.cpp \
 OBJDIR = obj
 OBJ = $(SRC:%.cpp=$(OBJDIR)/%.o)
 
-# -Wall -Wextra -Werror
+# 
 
-CPPFLAGS = #-fsanitize=address -std=c++98
+CPPFLAGS = -Wall -Wextra -Werror -fsanitize=address -std=c++98
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)

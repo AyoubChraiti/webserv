@@ -22,7 +22,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     if (epollFd == -1)
         sysCallFail();
 
-    for (int i = 0; i < servrs.size(); i++) {
+    for (size_t i = 0; i < servrs.size(); i++) {
         add_fds_to_epoll(epollFd, servrs[i], EPOLLIN);
     }
 
@@ -56,7 +56,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 if (events[i].events & EPOLLOUT)
                     handle_cgi_write(eventFd, epollFd, pipes_map);
                 else if (events[i].events & EPOLLIN)
-                    handle_cgi_read(eventFd, epollFd, pipes_map[eventFd]);
+                    handle_cgi_read(eventFd, pipes_map[eventFd]);
                 else if (events[i].events & EPOLLHUP) 
                 {
                     // parseCGIoutput(pipes_map[eventFd]->outputCGI);
@@ -71,7 +71,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map); // request
                 }
                 else if (events[i].events & EPOLLOUT) {
-                    handle_client_write(eventFd, epollFd, conf, requestmp); // responce
+                    handle_client_write(eventFd, epollFd, requestmp); // responce
                 }
             }
         }
@@ -86,7 +86,6 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
     for (map<string, servcnf>::const_iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
         int serverFd;
         struct sockaddr_in address;
-        int addrlen = sizeof(address);
         if ((serverFd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
             sysCallFail();
 

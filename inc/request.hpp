@@ -86,7 +86,7 @@ public:
 };
 
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
-RouteResult handleRouting(int fd, HttpRequest* req);
+RouteResult handleRouting(HttpRequest* req);
 
 // requestParser file
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest *> &reqStates, map<int , HttpRequest *> &pipes_map);
@@ -104,7 +104,7 @@ void writebody(fstream &bodyFile , string &buffer);
 // CgiHandler headers
 int HandleCGI (int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map<int, HttpRequest *> &pipes_map);
 void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_map);
-void handle_cgi_read(int readFd, int epollFd, HttpRequest *reqStates);
+void handle_cgi_read(int readFd, HttpRequest *reqStates);
 void parseCGIoutput (string &outputCGI);
 
 

@@ -38,7 +38,6 @@ void HttpRequest::HandleUri()
     string bestMatch = mtroute.root;
     tmpUri.erase(tmpUri.begin(), tmpUri.begin() + bestMatch.size());
     fullPath = mtroute.alias + tmpUri;
-    cout << "ful path simo = " << fullPath << endl;
 }
 void HttpRequest::checkIsCGI()
 {
@@ -54,11 +53,8 @@ void HttpRequest::checkIsCGI()
     if (extensionPos == string::npos)
         return ;
     string extension_uri = uri.substr(extensionPos);
-    if (!mtroute.cgi_map.count(extension_uri)) {
-        cout << "cgi" << endl;
-        exit(1);
+    if (!mtroute.cgi_map.count(extension_uri))
         throw HttpExcept(501, "CGI Extension Not Implemented");
-    }
     _extensionCGI = mtroute.cgi_map[extension_uri];
 }
 void HttpRequest::parseRequestLine () 
