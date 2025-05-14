@@ -2,7 +2,7 @@
 
 #include "config.hpp"
 
-#define BUFFER_SIZE 8192 // <----------------
+#define BUFFER_SIZE 1 // <----------------
 #define MAX_URI_LENGTH 1024
 
 
@@ -80,7 +80,7 @@ public:
     void HandleUri();
     void HandleChunkedBody();
     void HandleBoundary() ;
-    bool openFile (string filename);
+    void openFile (string name);
     void checkIsCGI();
     void checkPost();
 };

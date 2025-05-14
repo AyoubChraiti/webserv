@@ -59,20 +59,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 else if (events[i].events & EPOLLHUP) 
                 {
                     // parseCGIoutput(pipes_map[eventFd]->outputCGI);
-                    // modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
-                    // epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
-                    // close(eventFd);
-                    // pipes_map.erase(eventFd);
-
+                    modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
                     epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
                     close(eventFd);
-                    if (requestmp.count(eventFd)) {
-                        delete requestmp[eventFd];
-                        requestmp.erase(eventFd);
-                    }
-                    if (pipes_map.count(eventFd)) {
-                        pipes_map.erase(eventFd);
-                    }
+                    pipes_map.erase(eventFd);
                 }
             }
             else {

@@ -39,24 +39,23 @@ void HttpRequest::HandleUri()
     tmpUri.erase(tmpUri.begin(), tmpUri.begin() + bestMatch.size());
     fullPath = mtroute.alias + tmpUri;
 }
+
 void HttpRequest::checkIsCGI()
 {
-    if (mtroute.cgi_map.empty() || mtroute.cgi == false)
+    if (mtroute.cgi == false)
         return ;
-    if (mtroute.cgi) {
-        cout << mtroute.cgi_map[".py"] << endl;
-    }
     isCGI = true;
     if (find(mtroute.cgi_methods.begin(), mtroute.cgi_methods.end(), method) == mtroute.cgi_methods.end())
         throw HttpExcept(405, "Method Not Allowed");
     size_t extensionPos = uri.find(".");
     if (extensionPos == string::npos)
-        return ;
+        throw HttpExcept(404, "fix it later");
     string extension_uri = uri.substr(extensionPos);
-    if (!mtroute.cgi_map.count(extension_uri))
+    if (!mtroute.cgi_map.count(extension_uri)) 
         throw HttpExcept(501, "CGI Extension Not Implemented");
     _extensionCGI = mtroute.cgi_map[extension_uri];
 }
+
 void HttpRequest::parseRequestLine () 
 {
     size_t index = buffer.find("\r\n");
@@ -144,16 +143,19 @@ void HttpRequest::ParseHeaders()
     if (method == "POST" && !isPostKeys)
         throw HttpExcept(400 ,"Bad Request");
 }
-void HttpRequest::checkPost()// heere
+
+void HttpRequest::checkPost()
 {
     state = READING_BODY;
     if (mtroute.fileUpload == false)
-        throw HttpExcept(405 ,"Upload Not Supported"); 
+        throw HttpExcept(405 ,"Upload Not Supported");
+    if (mtroute.uploadStore.empty())
+        throw HttpExcept(403, "Missing upload directory");
     buffer.erase(0, 2);
     if (Boundary.empty())
         openFile("bigfile.txt"); // edit to tmp after 
-    
 }
+
 void HttpRequest::HandleHeaders()
 {
     size_t index;
@@ -212,16 +214,16 @@ void HttpRequest::HandleChunkedBody()
     }
 }
 
-bool HttpRequest::openFile(string filename)
+void HttpRequest::openFile(string name)
 {
+    string filename = mtroute.uploadStore + name;
+    ifstream testFile(filename.c_str()); // goodbit and failbit are set if its open 
+    if (testFile.good())
+        throw HttpExcept(409, "File already open");
+    testFile.close();
     bodyFile.open(filename.c_str(), ios::in | ios::out | ios::binary | ios::trunc);
     if (!bodyFile.is_open())
-    {
-        cerr << "Fail openning File" << endl;
-        state = COMPLETE;
-        return false;
-    }
-    return true;
+        throw HttpExcept(500, "Fail openning file");
 }
 
 void HttpRequest::HandleBoundary() 
