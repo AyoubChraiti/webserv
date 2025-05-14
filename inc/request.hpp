@@ -38,7 +38,7 @@ struct RouteResult {
     string contentType;
     string redirectLocation;
     bool shouldRDR;
-    int resFd;
+    ifstream* fileStream;
     string fullPath;
 };
 

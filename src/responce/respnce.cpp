@@ -29,7 +29,7 @@ void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest* req) {
     stringstream response;
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
     response << "Content-Type: " << routeResult.contentType << "\r\n";
-    if (routeResult.resFd != -1) {
+    if (routeResult.fileStream->is_open()) {
         response << "Content-Length: " << getContentLength(routeResult.fullPath) << "\r\n";
     }
     else {
@@ -71,10 +71,12 @@ void handle_client_write(int fd, int epollFd, map<int, HttpRequest *>& requestmp
         if (req->method == "GET") {
             int get = getMethode(fd, req);
             if (get) {
-                int file_fd = req->routeResult.resFd;
+                if (req->routeResult.fileStream) {
+                    req->routeResult.fileStream->close();
+                    delete req->routeResult.fileStream;
+                    req->routeResult.fileStream = NULL;
+                }
                 closeOrSwitch(fd, epollFd, req, requestmp);
-                if (file_fd != -1)
-                    close(file_fd);
                 return;
             }
         }

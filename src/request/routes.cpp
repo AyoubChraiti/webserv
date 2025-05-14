@@ -2,7 +2,7 @@
 #include "../../inc/responce.hpp"
 
 RouteResult handleRouting(HttpRequest* req) {
-    RouteResult result = {200, "OK", "", "text/plain", "", false, -1, ""};
+    RouteResult result = {200, "OK", "", "text/plain", "", false,};
     string reqPath = req->uri;
 
     if (isDirectory(req->fullPath)) {
@@ -25,6 +25,8 @@ RouteResult handleRouting(HttpRequest* req) {
         }
         req->fullPath += req->mtroute.index;
     }
+
+    cout << "full path : " << req->fullPath << endl;
     
     if (!fileExists(req->fullPath)) {
         throw HttpExcept(404, "Not Found");
@@ -32,11 +34,12 @@ RouteResult handleRouting(HttpRequest* req) {
 
     result.fullPath = req->fullPath;
 
-    result.resFd = open(req->fullPath.c_str(), ios::binary);
-
-    if (result.resFd == -1)
+    ifstream* file = new ifstream(req->fullPath.c_str(), ios::binary);
+    if (!file->is_open()) {
+        delete file;
         throw HttpExcept(500, "Internal Server Error");
-
+    }
+    result.fileStream = file;
     result.contentType = getContentType(req->fullPath);
     return result;
 }

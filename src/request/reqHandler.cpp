@@ -35,6 +35,9 @@ bool HttpRequest::request(int clientFd) {
     if (recvBytes > 0)
     {
         buffer.append(buff, recvBytes);
+
+        cout << buffer << endl;
+
         if (state != READING_BODY && buffer.find("\r\n") == string::npos)
             return false;
         if (state == READING_REQUEST_LINE)

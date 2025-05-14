@@ -15,7 +15,7 @@ int getMethode(int clientFd, HttpRequest* req) {
             return 1;
         }    
 
-        if (routeResult.resFd == -1) {
+        if (!routeResult.fileStream->is_open()) {
             send(clientFd, routeResult.responseBody.c_str(), routeResult.responseBody.size(), 0);
             return 1;
         }
@@ -26,16 +26,24 @@ int getMethode(int clientFd, HttpRequest* req) {
     }
     char buffer[BUFFER_SIZE];
 
-    ssize_t bytesRead = pread(routeResult.resFd, buffer, BUFFER_SIZE, req->bytesSentSoFar);
+    routeResult.fileStream->read(buffer, BUFFER_SIZE);
+    streamsize bytesRead = routeResult.fileStream->gcount();
+
+    if (bytesRead <= 0)
+        return 1;
 
     ssize_t sent = send(clientFd, buffer, bytesRead, 0);
+    if (sent < 0)
+        return 1;
 
     req->bytesSentSoFar += sent;
 
-    if ((size_t)sent < (size_t)bytesRead)
+    if ((size_t)sent < (size_t)bytesRead) {
+        routeResult.fileStream->seekg(req->bytesSentSoFar, ios::beg);
         return 0;
+    }
 
-    if (req->bytesSentSoFar >= getContentLength(routeResult.fullPath))
+    if (routeResult.fileStream->eof() || req->bytesSentSoFar >= getContentLength(routeResult.fullPath))
         return 1;
 
     return 0;
