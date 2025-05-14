@@ -28,14 +28,13 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
 
     struct epoll_event events[MAX_EVENTS];
 
-    while (true) {
+    while (!shutServer) {
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
         if (numEvents == -1) {
             if (errno != EINTR) {
-                cout << "epoll fail\n";
+                cout << "epoll_wait fail\n";
                 sysCallFail();
             }
-            cout << "epoll fail\n";
         }
 
         for (int i = 0; i < numEvents; i++) {
@@ -60,10 +59,20 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 else if (events[i].events & EPOLLHUP) 
                 {
                     // parseCGIoutput(pipes_map[eventFd]->outputCGI);
-                    modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
+                    // modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
+                    // epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
+                    // close(eventFd);
+                    // pipes_map.erase(eventFd);
+
                     epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
-                    pipes_map.erase(eventFd);
                     close(eventFd);
+                    if (requestmp.count(eventFd)) {
+                        delete requestmp[eventFd];
+                        requestmp.erase(eventFd);
+                    }
+                    if (pipes_map.count(eventFd)) {
+                        pipes_map.erase(eventFd);
+                    }
                 }
             }
             else {
@@ -75,11 +84,20 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 }
             }
         }
-        if (shutServer) {
-            cout << "exiting sucesfully" << endl;
-            break;
-        }
     }
+    for (map<int, HttpRequest*>::iterator it = requestmp.begin(); it != requestmp.end(); it++) {
+        close(it->first);
+        delete it->second;
+    }
+    requestmp.clear();
+
+    for (map<int, HttpRequest*>::iterator it = pipes_map.begin(); it != pipes_map.end(); it++)
+        close(it->first);
+    pipes_map.clear();
+
+    for (size_t i = 0; i < servrs.size(); i++)
+        close(servrs[i]);
+    close(epollFd);
 }
 
 void serverSetup(mpserv &conf, vector<int> &servrs) {

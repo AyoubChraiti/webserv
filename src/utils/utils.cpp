@@ -54,7 +54,8 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
             if (filePath.find(".html") != string::npos) {
                 contentType = "text/html";
             }
-        } else {
+        }
+        else {
             cerr << "Warning: Could not open error page file: " << filePath << endl;
             responseBody = message;
         }
@@ -70,7 +71,6 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
         "\r\n" + responseBody;
 
     cerr << "Error: '" << statusText << "' sent to client (code: " << statusCode << ")" << endl;
-
     send(fd, response.c_str(), response.length(), 0);
 }
 

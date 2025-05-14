@@ -109,7 +109,6 @@ void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_ma
 
 int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map<int, HttpRequest *> &pipes_map)
 {
-
     map<int, HttpRequest *>::iterator it = reqStates.find(clientFd);
     if (it == reqStates.end()) {
         return -1;
@@ -126,14 +125,15 @@ int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map
     }
     if (pid == 0) {
         childCGI(it->second, stdoutFd, stdinFd, clientFd);
-    } else {
-   
+    }
+    else {
         close(stdoutFd[1]);
         close(stdinFd[0]);
         if (it->second->method == "POST") {
             add_fds_to_epoll(epollFd, stdinFd[1], EPOLLOUT);
             pipes_map[stdinFd[1]] = it->second;
-        } else {
+        }
+        else {
             close(stdinFd[1]);
         }
    
