@@ -73,7 +73,8 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
                     throw HttpExcept(500, "Internal Server Error");
                 return;
             }
-            if (it->second->method == "POST") {
+            if (it->second->method == "POST") 
+            {
                 sendPostResponse(clientFd, 201, "", it->second);
                 modifyState(epollFd, clientFd, EPOLLIN);
             }

@@ -2,7 +2,7 @@
 
 #include "config.hpp"
 
-#define BUFFER_SIZE 1 // <----------------
+#define BUFFER_SIZE 8192 // <----------------
 #define MAX_URI_LENGTH 1024
 
 
