@@ -68,6 +68,7 @@ public:
     bool isPostKeys;
     bool isChunked;
     bool isCGI;
+    bool hasBody;
 
     HttpRequest(servcnf config);
     ~HttpRequest();
@@ -98,7 +99,8 @@ size_t StringStream(const string &string);
 bool isValidContentLength (const string &value);
 bool isValidHostHeader(const string& host) ;
 void writebody(fstream &bodyFile , string &buffer);
-
+void closeOrSwitch(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *>& requestmp);
+void sendPostResponse(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *> &reqStates);
 
 
 // CgiHandler headers

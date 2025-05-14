@@ -71,10 +71,8 @@ void HttpRequest::parseRequestLine ()
         throw HttpExcept(400, "Bad Request");
     if (method.empty() || uri.empty() || version.empty())
         throw HttpExcept(400, "Bad Request");
-    if (method != "GET" && method != "POST" && method != "DELETE") {
-        cout << '1' << endl;
+    if (method != "GET" && method != "POST" && method != "DELETE")
         throw HttpExcept(501, "Not Implemented");
-    }
     if (version != "HTTP/1.1")
         throw HttpExcept(505, "HTTP Version Not Supported");
     buffer.erase(0, index + 2);
@@ -83,6 +81,7 @@ void HttpRequest::parseRequestLine ()
     if (find(mtroute.methodes.begin(), mtroute.methodes.end(), method) == mtroute.methodes.end() && !isCGI)
         throw HttpExcept(405, "Method Not Allowed");
     state = READING_HEADERS;
+
 }
 
 bool isValidHostHeader(const string& host) {
@@ -125,10 +124,8 @@ void HttpRequest::ParseHeaders()
     
     if (headers.count("Transfer-Encoding") > 0)
     {
-        if (headers["Transfer-Encoding"].find("Chunked") == string::npos) {
-            cout << "2" << endl;
+        if (headers["Transfer-Encoding"].find("Chunked") == string::npos)
             throw HttpExcept(501, "Not Implemented");
-        }
         isChunked = true; 
     }  
     else if (headers.count("Content-Length") > 0 && isValidContentLength(headers["Content-Length"]))
@@ -158,6 +155,7 @@ void HttpRequest::checkPost()
 
 void HttpRequest::HandleHeaders()
 {
+
     size_t index;
     while ((index = buffer.find("\r\n")) != string::npos)
     {
@@ -203,6 +201,7 @@ void HttpRequest::HandleChunkedBody()
             bodyFile.clear();
             bodyFile.seekg(0, ios::beg);
             state = COMPLETE;
+            hasBody = true;
             return;
         }
         size_t bytesTowrite = min(contentLength, buffer.size());
@@ -216,6 +215,8 @@ void HttpRequest::HandleChunkedBody()
 
 void HttpRequest::openFile(string name)
 {
+    if (name.empty())
+        throw HttpExcept(409, "Empty Body");
     string filename = mtroute.uploadStore + name;
     ifstream testFile(filename.c_str()); // goodbit and failbit are set if its open 
     if (testFile.good())
@@ -299,6 +300,7 @@ void HttpRequest::parseBody()
             bodyFile.clear();
             bodyFile.seekg(0, ios::beg);
             state = COMPLETE;
+            hasBody = true;
         }
     }
     else

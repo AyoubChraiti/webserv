@@ -22,7 +22,6 @@ void setupCGIenv(string &scriptname, HttpRequest *reqStates, vector <char *> &ve
     env["REQUEST_METHOD"] = reqStates->method;
     env["REDIRECT_STATUS"] = "200";
     env["SCRIPT_FILENAME"] = scriptname; // edit 
-    cout << scriptname << endl;
     env["SCRIPT_NAME"] = scriptname;
     env["QUERY_STRING"] = reqStates->querystring;
     if (reqStates->method == "POST") {
@@ -44,7 +43,6 @@ void setupCGIenv(string &scriptname, HttpRequest *reqStates, vector <char *> &ve
 
 void childCGI (HttpRequest *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
 {
-    cout << reqStates->_extensionCGI << endl;
     vector <char *> vec;
     vector <string> envVar;
     setupCGIenv(reqStates->fullPath, reqStates, vec, envVar);
@@ -69,14 +67,11 @@ void sigchld_handler(int)
     while (waitpid(-1, NULL, WNOHANG) > 0) {}
 }
 
-// void parseCGIoutput (string &outputCGI)
-// {
-//     return ;
-    // size_t pos = outputCGI.find("\r\n\r\n");
-    // if (pos == string::npos)
-    //     throw HttpExcept(400, "bdlaha");
-    // find
-// }
+void parseCGIoutput (string &outputCGI)
+{
+    // cout << outputCGI << endl;
+    return ;
+}
 
 void handle_cgi_read(int readFd, HttpRequest *reqStates)
 {

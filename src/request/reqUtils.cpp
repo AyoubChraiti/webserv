@@ -16,6 +16,7 @@ HttpRequest::HttpRequest(servcnf config) {
     Boundary = "";
     startBoundFlag = false;
     outputCGI = "HTTP/1.1 200 OK\r\n";
+    hasBody = false;
 }
 
 HttpRequest::~HttpRequest() {}
@@ -69,4 +70,51 @@ string getFileName(string buff) {
 void writebody(fstream &bodyFile , string &buffer) {
     bodyFile.write(buffer.c_str(), buffer.size());
     buffer.clear();
+}
+
+void sendPostResponse(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *> &reqStates) {
+    string response;
+    response.append("HTTP/1.1 ").append(req->hasBody ? "200 OK" : "204 No Content").append("\r\n");
+    response.append("Connection: ").append(req->connection).append("\r\n");
+    if (req->hasBody)
+    {
+        string body =
+            "<!DOCTYPE html>\r\n"
+            "<html lang=\"en\">\r\n"
+            "<head>\r\n"
+            "  <meta charset=\"UTF-8\">\r\n"
+            "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"
+            "  <title>Upload Result</title>\r\n"
+            "</head>\r\n"
+            "<body>\r\n"
+            "  <h1>File upload successful</h1>\r\n"
+            "</body>\r\n"
+            "</html>\r\n";
+        response.append("Content-Type: text/html; charset=UTF-8\r\n");
+        response.append("Content-Length: ").append(to_string(body.size())).append("\r\n");
+        response.append("\r\n");
+        response.append(body);
+
+    }
+    else
+    {
+        string body =
+            "<!DOCTYPE html>\r\n"
+            "<html lang=\"en\">\r\n"
+            "<head>\r\n"
+            "  <meta charset=\"UTF-8\">\r\n"
+            "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n"
+            "  <title>No Content</title>\r\n"
+            "</head>\r\n"
+            "<body>\r\n"
+            "  <h1>No body to upload message</h1>\r\n"
+            "</body>\r\n"
+            "</html>\r\n";
+        response.append("Content-Type: text/html; charset=UTF-8\r\n");
+        response.append("Content-Length: ").append(to_string(body.size())).append("\r\n");
+        response.append("\r\n");
+        response.append(body);
+    }
+    send(clientFd, response.c_str(),response.size(), 0);
+    closeOrSwitch(clientFd, epollFd, req, reqStates);
 }

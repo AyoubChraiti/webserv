@@ -26,7 +26,7 @@ bool HttpRequest::request(int clientFd) {
     memset(buff, 0, sizeof(buff));
     ssize_t recvBytes = recv(clientFd, buff, BUFFER_SIZE, 0);
     if (recvBytes == 0) {
-        if (state != COMPLETE && !buffer.empty())
+        if (state != COMPLETE  && !buffer.empty())
             throw HttpExcept(400, "Bad Request");
         return true;
     }
@@ -49,15 +49,6 @@ bool HttpRequest::request(int clientFd) {
     return false;
 }
 
-void sendPostResponse(int clientFd, int statusCode, const string& statusMsg, HttpRequest* req) {
-    string response = "HTTP/1.1 " + to_string(statusCode) + " " + statusMsg + "\r\n";
-    response += "Content-Length: 0\r\n";
-    response += "Connection: " + req->connection + "\r\n";
-    response += "\r\n";
-    send(clientFd, response.c_str(), response.size(), 0);
-}
-
-
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest *> &req, map<int, HttpRequest *> &pipes_map) {
     string host = getInfoClient(clientFd);
     map<int, HttpRequest *>::iterator it = req.find(clientFd);
@@ -65,7 +56,6 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
         HttpRequest* newReq = new HttpRequest(conf.servers[host]);
         it = req.insert(make_pair(clientFd, newReq)).first;
     }
-
     try  {
         if (it->second->request(clientFd)) {
             if (it->second->isCGI) {
@@ -73,11 +63,8 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
                     throw HttpExcept(500, "Internal Server Error");
                 return;
             }
-            if (it->second->method == "POST") 
-            {
-                sendPostResponse(clientFd, 201, "", it->second);
-                modifyState(epollFd, clientFd, EPOLLIN);
-            }
+            else if (it->second->method == "POST") 
+                return sendPostResponse(clientFd, epollFd,it->second ,req);
             else if (it->second->method == "GET") {
                 it->second->routeResult = handleRouting(it->second);
                 modifyState(epollFd, clientFd, EPOLLOUT);

@@ -98,7 +98,6 @@ void closeOrSwitch(int clientFd, int epollFd, HttpRequest* req, map<int, HttpReq
     HttpRequest* request = requestmp[clientFd];
 
     requestmp.erase(clientFd);
-
     if (req->connection != "keep-alive") {
         if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1) {
             perror("epoll_ctl");
