@@ -55,10 +55,11 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 if (events[i].events & EPOLLOUT)
                     handle_cgi_write(eventFd, epollFd, pipes_map);
                 else if (events[i].events & EPOLLIN)
-                    handle_cgi_read(eventFd, pipes_map[eventFd]);
+                    handle_cgi_read(epollFd, eventFd, pipes_map[eventFd], pipes_map);
                 else if (events[i].events & EPOLLHUP) 
                 {
-                    // parseCGIoutput(pipes_map[eventFd]->outputCGI);
+                    pipes_map[eventFd]->stateCGI = COMPLETE_CGI;
+                    pipes_map[eventFd]->outputCGI.append("0\r\n\r\n");
                     modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
                     epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
                     close(eventFd);

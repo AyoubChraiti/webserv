@@ -1,5 +1,4 @@
 #include "../../inc/request.hpp"
-#define BUFFER_BYTES 1024
 
 string strUpper(string str)
 {
@@ -63,30 +62,24 @@ void childCGI (HttpRequest *reqStates, int stdoutFd[2],int stdinFd[2], int clien
 
 void sigchld_handler(int)
 {
-    // Reap all finished child processes
     while (waitpid(-1, NULL, WNOHANG) > 0) {}
 }
 
-void parseCGIoutput (string &outputCGI)
+void handle_cgi_read(int epollFd, int readFd, HttpRequest *reqStates, map<int, HttpRequest *> &pipes_map)
 {
-    // cout << outputCGI << endl;
-    return ;
-}
-
-void handle_cgi_read(int readFd, HttpRequest *reqStates)
-{
-    char buff[BUFFER_BYTES];
+    char buff[BUFFER_SIZE];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));
     if (recvBytes == -1)
         return (perror("read"), void());
     reqStates->outputCGI.append(buff, recvBytes);
+    modifyState(epollFd, pipes_map[readFd]->clientFd, EPOLLOUT);
 }
 
-void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_map)
+void handle_cgi_write(int writeFd, int epollFd, map<int, HttpRequest *> &pipes_map)
 {
     HttpRequest *reqStates = pipes_map[writeFd];
-    char buff[BUFFER_BYTES];
-    reqStates->bodyFile.read(buff, BUFFER_BYTES);
+    char buff[BUFFER_SIZE];
+    reqStates->bodyFile.read(buff, BUFFER_SIZE);
     size_t bytesRead = reqStates->bodyFile.gcount();
     if (bytesRead > 0)
     {
@@ -134,7 +127,6 @@ int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map
    
         add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN);
         pipes_map[stdoutFd[0]] = it->second;
-
     }
     return 0;
 }

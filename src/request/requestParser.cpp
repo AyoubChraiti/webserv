@@ -124,7 +124,7 @@ void HttpRequest::ParseHeaders()
     
     if (headers.count("Transfer-Encoding") > 0)
     {
-        if (headers["Transfer-Encoding"].find("Chunked") == string::npos)
+        if (headers["Transfer-Encoding"].find("chunked") == string::npos)
             throw HttpExcept(501, "Not Implemented");
         isChunked = true; 
     }  
@@ -209,7 +209,7 @@ void HttpRequest::HandleChunkedBody()
         (contentLength > buffer.size()) ? buffer.erase(0, buffer.size()) : buffer.erase(0, contentLength);
         remaining = contentLength - bytesTowrite;
         if (!remaining && buffer.size() >= 2 && buffer.find("\r\n") == string::npos)
-            throw HttpExcept(400 ,"Bad Request");
+            throw HttpExcept(400 ,"Bad Request3");
     }
 }
 
@@ -219,8 +219,8 @@ void HttpRequest::openFile(string name)
         throw HttpExcept(409, "Empty Body");
     string filename = mtroute.uploadStore + name;
     ifstream testFile(filename.c_str()); // goodbit and failbit are set if its open 
-    if (testFile.good())
-        throw HttpExcept(409, "File already open");
+    // if (testFile.good())
+    //     throw HttpExcept(409, "File already open");
     testFile.close();
     bodyFile.open(filename.c_str(), ios::in | ios::out | ios::binary | ios::trunc);
     if (!bodyFile.is_open())
@@ -286,9 +286,14 @@ void HttpRequest::parseBody()
 {
     if (!isChunked)
     {
+        if (contentLength == 0 && !hasBody) {
+            state = COMPLETE;
+            return ;
+        } 
+        hasBody = true;
         if (contentLength > StringStream(conf.maxBodySize))
             throw HttpExcept(413 , "Request Entity too large");
-        if (Boundary.empty()) 
+        if (Boundary.empty())
         {
             contentLength -= buffer.size();
             writebody(bodyFile,  buffer);
@@ -300,7 +305,6 @@ void HttpRequest::parseBody()
             bodyFile.clear();
             bodyFile.seekg(0, ios::beg);
             state = COMPLETE;
-            hasBody = true;
         }
     }
     else

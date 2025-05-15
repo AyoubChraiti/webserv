@@ -15,8 +15,8 @@ HttpRequest::HttpRequest(servcnf config) {
     querystring = "";
     Boundary = "";
     startBoundFlag = false;
-    outputCGI = "HTTP/1.1 200 OK\r\n";
     hasBody = false;
+    stateCGI = HEADERS_CGI;
 }
 
 HttpRequest::~HttpRequest() {}
@@ -68,6 +68,8 @@ string getFileName(string buff) {
 }
 
 void writebody(fstream &bodyFile , string &buffer) {
+    if (buffer.empty ())
+        return ;
     bodyFile.write(buffer.c_str(), buffer.size());
     buffer.clear();
 }

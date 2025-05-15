@@ -35,9 +35,6 @@ bool HttpRequest::request(int clientFd) {
     if (recvBytes > 0)
     {
         buffer.append(buff, recvBytes);
-
-        cout << buffer << endl;
-
         if (state != READING_BODY && buffer.find("\r\n") == string::npos)
             return false;
         if (state == READING_REQUEST_LINE)
@@ -66,7 +63,7 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRe
                     throw HttpExcept(500, "Internal Server Error");
                 return;
             }
-            else if (it->second->method == "POST") 
+            else if (it->second->method == "POST")
                 return sendPostResponse(clientFd, epollFd,it->second ,req);
             else if (it->second->method == "GET") {
                 it->second->routeResult = handleRouting(it->second);
