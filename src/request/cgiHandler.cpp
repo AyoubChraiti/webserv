@@ -67,11 +67,13 @@ void sigchld_handler(int)
 
 void handle_cgi_read(int epollFd, int readFd, HttpRequest *reqStates, map<int, HttpRequest *> &pipes_map)
 {
+    cout << "reading" << endl;
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));
     if (recvBytes == -1)
         return (perror("read"), void());
     reqStates->outputCGI.append(buff, recvBytes);
+    cout << reqStates->outputCGI << endl;
     modifyState(epollFd, pipes_map[readFd]->clientFd, EPOLLOUT);
 }
 
@@ -95,8 +97,10 @@ void handle_cgi_write(int writeFd, int epollFd, map<int, HttpRequest *> &pipes_m
 }
 
 
-int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map<int, HttpRequest *> &pipes_map)
+int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map<int, HttpRequest *> &pipes_map, map<int ,time_t > &timer)
 {
+    time_t now = time(NULL);
+
     map<int, HttpRequest *>::iterator it = reqStates.find(clientFd);
     if (it == reqStates.end()) {
         return -1;
@@ -119,6 +123,7 @@ int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map
         close(stdinFd[0]);
         if (it->second->method == "POST") {
             add_fds_to_epoll(epollFd, stdinFd[1], EPOLLOUT);
+            timer[stdinFd[1]] = now;
             pipes_map[stdinFd[1]] = it->second;
         }
         else {
@@ -127,6 +132,7 @@ int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map
    
         add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN);
         pipes_map[stdoutFd[0]] = it->second;
+        timer[stdoutFd[0]] = now;
     }
     return 0;
 }

@@ -29,7 +29,7 @@ void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest* req) {
     stringstream response;
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
     response << "Content-Type: " << routeResult.contentType << "\r\n";
-    if (routeResult.fileStream->is_open()) {
+    if (routeResult.fileStream) {
         response << "Content-Length: " << getContentLength(routeResult.fullPath) << "\r\n";
     }
     else {

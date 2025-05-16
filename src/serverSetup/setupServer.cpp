@@ -18,6 +18,7 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     map<int, HttpRequest *> requestmp;
     map<int, HttpRequest*> pipes_map;
+    map<int, time_t> clientLastActive;
     int epollFd = epoll_create1(0);
     if (epollFd == -1)
         sysCallFail();
@@ -29,11 +30,31 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     struct epoll_event events[MAX_EVENTS];
 
     while (!shutServer) {
-        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
+        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000); // 1 sec
         if (numEvents == -1) {
             if (errno != EINTR) {
                 cout << "epoll_wait fail\n";
                 sysCallFail();
+            }
+        }
+
+        time_t now = time(NULL);
+
+        // cout << "time : " << now << endl;
+        for (map<int, time_t>::iterator it = clientLastActive.begin(); it != clientLastActive.end(); ) {
+            int fd = it->first;
+            if (now - it->second > 10) {
+                cout << "Client " << fd << " timed out\n";
+                epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
+                close(fd);
+                if (requestmp.count(fd)) {
+                    delete requestmp[fd];
+                    requestmp.erase(fd);
+                }
+                clientLastActive.erase(it++);
+            }
+            else {
+                ++it;
             }
         }
 
@@ -49,15 +70,15 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     continue;
                 }
                 add_fds_to_epoll(epollFd, clientFd, EPOLLIN);
+                clientLastActive[clientFd] = now;
             }
-            else if (pipes_map.find(eventFd) != pipes_map.end())
-            {
+            else if (pipes_map.find(eventFd) != pipes_map.end()) {
                 if (events[i].events & EPOLLOUT)
                     handle_cgi_write(eventFd, epollFd, pipes_map);
                 else if (events[i].events & EPOLLIN)
                     handle_cgi_read(epollFd, eventFd, pipes_map[eventFd], pipes_map);
-                else if (events[i].events & EPOLLHUP) 
-                {
+                else if (events[i].events & EPOLLHUP) {
+                    cout << "Here" << endl;
                     pipes_map[eventFd]->stateCGI = COMPLETE_CGI;
                     pipes_map[eventFd]->outputCGI.append("0\r\n\r\n");
                     modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
@@ -68,14 +89,19 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             }
             else {
                 if (events[i].events & EPOLLIN) {
-                    handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map); // request
+                    handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map, clientLastActive);
+                    clientLastActive[eventFd] = now;
                 }
                 else if (events[i].events & EPOLLOUT) {
-                    handle_client_write(eventFd, epollFd, requestmp); // responce
+                    handle_client_write(eventFd, epollFd, requestmp);
+                    clientLastActive[eventFd] = now;
                 }
             }
         }
+
+
     }
+
     for (map<int, HttpRequest*>::iterator it = requestmp.begin(); it != requestmp.end(); it++) {
         close(it->first);
         delete it->second;

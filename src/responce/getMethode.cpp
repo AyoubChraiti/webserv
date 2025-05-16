@@ -15,7 +15,7 @@ int getMethode(int clientFd, HttpRequest* req) {
             return 1;
         }    
 
-        if (!routeResult.fileStream->is_open()) {
+        if (!routeResult.fileStream) {
             send(clientFd, routeResult.responseBody.c_str(), routeResult.responseBody.size(), 0);
             return 1;
         }
