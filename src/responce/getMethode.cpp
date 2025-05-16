@@ -1,7 +1,7 @@
 #include "../../inc/responce.hpp"
 #include "../../inc/request.hpp"
 
-int getMethode(int clientFd, HttpRequest* req) {
+int getMethode(int clientFd, Http* req) {
     RouteResult& routeResult = req->routeResult;
 
     if (!req->headerSent) {
@@ -24,8 +24,8 @@ int getMethode(int clientFd, HttpRequest* req) {
             req->bytesSentSoFar = 0;
         }
     }
-    char buffer[BUFFER_SIZE];
 
+    char buffer[BUFFER_SIZE];
     routeResult.fileStream->read(buffer, BUFFER_SIZE);
     streamsize bytesRead = routeResult.fileStream->gcount();
 
@@ -43,7 +43,7 @@ int getMethode(int clientFd, HttpRequest* req) {
         return 0;
     }
 
-    if (routeResult.fileStream->eof() || req->bytesSentSoFar >= getContentLength(routeResult.fullPath))
+    if (routeResult.fileStream->eof() || req->bytesSentSoFar >= getContentLength(req->fullPath))
         return 1;
 
     return 0;

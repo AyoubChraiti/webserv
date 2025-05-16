@@ -1,12 +1,16 @@
 #include "../../inc/request.hpp"
 #include "../../inc/responce.hpp"
 
-RouteResult handleRouting(HttpRequest* req) {
-    RouteResult result = {200, "OK", "", "text/plain", "", false,};
+RouteResult handleRouting(Http* req) {
+    RouteResult result = {200, "OK", "", "text/plain", "", false, false};
     string reqPath = req->uri;
 
+    cout << "the full_path : " << req->fullPath << endl;
+
     if (isDirectory(req->fullPath)) {
+        cout << "is a directory <-------------------" << endl;
         if (back(req->fullPath) != '/') {
+            cout << "code for rederection <-------------------" << endl;
             result.shouldRDR = true;
             result.redirectLocation = req->uri + "/";
             result.statusCode = 301;
@@ -15,6 +19,7 @@ RouteResult handleRouting(HttpRequest* req) {
         }
         if (req->mtroute.index.empty()) {
             if (req->mtroute.autoindex) {
+                result.autoindex = true;
                 result.contentType = "text/html"; 
                 if (reqPath.empty())
                     reqPath = "/";
@@ -25,14 +30,9 @@ RouteResult handleRouting(HttpRequest* req) {
         }
         req->fullPath += req->mtroute.index;
     }
-
-    cout << "full path : " << req->fullPath << endl;
-    
     if (!fileExists(req->fullPath)) {
         throw HttpExcept(404, "Not Found");
     }
-
-    result.fullPath = req->fullPath;
 
     ifstream* file = new ifstream(req->fullPath.c_str(), ios::binary);
     if (!file->is_open()) {

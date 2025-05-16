@@ -13,15 +13,14 @@ string strUpper(string str)
     return res;
 }
 
-void setupCGIenv(string &scriptname, HttpRequest *reqStates, vector <char *> &vec, vector<string> &envVar)
-{
+void setupCGIenv(string &scriptname, Http *reqStates, vector <char *> &vec, vector<string> &envVar) {
     map <string, string > env;
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_PROTOCOL"] = reqStates->version;
     env["REQUEST_METHOD"] = reqStates->method;
-    env["REDIRECT_STATUS"] = "200";
-    env["SCRIPT_FILENAME"] = scriptname; // edit 
-    env["SCRIPT_NAME"] = scriptname;
+    // env["REDIRECT_STATUS"] = "200";
+    env["SCRIPT_FILENAME"] = scriptname; // edit
+    env["SCRIPT_NAME"] = "script.php";
     env["QUERY_STRING"] = reqStates->querystring;
     if (reqStates->method == "POST") {
         if (reqStates->headers.find("Content-Type") != reqStates->headers.end())
@@ -40,7 +39,7 @@ void setupCGIenv(string &scriptname, HttpRequest *reqStates, vector <char *> &ve
     vec.push_back(NULL);
 }   
 
-void childCGI (HttpRequest *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
+void childCGI (Http *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
 {
     vector <char *> vec;
     vector <string> envVar;
@@ -65,7 +64,7 @@ void sigchld_handler(int)
     while (waitpid(-1, NULL, WNOHANG) > 0) {}
 }
 
-void handle_cgi_read(int epollFd, int readFd, HttpRequest *reqStates, map<int, HttpRequest *> &pipes_map)
+void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> &pipes_map)
 {
     cout << "reading" << endl;
     char buff[BUFFER_SIZE];
@@ -73,13 +72,12 @@ void handle_cgi_read(int epollFd, int readFd, HttpRequest *reqStates, map<int, H
     if (recvBytes == -1)
         return (perror("read"), void());
     reqStates->outputCGI.append(buff, recvBytes);
-    cout << reqStates->outputCGI << endl;
     modifyState(epollFd, pipes_map[readFd]->clientFd, EPOLLOUT);
 }
 
-void handle_cgi_write(int writeFd, int epollFd, map<int, HttpRequest *> &pipes_map)
+void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map)
 {
-    HttpRequest *reqStates = pipes_map[writeFd];
+    Http *reqStates = pipes_map[writeFd];
     char buff[BUFFER_SIZE];
     reqStates->bodyFile.read(buff, BUFFER_SIZE);
     size_t bytesRead = reqStates->bodyFile.gcount();
@@ -97,11 +95,10 @@ void handle_cgi_write(int writeFd, int epollFd, map<int, HttpRequest *> &pipes_m
 }
 
 
-int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map<int, HttpRequest *> &pipes_map, map<int ,time_t > &timer)
-{
+int HandleCGI(int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, Http *> &pipes_map) {
     time_t now = time(NULL);
 
-    map<int, HttpRequest *>::iterator it = reqStates.find(clientFd);
+    map<int, Http *>::iterator it = reqStates.find(clientFd);
     if (it == reqStates.end()) {
         return -1;
     }
@@ -123,7 +120,6 @@ int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map
         close(stdinFd[0]);
         if (it->second->method == "POST") {
             add_fds_to_epoll(epollFd, stdinFd[1], EPOLLOUT);
-            timer[stdinFd[1]] = now;
             pipes_map[stdinFd[1]] = it->second;
         }
         else {
@@ -132,7 +128,6 @@ int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map
    
         add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN);
         pipes_map[stdoutFd[0]] = it->second;
-        timer[stdoutFd[0]] = now;
     }
     return 0;
 }

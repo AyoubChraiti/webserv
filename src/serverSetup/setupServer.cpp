@@ -16,9 +16,9 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
 }
 
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
-    map<int, HttpRequest *> requestmp;
-    map<int, HttpRequest*> pipes_map;
-    map<int, time_t> clientLastActive;
+    map<int, Http *> requestmp;
+    map<int, Http*> pipes_map;
+    // map<int, time_t> clientLastActive;
     int epollFd = epoll_create1(0);
     if (epollFd == -1)
         sysCallFail();
@@ -30,34 +30,13 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     struct epoll_event events[MAX_EVENTS];
 
     while (!shutServer) {
-        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, 1000); // 1 sec
+        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
         if (numEvents == -1) {
             if (errno != EINTR) {
                 cout << "epoll_wait fail\n";
                 sysCallFail();
             }
         }
-
-        time_t now = time(NULL);
-
-        // cout << "time : " << now << endl;
-        for (map<int, time_t>::iterator it = clientLastActive.begin(); it != clientLastActive.end(); ) {
-            int fd = it->first;
-            if (now - it->second > 10) {
-                cout << "Client " << fd << " timed out\n";
-                epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
-                close(fd);
-                if (requestmp.count(fd)) {
-                    delete requestmp[fd];
-                    requestmp.erase(fd);
-                }
-                clientLastActive.erase(it++);
-            }
-            else {
-                ++it;
-            }
-        }
-
         for (int i = 0; i < numEvents; i++) {
             int eventFd = events[i].data.fd;
 
@@ -70,7 +49,6 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     continue;
                 }
                 add_fds_to_epoll(epollFd, clientFd, EPOLLIN);
-                clientLastActive[clientFd] = now;
             }
             else if (pipes_map.find(eventFd) != pipes_map.end()) {
                 if (events[i].events & EPOLLOUT)
@@ -89,12 +67,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             }
             else {
                 if (events[i].events & EPOLLIN) {
-                    handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map, clientLastActive);
-                    clientLastActive[eventFd] = now;
+                    handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map);
                 }
                 else if (events[i].events & EPOLLOUT) {
                     handle_client_write(eventFd, epollFd, requestmp);
-                    clientLastActive[eventFd] = now;
                 }
             }
         }
@@ -102,18 +78,28 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
 
     }
 
-    for (map<int, HttpRequest*>::iterator it = requestmp.begin(); it != requestmp.end(); it++) {
+    for (map<int, Http*>::iterator it = requestmp.begin(); it != requestmp.end(); ++it) {
+        Http* http = it->second;
+        if (http && http->routeResult.fileStream != NULL) {
+            if (http->routeResult.fileStream->is_open()) {
+                http->routeResult.fileStream->close();
+            }
+            delete http->routeResult.fileStream;
+            http->routeResult.fileStream = NULL;
+        }
         close(it->first);
-        delete it->second;
+        delete http;
     }
     requestmp.clear();
 
-    for (map<int, HttpRequest*>::iterator it = pipes_map.begin(); it != pipes_map.end(); it++)
+    for (map<int, Http*>::iterator it = pipes_map.begin(); it != pipes_map.end(); ++it) {
         close(it->first);
+    }
     pipes_map.clear();
 
-    for (size_t i = 0; i < servrs.size(); i++)
+    for (size_t i = 0; i < servrs.size(); i++) {
         close(servrs[i]);
+    }
     close(epollFd);
 }
 

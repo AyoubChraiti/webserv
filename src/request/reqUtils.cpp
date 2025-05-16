@@ -1,6 +1,6 @@
 #include "../../inc/request.hpp"
 
-HttpRequest::HttpRequest(servcnf config) {
+Http::Http(servcnf config) {
     contentLength = 0;
     bytesRead = 0;
     sendingFile = false;
@@ -19,7 +19,7 @@ HttpRequest::HttpRequest(servcnf config) {
     stateCGI = HEADERS_CGI;
 }
 
-HttpRequest::~HttpRequest() {}
+Http::~Http() {}
 
 size_t StringStream(const string &string)
 {
@@ -74,7 +74,7 @@ void writebody(fstream &bodyFile , string &buffer) {
     buffer.clear();
 }
 
-void sendPostResponse(int clientFd, int epollFd, HttpRequest* req, map<int, HttpRequest *> &reqStates) {
+void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &reqStates) {
     string response;
     response.append("HTTP/1.1 ").append(req->hasBody ? "200 OK" : "204 No Content").append("\r\n");
     response.append("Connection: ").append(req->connection).append("\r\n");

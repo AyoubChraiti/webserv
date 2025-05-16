@@ -1,6 +1,6 @@
 #include "../../inc/responce.hpp"
 
-void sendRedirect(int fd, const string& location, HttpRequest* req) {
+void sendRedirect(int fd, const string& location, Http* req) {
     stringstream response;
 
     response << "HTTP/1.1 301 Moved Permanently\r\n";
@@ -25,12 +25,12 @@ size_t getContentLength(const string& path) {
     return fileStat.st_size;
 }
 
-void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest* req) {
+void sendHeaders(int clientFd, RouteResult& routeResult, Http* req) {
     stringstream response;
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
     response << "Content-Type: " << routeResult.contentType << "\r\n";
     if (routeResult.fileStream) {
-        response << "Content-Length: " << getContentLength(routeResult.fullPath) << "\r\n";
+        response << "Content-Length: " << getContentLength(req->fullPath) << "\r\n";
     }
     else {
         response << "Content-Length: " << routeResult.responseBody.size() << "\r\n";
@@ -42,14 +42,13 @@ void sendHeaders(int clientFd, RouteResult& routeResult, HttpRequest* req) {
     req->headerSent = true;
 }
 
-string to_hex(size_t value)
-{
+string to_hex(size_t value) {
     ostringstream oss;
     oss << hex << value;
     return oss.str();
 }
 
-void parseCGIandSend(int epollFd, int fd, HttpRequest* req,  map<int, HttpRequest *>& requestmp)
+void parseCGIandSend(int epollFd, int fd, Http* req,  map<int, Http *>& requestmp)
 {
     if (req->stateCGI == HEADERS_CGI)
     {
@@ -125,8 +124,8 @@ void parseCGIandSend(int epollFd, int fd, HttpRequest* req,  map<int, HttpReques
         modifyState(epollFd, fd, EPOLLIN);
 }
 
-void handle_client_write(int fd, int epollFd, map<int, HttpRequest *>& requestmp) {
-    map<int, HttpRequest*>::iterator it = requestmp.find(fd);
+void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp) {
+    map<int, Http*>::iterator it = requestmp.find(fd);
     if (it == requestmp.end()) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
         delete requestmp[fd];
@@ -134,16 +133,22 @@ void handle_client_write(int fd, int epollFd, map<int, HttpRequest *>& requestmp
         return;
     }
     
-    HttpRequest* req = it->second;
+    Http* req = it->second;
     try {
-        if (req->isCGI) 
-            return parseCGIandSend(epollFd, fd, it->second ,requestmp);
-        if (!req->mtroute.redirect.empty()) {
+        if (req->routeResult.autoindex) {
+            sendHeaders(fd, req->routeResult, req);
+            send(fd, req->routeResult.responseBody.c_str(), req->routeResult.responseBody.size(), 0);
+            closeOrSwitch(fd, epollFd, req, requestmp);
+            return;
+        }
+        else if (req->routeResult.shouldRDR) {
             sendRedirect(fd, req->mtroute.redirect, req);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
         }
-        if (req->method == "GET") {
+        else if (req->isCGI)
+            return parseCGIandSend(epollFd, fd, it->second ,requestmp);
+        else if (req->method == "GET") {
             int get = getMethode(fd, req);
             if (get) {
                 if (req->routeResult.fileStream) {
@@ -155,7 +160,7 @@ void handle_client_write(int fd, int epollFd, map<int, HttpRequest *>& requestmp
                 return;
             }
         }
-        if (req->method == "DELETE") {
+        else if (req->method == "DELETE") {
             deleteMethod(fd, req);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;

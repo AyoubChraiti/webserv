@@ -34,7 +34,7 @@ bool removeDirectoryRecursively(const char* path) {
     return true;
 }
 
-void sendDeleteResponse(int clientFd, int statusCode, const string& statusMsg, HttpRequest* req) {
+void sendDeleteResponse(int clientFd, int statusCode, const string& statusMsg, Http* req) {
     string response = "HTTP/1.1 " + to_string(statusCode) + " " + statusMsg + "\r\n";
     response += "Content-Length: " + to_string(0) + "\r\n";
     response += "Content-Type: text/plain\r\n";
@@ -45,7 +45,7 @@ void sendDeleteResponse(int clientFd, int statusCode, const string& statusMsg, H
     send(clientFd, response.c_str(), response.size(), 0);
 }
 
-void deleteMethod(int clientFd, HttpRequest* req) {
+void deleteMethod(int clientFd, Http* req) {
     string bestMatch = req->mtroute.root;
     string reqPath = req->uri;
 

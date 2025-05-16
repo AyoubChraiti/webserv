@@ -1,7 +1,6 @@
 #include "../../inc/request.hpp"
 
-void HttpRequest::HandleUri()
-{
+void Http::HandleUri() {
     const string allowed = "-._~:/?#[\\]@!$&'()*+,;=";
     for (size_t i = 0; i < uri.size(); ++i) {
         unsigned char ch = static_cast<unsigned char>(uri[i]);
@@ -31,42 +30,47 @@ void HttpRequest::HandleUri()
             }
         }
     }
-    if (!flag)
+    if (!flag) {
         throw HttpExcept(404, "No route for path: " + uri);
+    }
     string tmpUri = uri;
     mtroute = conf.routes[key];
     string bestMatch = mtroute.root;
     tmpUri.erase(tmpUri.begin(), tmpUri.begin() + bestMatch.size());
     fullPath = mtroute.alias + tmpUri;
+    routeResult = handleRouting(this);
 }
 
-void HttpRequest::checkIsCGI()
-{
-    if (mtroute.cgi == false)
+void Http::checkIsCGI() {
+    if (mtroute.cgi == false || routeResult.autoindex)
         return ;
+
     isCGI = true;
     if (find(mtroute.cgi_methods.begin(), mtroute.cgi_methods.end(), method) == mtroute.cgi_methods.end())
         throw HttpExcept(405, "Method Not Allowed");
     size_t extensionPos = uri.find(".");
-    if (extensionPos == string::npos)
+    if (extensionPos == string::npos) {
         throw HttpExcept(404, "fix it later");
+    }
     string extension_uri = uri.substr(extensionPos);
     if (!mtroute.cgi_map.count(extension_uri)) 
         throw HttpExcept(501, "CGI Extension Not Implemented");
     _extensionCGI = mtroute.cgi_map[extension_uri];
 }
 
-void HttpRequest::parseRequestLine () 
-{
+void Http::parseRequestLine ()  {
     size_t index = buffer.find("\r\n");
     if (index == string::npos)
         throw HttpExcept(400, "Bad Request");
+
     string line = buffer.substr(0, index);
     if (line.size() > MAX_URI_LENGTH)
         throw HttpExcept (414, "URI Too Long");
+
     string requestLine = trim(line);
     stringstream ss (requestLine);
     ss >> method >> uri >> version;
+
     if (!ss.eof())
         throw HttpExcept(400, "Bad Request");
     if (method.empty() || uri.empty() || version.empty())
@@ -75,13 +79,14 @@ void HttpRequest::parseRequestLine ()
         throw HttpExcept(501, "Not Implemented");
     if (version != "HTTP/1.1")
         throw HttpExcept(505, "HTTP Version Not Supported");
+
     buffer.erase(0, index + 2);
     HandleUri();
     checkIsCGI();
+
     if (find(mtroute.methodes.begin(), mtroute.methodes.end(), method) == mtroute.methodes.end() && !isCGI)
         throw HttpExcept(405, "Method Not Allowed");
     state = READING_HEADERS;
-
 }
 
 bool isValidHostHeader(const string& host) {
@@ -106,7 +111,7 @@ bool isValidHostHeader(const string& host) {
     return true;
 }
 
-void HttpRequest::ParseHeaders()
+void Http::ParseHeaders()
 {
     if (!headers.count("Host") || !isValidHostHeader(headers["Host"])) // edit func
         throw HttpExcept(400, "Bad Request");
@@ -141,7 +146,7 @@ void HttpRequest::ParseHeaders()
         throw HttpExcept(400 ,"Bad Request");
 }
 
-void HttpRequest::checkPost()
+void Http::checkPost()
 {
     state = READING_BODY;
     if (mtroute.fileUpload == false)
@@ -153,7 +158,7 @@ void HttpRequest::checkPost()
         openFile("bigfile.txt"); // edit to tmp after 
 }
 
-void HttpRequest::HandleHeaders()
+void Http::HandleHeaders()
 {
 
     size_t index;
@@ -179,7 +184,7 @@ void HttpRequest::HandleHeaders()
         checkPost();
 }
 
-void HttpRequest::HandleChunkedBody()
+void Http::HandleChunkedBody()
 {
     while (!buffer.empty()) 
     {
@@ -213,7 +218,7 @@ void HttpRequest::HandleChunkedBody()
     }
 }
 
-void HttpRequest::openFile(string name)
+void Http::openFile(string name)
 {
     if (name.empty())
         throw HttpExcept(409, "Empty Body");
@@ -227,7 +232,7 @@ void HttpRequest::openFile(string name)
         throw HttpExcept(500, "Fail openning file");
 }
 
-void HttpRequest::HandleBoundary() 
+void Http::HandleBoundary() 
 {
     contentLength -= buffer.size();
     string start_bound = "--" + Boundary + "\r\n";
@@ -282,7 +287,7 @@ void HttpRequest::HandleBoundary()
     }
 }
 
-void HttpRequest::parseBody()
+void Http::parseBody()
 {
     if (!isChunked)
     {

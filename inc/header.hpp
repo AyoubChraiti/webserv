@@ -30,7 +30,7 @@ using namespace std;
 extern bool shutServer;
 
 struct mpserv;
-class HttpRequest;
+class Http;
 
 /* error handling */
 void sysCallFail();
