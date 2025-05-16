@@ -52,7 +52,7 @@ bool Http::request(int Fd) {
     return false;
 }
 
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *> &req, map<int, Http *> &pipes_map) {
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *> &req, map<int, Http *> &pipes_map, map<int, time_t>& timer) {
     string host = getInfoClient(clientFd);
     map<int, Http *>::iterator it = req.find(clientFd);
     if (it == req.end()) {
@@ -66,7 +66,7 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *
                 return;
             }
             else if (it->second->isCGI) {
-                if (HandleCGI(epollFd, clientFd, req, pipes_map) == -1)
+                if (HandleCGI(epollFd, clientFd, req, pipes_map, timer) == -1)
                     throw HttpExcept(500, "Internal Server Error");
                 return;
             }

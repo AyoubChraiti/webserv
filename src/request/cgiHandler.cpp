@@ -75,8 +75,7 @@ void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> 
     modifyState(epollFd, pipes_map[readFd]->clientFd, EPOLLOUT);
 }
 
-void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map)
-{
+void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map, map<int, time_t> timer) {
     Http *reqStates = pipes_map[writeFd];
     char buff[BUFFER_SIZE];
     reqStates->bodyFile.read(buff, BUFFER_SIZE);
@@ -86,6 +85,8 @@ void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map)
         write(writeFd, buff, bytesRead);
         if (reqStates->bodyFile.eof())
         {
+            timer.erase(writeFd);
+            pipes_map[writeFd]->stdinFd = -1;
             epoll_ctl(epollFd, EPOLL_CTL_DEL, writeFd, NULL);
             pipes_map.erase(writeFd);
             close(writeFd);
@@ -95,7 +96,7 @@ void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map)
 }
 
 
-int HandleCGI(int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, Http *> &pipes_map) {
+int HandleCGI(int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, Http *> &pipes_map, map<int ,time_t > &timer) {
     time_t now = time(NULL);
 
     map<int, Http *>::iterator it = reqStates.find(clientFd);
@@ -121,13 +122,17 @@ int HandleCGI(int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, H
         if (it->second->method == "POST") {
             add_fds_to_epoll(epollFd, stdinFd[1], EPOLLOUT);
             pipes_map[stdinFd[1]] = it->second;
+            pipes_map[stdinFd[1]]->stdinFd = stdinFd[1];
         }
         else {
             close(stdinFd[1]);
         }
-   
+        reqStates[clientFd]->cgiPid = pid;
         add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN);
         pipes_map[stdoutFd[0]] = it->second;
+
+        timer[stdoutFd[0]] = now;
+        pipes_map[stdoutFd[0]]->stdoutFd = stdoutFd[0];
     }
     return 0;
 }

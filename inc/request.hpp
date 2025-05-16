@@ -65,7 +65,10 @@ public:
     string Boundary ; 
     string fullPath;
     string _extensionCGI;
+    CGIState stateCGI;
     int clientFd;
+    int stdinFd;
+    int stdoutFd;
     int bytesRead;
     bool sendingFile;
     bool startBoundFlag;
@@ -73,8 +76,8 @@ public:
     bool isPostKeys;
     bool isChunked;
     bool isCGI;
-    CGIState stateCGI;
     bool hasBody;
+    int cgiPid;
 
     Http(servcnf config);
     ~Http();
@@ -96,7 +99,7 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
 RouteResult handleRouting(Http* req);
 
 // requestParser file
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *> &req, map<int, Http *> &pipes_map);
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *> &req, map<int, Http *> &pipes_map, map<int, time_t>& timer);
 void modifyState(int epollFd ,int clientFd, uint32_t events);
 string getInfoClient(int clientFd);
 string getFileName(string buff);
@@ -110,8 +113,9 @@ void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &re
 
 
 // CgiHandler headers
-int HandleCGI (int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, Http *> &pipes_map);
-void handle_cgi_write(int writeFd, int epollFd,map<int, Http *> &pipes_map);
+
+int HandleCGI (int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, Http *> &pipes_map, map<int , time_t> &timer);
+void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map, map<int, time_t> timer);
 void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> &pipes_map);
 
 
