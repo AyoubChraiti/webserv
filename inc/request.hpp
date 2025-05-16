@@ -65,7 +65,10 @@ public:
     string Boundary ; 
     string fullPath;
     string _extensionCGI;
+    CGIState stateCGI;
     int clientFd;
+    int stdinFd;
+    int stdoutFd;
     int bytesRead;
     bool sendingFile;
     bool startBoundFlag;
@@ -73,7 +76,6 @@ public:
     bool isPostKeys;
     bool isChunked;
     bool isCGI;
-    CGIState stateCGI;
     bool hasBody;
 
     HttpRequest(servcnf config);
@@ -111,7 +113,7 @@ void sendPostResponse(int clientFd, int epollFd, HttpRequest* req, map<int, Http
 
 // CgiHandler headers
 int HandleCGI (int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map<int, HttpRequest *> &pipes_map, map<int , time_t> &timer);
-void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_map);
+void handle_cgi_write(int writeFd, int epollFd, map<int, HttpRequest *> &pipes_map, map<int, time_t> timer);
 void handle_cgi_read(int epollFd, int readFd, HttpRequest *reqStates, map<int, HttpRequest *> &pipes_map);
 
 

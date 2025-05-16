@@ -46,11 +46,11 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             if (now - it->second > 10) {
                 cout << "Client " << fd << " timed out\n";
                 epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
-                close(fd);
-                if (requestmp.count(fd)) {
-                    delete requestmp[fd];
-                    requestmp.erase(fd);
-                }
+                if (pipes_map[fd]->method == "POST")
+                    close (pipes_map[fd]->stdinFd);
+                close (pipes_map[fd]->stdoutFd);
+                close(pipes_map[fd]->clientFd);
+                delete pipes_map[fd];
                 clientLastActive.erase(it++);
             }
             else {
@@ -70,15 +70,14 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     continue;
                 }
                 add_fds_to_epoll(epollFd, clientFd, EPOLLIN);
-                clientLastActive[clientFd] = now;
             }
             else if (pipes_map.find(eventFd) != pipes_map.end()) {
                 if (events[i].events & EPOLLOUT)
-                    handle_cgi_write(eventFd, epollFd, pipes_map);
+                    handle_cgi_write(eventFd, epollFd, pipes_map, clientLastActive);
                 else if (events[i].events & EPOLLIN)
                     handle_cgi_read(epollFd, eventFd, pipes_map[eventFd], pipes_map);
                 else if (events[i].events & EPOLLHUP) {
-                    cout << "Here" << endl;
+                    clientLastActive.erase(eventFd);
                     pipes_map[eventFd]->stateCGI = COMPLETE_CGI;
                     pipes_map[eventFd]->outputCGI.append("0\r\n\r\n");
                     modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
@@ -88,14 +87,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 }
             }
             else {
-                if (events[i].events & EPOLLIN) {
+                if (events[i].events & EPOLLIN)
                     handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map, clientLastActive);
-                    clientLastActive[eventFd] = now;
-                }
-                else if (events[i].events & EPOLLOUT) {
+                else if (events[i].events & EPOLLOUT)
                     handle_client_write(eventFd, epollFd, requestmp);
-                    clientLastActive[eventFd] = now;
-                }
             }
         }
 
