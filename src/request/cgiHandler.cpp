@@ -88,6 +88,7 @@ void handle_cgi_write(int writeFd, int epollFd, map<int, HttpRequest *> &pipes_m
         if (reqStates->bodyFile.eof())
         {
             timer.erase(writeFd);
+            pipes_map[writeFd]->stdinFd = -1;
             epoll_ctl(epollFd, EPOLL_CTL_DEL, writeFd, NULL);
             pipes_map.erase(writeFd);
             close(writeFd);
@@ -129,7 +130,7 @@ int HandleCGI(int epollFd, int clientFd, map<int, HttpRequest *> &reqStates, map
         else {
             close(stdinFd[1]);
         }
-   
+        reqStates[clientFd]->cgiPid = pid;
         add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN);
         pipes_map[stdoutFd[0]] = it->second;
         timer[stdoutFd[0]] = now;

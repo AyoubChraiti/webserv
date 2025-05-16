@@ -77,6 +77,7 @@ public:
     bool isChunked;
     bool isCGI;
     bool hasBody;
+    int cgiPid;
 
     HttpRequest(servcnf config);
     ~HttpRequest();

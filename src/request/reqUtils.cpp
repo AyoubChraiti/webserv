@@ -17,6 +17,10 @@ HttpRequest::HttpRequest(servcnf config) {
     startBoundFlag = false;
     hasBody = false;
     stateCGI = HEADERS_CGI;
+    stdinFd = -1;
+    stdoutFd = -1;
+    clientFd = -1;
+    cgiPid = -1;
 }
 
 HttpRequest::~HttpRequest() {}

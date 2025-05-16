@@ -40,20 +40,42 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
 
         time_t now = time(NULL);
 
-        // cout << "time : " << now << endl;
         for (map<int, time_t>::iterator it = clientLastActive.begin(); it != clientLastActive.end(); ) {
             int fd = it->first;
-            if (now - it->second > 10) {
+            HttpRequest *req = pipes_map[fd];
+
+            if (now - it->second > 3 && req) {
+                if (req->cgiPid > 0) {
+                    kill(req->cgiPid, SIGKILL); // or SIGTERM for a gentler shutdown
+                    req->cgiPid = -1;
+                }   
                 cout << "Client " << fd << " timed out\n";
-                epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
-                if (pipes_map[fd]->method == "POST")
-                    close (pipes_map[fd]->stdinFd);
-                close (pipes_map[fd]->stdoutFd);
-                close(pipes_map[fd]->clientFd);
-                delete pipes_map[fd];
+                if (req->clientFd > 0) {
+                    cout << "cclient 7aydo" << endl;
+                    epoll_ctl(epollFd, EPOLL_CTL_DEL, req->clientFd, NULL);
+                    requestmp.erase(req->clientFd);
+                    close(req->clientFd);
+                    req->clientFd = -1;
+                }
+                if (req->stdinFd > 0) {
+                    epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdinFd, NULL);
+                    pipes_map.erase(req->stdinFd);
+                    close(req->stdinFd);
+                    req->stdinFd = -1;
+                }
+                if (req->stdoutFd > 0) {
+                    epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdoutFd, NULL);
+                    pipes_map.erase(req->stdoutFd);
+                    close(req->stdoutFd);
+                    req->stdoutFd = -1;
+                }
+                // Remove from all maps (be safe, erase both fd and clientFd)
+                pipes_map.erase(fd);
+                requestmp.erase(fd);
                 clientLastActive.erase(it++);
-            }
-            else {
+                delete req;
+                break;
+            } else {
                 ++it;
             }
         }
@@ -87,14 +109,13 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 }
             }
             else {
+                cout << "server" << endl;
                 if (events[i].events & EPOLLIN)
                     handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map, clientLastActive);
                 else if (events[i].events & EPOLLOUT)
                     handle_client_write(eventFd, epollFd, requestmp);
             }
         }
-
-
     }
 
     for (map<int, HttpRequest*>::iterator it = requestmp.begin(); it != requestmp.end(); it++) {
