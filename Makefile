@@ -7,7 +7,7 @@ SRC =  src/main.cpp \
 	src/serverSetup/setupServer.cpp \
 	src/request/reqHandler.cpp  src/request/requestParser.cpp src/request/routes.cpp src/request/cgiHandler.cpp src/request/reqUtils.cpp \
 	src/responce/respnce.cpp src/responce/post.cpp src/responce/resUtils.cpp src/responce/deleteMethode.cpp src/responce/getMethode.cpp \
-	src/utils/utils.cpp src/utils/signals.cpp src/utils/conf.cpp \
+	src/utils/utils.cpp src/utils/signals.cpp src/utils/conf.cpp src/request/cgiUtils.cpp\
 
 OBJDIR = obj
 OBJ = $(SRC:%.cpp=$(OBJDIR)/%.o)

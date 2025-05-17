@@ -50,7 +50,6 @@ string to_hex(size_t value) {
 
 void parseCGIandSend(int epollFd, int fd, Http* req,  map<int, Http *>& requestmp)
 {
-    cout << "send cgi response" << endl;
     if (req->stateCGI == HEADERS_CGI)
     {
         size_t pos = req->outputCGI.find("\r\n\r\n");

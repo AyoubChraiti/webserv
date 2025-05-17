@@ -28,7 +28,6 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     }
 
     struct epoll_event events[MAX_EVENTS];
-
     while (!shutServer) {
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
         if (numEvents == -1) {
@@ -37,49 +36,8 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 sysCallFail();
             }
         }
-
-        time_t now = time(NULL);
-
-        for (map<int, time_t>::iterator it = clientLastActive.begin(); it != clientLastActive.end(); ) {
-            int fd = it->first;
-            Http *req = pipes_map[fd];
-
-            if (now - it->second > 3 && req) {
-                if (req->cgiPid > 0) {
-                    kill(req->cgiPid, SIGKILL); // or SIGTERM for a gentler shutdown
-                    req->cgiPid = -1;
-                }   
-                cout << "Client " << fd << " timed out\n";
-                if (req->clientFd > 0) {
-                    cout << "cclient 7aydo" << endl;
-                    epoll_ctl(epollFd, EPOLL_CTL_DEL, req->clientFd, NULL);
-                    requestmp.erase(req->clientFd);
-                    close(req->clientFd);
-                    req->clientFd = -1;
-                }
-                if (req->stdinFd > 0) {
-                    epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdinFd, NULL);
-                    pipes_map.erase(req->stdinFd);
-                    close(req->stdinFd);
-                    req->stdinFd = -1;
-                }
-                if (req->stdoutFd > 0) {
-                    epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdoutFd, NULL);
-                    pipes_map.erase(req->stdoutFd);
-                    close(req->stdoutFd);
-                    req->stdoutFd = -1;
-                }
-                // Remove from all maps (be safe, erase both fd and clientFd)
-                pipes_map.erase(fd);
-                requestmp.erase(fd);
-                clientLastActive.erase(it++);
-                delete req;
-                break;
-            } else {
-                ++it;
-            }
-        }
-
+        if (CGImonitor(epollFd, requestmp , pipes_map, clientLastActive))
+            continue;
         for (int i = 0; i < numEvents; i++) {
             int eventFd = events[i].data.fd;
 
@@ -116,7 +74,6 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             }
         }
     }
-
     for (map<int, Http*>::iterator it = requestmp.begin(); it != requestmp.end(); ++it) {
         Http* http = it->second;
         if (http && http->routeResult.fileStream != NULL) {

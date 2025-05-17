@@ -5,7 +5,6 @@ RouteResult handleRouting(Http* req) {
     RouteResult result = {200, "OK", "", "text/plain", "", false, false};
     string reqPath = req->uri;
 
-    cout << "the full_path : " << req->fullPath << endl;
 
     if (isDirectory(req->fullPath)) {
         cout << "is a directory <-------------------" << endl;

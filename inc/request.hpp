@@ -117,5 +117,6 @@ void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &re
 int HandleCGI (int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, Http *> &pipes_map, map<int , time_t> &timer);
 void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map, map<int, time_t> timer);
 void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> &pipes_map);
-
+bool CGImonitor(int epollFd, map<int, Http *> &request, map<int, Http *> &pipes_map, map<int, time_t>& timer) ;
+string strUpper(string str);
 

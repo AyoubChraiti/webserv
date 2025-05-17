@@ -1,26 +1,13 @@
 #include "../../inc/request.hpp"
 
-string strUpper(string str)
-{
-    string res;
-    for (size_t i = 0 ;i < str.size(); i++)
-    {
-        if (str[i] == '-')
-            res += "_";
-        else
-            res += static_cast<char>(toupper(str[i]));
-    }
-    return res;
-}
-
-void setupCGIenv(string &scriptname, Http *reqStates, vector <char *> &vec, vector<string> &envVar) {
+void setupCGIenv(string &FullPath, Http *reqStates, vector <char *> &vec, vector<string> &envVar) {
     map <string, string > env;
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_PROTOCOL"] = reqStates->version;
     env["REQUEST_METHOD"] = reqStates->method;
-    // env["REDIRECT_STATUS"] = "200";
-    env["SCRIPT_FILENAME"] = scriptname; // edit
-    env["SCRIPT_NAME"] = "script.php";
+    env["REDIRECT_STATUS"] = "200";
+    env["SCRIPT_FILENAME"] = FullPath;
+    env["SCRIPT_NAME"] = FullPath.substr(FullPath.find_last_of("/") + 1);
     env["QUERY_STRING"] = reqStates->querystring;
     if (reqStates->method == "POST") {
         if (reqStates->headers.find("Content-Type") != reqStates->headers.end())
@@ -50,6 +37,8 @@ void childCGI (Http *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
     dup2(stdoutFd[1], STDOUT_FILENO);
     if (reqStates->method == "POST")
         dup2(stdinFd[0], STDIN_FILENO);
+    else
+        close(STDIN_FILENO);
     close(stdinFd[0]);
     close(stdoutFd[1]);
 
@@ -66,9 +55,9 @@ void sigchld_handler(int)
 
 void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> &pipes_map)
 {
-    cout << "reading" << endl;
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));
+    cout << recvBytes << endl;
     if (recvBytes == -1)
         return (perror("read"), void());
     reqStates->outputCGI.append(buff, recvBytes);
@@ -80,6 +69,7 @@ void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map, map
     char buff[BUFFER_SIZE];
     reqStates->bodyFile.read(buff, BUFFER_SIZE);
     size_t bytesRead = reqStates->bodyFile.gcount();
+    cout << "write : " << bytesRead <<endl;
     if (bytesRead > 0)
     {
         write(writeFd, buff, bytesRead);
@@ -117,22 +107,22 @@ int HandleCGI(int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, H
         childCGI(it->second, stdoutFd, stdinFd, clientFd);
     }
     else {
+        reqStates[clientFd]->cgiPid = pid;
         close(stdoutFd[1]);
         close(stdinFd[0]);
         if (it->second->method == "POST") {
             add_fds_to_epoll(epollFd, stdinFd[1], EPOLLOUT);
             pipes_map[stdinFd[1]] = it->second;
+            timer[stdinFd[1]] = now;
             pipes_map[stdinFd[1]]->stdinFd = stdinFd[1];
         }
-        else {
+        else
             close(stdinFd[1]);
-        }
-        reqStates[clientFd]->cgiPid = pid;
         add_fds_to_epoll(epollFd, stdoutFd[0], EPOLLIN);
         pipes_map[stdoutFd[0]] = it->second;
-
         timer[stdoutFd[0]] = now;
         pipes_map[stdoutFd[0]]->stdoutFd = stdoutFd[0];
     }
     return 0;
 }
+
