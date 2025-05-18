@@ -2,14 +2,12 @@
 #include "../../inc/responce.hpp"
 
 RouteResult handleRouting(Http* req) {
-    RouteResult result = {200, "OK", "", "text/plain", "", false, false};
+    RouteResult result;
     string reqPath = req->uri;
 
 
     if (isDirectory(req->fullPath)) {
-        cout << "is a directory <-------------------" << endl;
         if (back(req->fullPath) != '/') {
-            cout << "code for rederection <-------------------" << endl;
             result.shouldRDR = true;
             result.redirectLocation = req->uri + "/";
             result.statusCode = 301;

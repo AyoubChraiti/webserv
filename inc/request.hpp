@@ -45,6 +45,9 @@ struct RouteResult {
     bool shouldRDR;
     bool autoindex;
     ifstream* fileStream;
+
+    RouteResult() :statusCode(200), statusText("OK"), responseBody(""), contentType("text/plain"),
+        redirectLocation(""), shouldRDR(false), autoindex(false), fileStream(NULL) {}
 };
 
 class Http {
