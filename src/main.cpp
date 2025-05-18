@@ -5,7 +5,12 @@ bool shutServer = false;
 int main(int ac, char **av) {
     if (ac == 2) {
         try {
-            ctrl_C();
+            ctrl_C();            
+            struct sigaction sa;
+            sa.sa_handler = sigchld_handler;
+            sigemptyset(&sa.sa_mask);
+            sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+            sigaction(SIGCHLD, &sa, NULL);
             mpserv servercnf = configChecking(av[1]);
             webserver(servercnf);
         }

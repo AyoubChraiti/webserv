@@ -70,7 +70,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 if (events[i].events & EPOLLIN)
                     handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map, clientLastActive);
                 else if (events[i].events & EPOLLOUT)
-                    handle_client_write(eventFd, epollFd, requestmp);
+                    handle_client_write(eventFd, epollFd, requestmp, pipes_map, clientLastActive);
             }
         }
     }

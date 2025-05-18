@@ -184,6 +184,20 @@ void Http::HandleHeaders()
         checkPost();
 }
 
+void Http::openFile(string name)
+{
+    if (name.empty())
+        throw HttpExcept(409, "Empty Body");
+    string filename = mtroute.uploadStore + name;
+    ifstream testFile(filename.c_str()); // goodbit and failbit are set if its open 
+    // if (testFile.good())
+    //     throw HttpExcept(409, "File already open");
+    testFile.close();
+    bodyFile.open(filename.c_str(), ios::in | ios::out | ios::binary | ios::trunc);
+    if (!bodyFile.is_open())
+        throw HttpExcept(500, "Fail openning file");
+}
+
 void Http::HandleChunkedBody()
 {
     while (!buffer.empty()) 
@@ -197,6 +211,13 @@ void Http::HandleChunkedBody()
             if (crlf_pos == string::npos) 
                 return ;
             contentLength = hexToInt(buffer.substr(0, crlf_pos));
+            maxBodySizeChunked += contentLength;
+            if (maxBodySizeChunked > StringStream(conf.maxBodySize))
+            {
+                throw HttpExcept(413 , "Request Entity too large Chunked");
+                bodyFile.clear();
+                bodyFile.close();
+            }
             buffer.erase(0, crlf_pos + 2);
         }
         else
@@ -216,20 +237,6 @@ void Http::HandleChunkedBody()
         if (!remaining && buffer.size() >= 2 && buffer.find("\r\n") == string::npos)
             throw HttpExcept(400 ,"Bad Request3");
     }
-}
-
-void Http::openFile(string name)
-{
-    if (name.empty())
-        throw HttpExcept(409, "Empty Body");
-    string filename = mtroute.uploadStore + name;
-    ifstream testFile(filename.c_str()); // goodbit and failbit are set if its open 
-    // if (testFile.good())
-    //     throw HttpExcept(409, "File already open");
-    testFile.close();
-    bodyFile.open(filename.c_str(), ios::in | ios::out | ios::binary | ios::trunc);
-    if (!bodyFile.is_open())
-        throw HttpExcept(500, "Fail openning file");
 }
 
 void Http::HandleBoundary() 
@@ -287,31 +294,34 @@ void Http::HandleBoundary()
     }
 }
 
+void Http::HandleBody()
+{
+    if (contentLength == 0 && !hasBody) {
+        state = COMPLETE;
+        return ;
+    } 
+    hasBody = true;
+    if (contentLength > StringStream(conf.maxBodySize))
+        throw HttpExcept(413 , "Request Entity too large");
+    if (Boundary.empty())
+    {
+        contentLength -= buffer.size();
+        writebody(bodyFile,  buffer);
+    }
+    else
+        HandleBoundary();
+    if (contentLength == 0) {
+        cout << "End reading File" << endl;
+        bodyFile.clear();
+        bodyFile.seekg(0, ios::beg);
+        state = COMPLETE;
+    }
+}
+
 void Http::parseBody()
 {
     if (!isChunked)
-    {
-        if (contentLength == 0 && !hasBody) {
-            state = COMPLETE;
-            return ;
-        } 
-        hasBody = true;
-        if (contentLength > StringStream(conf.maxBodySize))
-            throw HttpExcept(413 , "Request Entity too large");
-        if (Boundary.empty())
-        {
-            contentLength -= buffer.size();
-            writebody(bodyFile,  buffer);
-        }
-        else
-            HandleBoundary();
-        if (contentLength == 0) {
-            cout << "End reading File" << endl;
-            bodyFile.clear();
-            bodyFile.seekg(0, ios::beg);
-            state = COMPLETE;
-        }
-    }
+        HandleBody();
     else
         HandleChunkedBody();
 }

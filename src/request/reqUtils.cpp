@@ -21,6 +21,7 @@ Http::Http(servcnf config) {
     stdoutFd = -1;
     clientFd = -1;
     cgiPid = -1;
+    maxBodySizeChunked = 0;
 }
 
 Http::~Http() {}

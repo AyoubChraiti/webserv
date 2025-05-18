@@ -12,7 +12,23 @@ string strUpper(string str)
     }
     return res;
 }
-
+void closeFds (int epollFd, Http *req, map<int, Http *> &pipes_map, map<int, time_t>& timer)
+{
+    if (req->stdoutFd > 0) {
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdoutFd, NULL);
+        timer.erase(req->stdoutFd);
+        pipes_map.erase(req->stdoutFd);
+        close(req->stdoutFd);
+        req->stdoutFd = -1;
+    }
+    if (req->stdinFd > 0) {
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdinFd, NULL);
+        timer.erase(req->stdinFd);
+        pipes_map.erase(req->stdinFd);
+        close(req->stdinFd);
+        req->stdinFd = -1;
+    }
+}
 bool CGImonitor(int epollFd ,map<int, Http *> &requestmp, map<int, Http *> &pipes_map, map<int, time_t>& timer) 
 {
     time_t now = time(NULL);
@@ -27,20 +43,7 @@ bool CGImonitor(int epollFd ,map<int, Http *> &requestmp, map<int, Http *> &pipe
                 kill(req->cgiPid, SIGKILL);
                 req->cgiPid = -1;
             }
-            if (req->stdoutFd > 0) {
-                epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdoutFd, NULL);
-                timer.erase(req->stdoutFd);
-                pipes_map.erase(req->stdoutFd);
-                close(req->stdoutFd);
-                req->stdoutFd = -1;
-            }
-            if (req->stdinFd > 0) {
-                epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdinFd, NULL);
-                timer.erase(req->stdinFd);
-                pipes_map.erase(req->stdinFd);
-                close(req->stdinFd);
-                req->stdinFd = -1;
-            }
+            closeFds(epollFd, req, pipes_map, timer);
             if (req->clientFd > 0) {
                 epoll_ctl(epollFd, EPOLL_CTL_DEL, req->clientFd, NULL);
                 requestmp.erase(req->clientFd);

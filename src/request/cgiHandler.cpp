@@ -38,7 +38,7 @@ void childCGI (Http *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
     if (reqStates->method == "POST")
         dup2(stdinFd[0], STDIN_FILENO);
     else
-        close(STDIN_FILENO);
+        close(STDIN_FILENO); // edit
     close(stdinFd[0]);
     close(stdoutFd[1]);
 
@@ -64,7 +64,7 @@ void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> 
     modifyState(epollFd, pipes_map[readFd]->clientFd, EPOLLOUT);
 }
 
-void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map, map<int, time_t> timer) {
+void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map, map<int, time_t> &timer) {
     Http *reqStates = pipes_map[writeFd];
     char buff[BUFFER_SIZE];
     reqStates->bodyFile.read(buff, BUFFER_SIZE);

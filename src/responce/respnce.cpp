@@ -52,52 +52,48 @@ void parseCGIandSend(int epollFd, int fd, Http* req,  map<int, Http *>& requestm
 {
     if (req->stateCGI == HEADERS_CGI)
     {
+        int toDelete = 4;
         size_t pos = req->outputCGI.find("\r\n\r\n");
+        if (pos == string::npos) {
+            toDelete = 2;
+            pos =  req->outputCGI.find("\n\n");
+        }
+        if (pos == string::npos)
+            throw HttpExcept(502, "Bad Gateway");
         string headers;
         string body;
         string statusLine = "HTTP/1.1 200 OK\r\n";
-        if (pos == string::npos)
+        map<string , string> storeHeaders;
+        headers = req->outputCGI.substr(0, pos);
+        body = req->outputCGI.substr(pos + toDelete);
+        size_t start = 0;
+        while (start < headers.size())
         {
-            body = req->outputCGI;
-            headers.append("Content-Type: text/html\r\n");
-            headers.append("Transfer-Encoding: Chunked\r\n");
-            headers.append ("Connection: close\r\n");
-        }
-        else
-        {
-            map<string , string> storeHeaders;
-            headers = req->outputCGI.substr(0, pos);
-            body = req->outputCGI.substr(pos + 4);
-            size_t start = 0;
-            while (start < headers.size())
-            {
-                size_t posEnd = headers.find("\r\n", start);
-                if (posEnd == string::npos)
-                    break;
-                string line = headers.substr(start, posEnd - start);
-                start = posEnd + 2;
-                size_t indexColon = line.find(":");
-                if (indexColon != string::npos) {
-                    string key = trim(line.substr(0, indexColon));
-                    string value = trim(line.substr(indexColon + 1));
-                    storeHeaders[key] = value;
-                }
+            size_t posEnd = headers.find("\r\n", start);
+            if (posEnd == string::npos)
+                break;
+            string line = headers.substr(start, posEnd - start);
+            start = posEnd + 2;
+            size_t indexColon = line.find(":");
+            if (indexColon != string::npos) {
+                string key = trim(line.substr(0, indexColon));
+                string value = trim(line.substr(indexColon + 1));
+                storeHeaders[key] = value;
             }
-            if (storeHeaders.count("Content-Type") == 0)
-                storeHeaders["Content-Type"] = "text/html";
-            if (storeHeaders.count ("Connection") == 0)
-                storeHeaders["Connection"] = "close";
-            if (storeHeaders.count("Content-Length") > 0)
-                storeHeaders.erase("Content-Length");
-            if (storeHeaders.count("Transfer-Encoding") > 0)
-                storeHeaders.erase("Transfer-Encoding");
-            storeHeaders["Transfer-Encoding"] = "chunked";
-            headers.clear();
-            map<string, string>::const_iterator it = storeHeaders.begin();
-            for (; it != storeHeaders.end(); it++)
-                headers += it->first + ": " + it->second + "\r\n";
-
         }
+        if (storeHeaders.count("Content-Type") == 0)
+            storeHeaders["Content-Type"] = "text/html";
+        if (storeHeaders.count ("Connection") == 0)
+            storeHeaders["Connection"] = "close";
+        if (storeHeaders.count("Content-Length") > 0)
+            storeHeaders.erase("Content-Length");
+        if (storeHeaders.count("Transfer-Encoding") > 0)
+            storeHeaders.erase("Transfer-Encoding");
+        storeHeaders["Transfer-Encoding"] = "chunked";
+        headers.clear();
+        map<string, string>::const_iterator it = storeHeaders.begin();
+        for (; it != storeHeaders.end(); it++)
+            headers += it->first + ": " + it->second + "\r\n";
         req->outputCGI.clear();
         req->outputCGI.append(statusLine).append(headers).append("\r\n");
         req->outputCGI.append(to_hex(body.size()) + "\r\n").append(body).append("\r\n");
@@ -124,7 +120,7 @@ void parseCGIandSend(int epollFd, int fd, Http* req,  map<int, Http *>& requestm
         modifyState(epollFd, fd, EPOLLIN);
 }
 
-void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp) {
+void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<int, Http *> &pipes_map, map<int, time_t>& timer) {
     map<int, Http*>::iterator it = requestmp.find(fd);
     if (it == requestmp.end()) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL);
@@ -168,6 +164,8 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp) {
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what(), req->conf);
+        if (req->isCGI && req->stateCGI != COMPLETE_CGI)
+            closeFds(epollFd, req, pipes_map, timer);
         delete requestmp[fd];
         requestmp.erase(fd);
         struct epoll_event ev;

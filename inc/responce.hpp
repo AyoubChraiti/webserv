@@ -6,7 +6,7 @@
 
 
 
-void handle_client_write(int clientFd, int epollFd, map<int, Http *>& requestmp);
+void handle_client_write(int clientFd, int epollFd, map<int, Http *>& requestmp, map<int, Http *> &pipes_map, map<int, time_t>& timer);
 void sendRedirect(int clientFd, const string& location, Http* req);
 bool isDirectory(const string& path);
 string getContentType(const string& filepath);
