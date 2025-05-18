@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ServerPulse – Docs</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<header>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a aria-current="page" href="docs.html">Docs</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+</header>
+
+<main>
+  <section class="content">
+    <h1>API Documentation</h1>
+    <table style="margin:1.5rem auto;border-collapse:collapse;font-family:var(--mono)">
+      <thead>
+        <tr><th style="padding:.5rem 1rem;border:1px solid var(--accent)">Endpoint</th>
+            <th style="padding:.5rem 1rem;border:1px solid var(--accent)">Method</th>
+            <th style="padding:.5rem 1rem;border:1px solid var(--accent)">Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:.5rem 1rem;border:1px solid var(--accent2)">/ping</td>
+            <td style="padding:.5rem 1rem;border:1px solid var(--accent2)">GET</td>
+            <td style="padding:.5rem 1rem;border:1px solid var(--accent2)">Returns “pong” with latency.</td></tr>
+        <tr><td style="padding:.5rem 1rem;border:1px solid var(--accent2)">/health</td>
+            <td style="padding:.5rem 1rem;border:1px solid var(--accent2)">GET</td>
+            <td style="padding:.5rem 1rem;border:1px solid var(--accent2)">System stats (CPU, RAM, uptime).</td></tr>
+        <tr><td style="padding:.5rem 1rem;border:1px solid var(--accent2)">/alert</td>
+            <td style="padding:.5rem 1rem;border:1px solid var(--accent2)">POST</td>
+            <td style="padding:.5rem 1rem;border:1px solid var(--accent2)">Register a downtime webhook.</td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<footer>
+  <p>Docs last updated May 2025</p>
+</footer>
+</body>
+</html>

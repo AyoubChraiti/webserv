@@ -27,9 +27,12 @@ RouteResult handleRouting(Http* req) {
         }
         req->fullPath += req->mtroute.index;
     }
+    cout << "File : " << req->fullPath << endl;
+    
     if (!fileExists(req->fullPath)) {
         throw HttpExcept(404, "Not Found");
     }
+
 
     ifstream* file = new ifstream(req->fullPath.c_str(), ios::binary);
     if (!file->is_open()) {
