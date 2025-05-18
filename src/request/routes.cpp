@@ -32,7 +32,8 @@ RouteResult handleRouting(Http* req) {
     if (!fileExists(req->fullPath)) {
         throw HttpExcept(404, "Not Found");
     }
-
+    if (req->mtroute.cgi)
+        return result;
 
     ifstream* file = new ifstream(req->fullPath.c_str(), ios::binary);
     if (!file->is_open()) {
