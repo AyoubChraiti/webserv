@@ -42,7 +42,8 @@ bool CGImonitor(int epollFd ,map<int, Http *> &requestmp, map<int, Http *> &pipe
                 kill(req->cgiPid, SIGKILL);
                 req->cgiPid = -1;
             }
-            sendErrorResponse(req->clientFd, 504, "504 Gateway Timeout", req->conf);
+            if (req->stateCGI == HEADERS_CGI)
+                sendErrorResponse(req->clientFd, 504, "504 Gateway Timeout", req->conf);
             closeFds(epollFd, req, pipes_map, timer);
             if (req->clientFd > 0) {
                 epoll_ctl(epollFd, EPOLL_CTL_DEL, req->clientFd, NULL);

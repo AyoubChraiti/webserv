@@ -3,8 +3,8 @@ import time
 import sys
 
 # Print CGI headers
-print("Content-Type: text/plain\r\n\r\n")
-print()
+# print("Content-Type: text/plain\r\n\r\n")
+# print()
 # Ensure headers are sent immediately
 sys.stdout.flush()
 
