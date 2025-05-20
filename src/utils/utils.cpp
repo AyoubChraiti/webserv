@@ -38,6 +38,9 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
         case 505:
             statusText = "HTTP Version Not Supported";
             break;
+        case 504:
+            statusText = "Gateway Timeout";
+            break;
         default:
             statusText = "Error";
             break;

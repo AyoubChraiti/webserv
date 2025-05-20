@@ -31,10 +31,10 @@ void closeFds (int epollFd, Http *req, map<int, Http *> &pipes_map, map<int, tim
 }
 bool CGImonitor(int epollFd ,map<int, Http *> &requestmp, map<int, Http *> &pipes_map, map<int, time_t>& timer) 
 {
-    cout << "Monitoring Cgi" << endl;
     time_t now = time(NULL);
     for (map<int, time_t>::iterator it = timer.begin(); it != timer.end(); ) {
-        if (now - it->second > TIMEOUT) {
+        cout << "Monitoring Cgi" << endl; 
+        if (now - it->second >= TIMEOUT) {
             int fd = it->first;
             Http *req = pipes_map[fd];
             cout << "Client " << fd << " timed out\n";
@@ -42,6 +42,7 @@ bool CGImonitor(int epollFd ,map<int, Http *> &requestmp, map<int, Http *> &pipe
                 kill(req->cgiPid, SIGKILL);
                 req->cgiPid = -1;
             }
+            sendErrorResponse(req->clientFd, 504, "504 Gateway Timeout", req->conf);
             closeFds(epollFd, req, pipes_map, timer);
             if (req->clientFd > 0) {
                 epoll_ctl(epollFd, EPOLL_CTL_DEL, req->clientFd, NULL);

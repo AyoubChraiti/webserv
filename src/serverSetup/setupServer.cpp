@@ -14,10 +14,11 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
         sysCallFail();
     }
 }
-int get_close_timeout (map<int, time_t> clientLastActive)
+int get_close_timeout (map<int, time_t> &clientLastActive)
 {
     if (clientLastActive.empty())
         return -1;
+    
     time_t now = time(NULL);
     std::map<int, time_t>::const_iterator it = clientLastActive.begin();
     int minTime = static_cast<int>(it->second);
