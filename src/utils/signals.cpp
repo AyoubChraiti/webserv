@@ -10,4 +10,5 @@ void signal_exit(int sig) {
 void ctrl_C() {
     signal(SIGINT, signal_exit);
     signal(SIGTERM, signal_exit);
+    signal(SIGPIPE, SIG_IGN);
 }
