@@ -52,6 +52,7 @@ void parseCGIandSend(int epollFd, int fd, Http* req,  map<int, Http *>& requestm
 {
     if (req->stateCGI == HEADERS_CGI)
     {
+        cout << "Response" << endl;
         int toDelete = 4;
         size_t pos = req->outputCGI.find("\r\n\r\n");
         if (pos == string::npos) {

@@ -11,4 +11,3 @@ sys.stdout.flush()
 # Infinite loop: send a dot every second
 while True:
     time.sleep(1)
-    print(".", end="", flush=True)

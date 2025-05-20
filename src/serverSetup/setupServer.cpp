@@ -14,7 +14,22 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
         sysCallFail();
     }
 }
-
+int get_close_timeout (map<int, time_t> clientLastActive)
+{
+    if (clientLastActive.empty())
+        return -1;
+    time_t now = time(NULL);
+    std::map<int, time_t>::const_iterator it = clientLastActive.begin();
+    int minTime = static_cast<int>(it->second);
+    ++it;
+    for (; it != clientLastActive.end(); ++it) {
+        if (it->second < minTime) {
+            minTime = static_cast <int> (it->second);
+        }
+    }
+    int remaining = TIMEOUT - static_cast<int>(now - minTime);
+    return remaining * 1000;
+}
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     map<int, Http *> requestmp;
     map<int, Http*> pipes_map;
@@ -29,7 +44,9 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
 
     struct epoll_event events[MAX_EVENTS];
     while (!shutServer) {
-        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
+        int timeout = get_close_timeout(clientLastActive);
+        cout << timeout<< endl;
+        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
         if (numEvents == -1) {
             if (errno != EINTR) {
                 cout << "epoll_wait fail\n";

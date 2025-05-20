@@ -35,6 +35,7 @@ void childCGI (Http *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
     close(stdoutFd[0]);
     close(stdinFd[1]);
     dup2(stdoutFd[1], STDOUT_FILENO);
+    dup2(stdoutFd[1], STDERR_FILENO);
     if (reqStates->method == "POST")
         dup2(stdinFd[0], STDIN_FILENO);
     else
@@ -55,9 +56,9 @@ void sigchld_handler(int)
 
 void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> &pipes_map)
 {
+    cout << "Read cgi script" << endl;
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));
-    cout << recvBytes << endl;
     if (recvBytes == -1)
         return (perror("read"), void());
     reqStates->outputCGI.append(buff, recvBytes);

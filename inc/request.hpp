@@ -4,6 +4,7 @@
 
 #define BUFFER_SIZE 8192 // <----------------
 #define MAX_URI_LENGTH 1024
+#define TIMEOUT 10
 
 
 class HttpExcept : public exception {
