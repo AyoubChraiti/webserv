@@ -1,6 +1,6 @@
 #include "../../inc/request.hpp"
 
-void setupCGIenv(string &FullPath, Http *reqStates, vector <char *> &vec, vector<string> &envVar) {
+void setupCGIenv(string &FullPath, Http *reqStates, vector <const char *> &vec, vector<string> &envVar) {
     map <string, string > env;
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_PROTOCOL"] = reqStates->version;
@@ -19,16 +19,18 @@ void setupCGIenv(string &FullPath, Http *reqStates, vector <char *> &vec, vector
         if (it->first != "Content-Length" && it->first != "Content-Type")
             env["HTTP_" + strUpper(it->first)] = it->second;
     }
+    envVar.reserve(env.size());
+    vec.reserve(env.size() + 1);
     for (map<string, string>::iterator it = env.begin(); it != env.end(); it++) {
         envVar.push_back(it->first + "=" + it->second);
         vec.push_back(const_cast<char *>(envVar.back().c_str())); 
     }
     vec.push_back(NULL);
-}   
+}
 
 void childCGI (Http *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
 {
-    vector <char *> vec;
+    vector <const char *> vec;
     vector <string> envVar;
     setupCGIenv(reqStates->fullPath, reqStates, vec, envVar);
     close (clientFd);
@@ -44,7 +46,7 @@ void childCGI (Http *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
     close(stdoutFd[1]);
 
     const char *args[] = {reqStates->_extensionCGI.c_str(), reqStates->fullPath.c_str(), NULL}; // cant change charcter
-    execve(reqStates->_extensionCGI.c_str(), const_cast<char* const*>(args), vec.data()); // cast (cant change string)
+    execve(reqStates->_extensionCGI.c_str(), const_cast<char* const*>(args), const_cast<char* const*>(vec.data())); // cast (cant change string)
     perror("cgi execve failed");
     exit(1);
 }
