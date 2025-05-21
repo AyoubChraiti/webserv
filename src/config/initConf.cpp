@@ -42,14 +42,14 @@ string remove_comment(string line) {
     return line;
 }
 
-void configFile::parseLine(string &line, servcnf &server, routeCnf &route, string &section) {
+void configFile::parseLine(string &line, servcnf &server, string &section) {
     line = remove_comment(line);
     line = trim(line);
 
     if (line.empty())
         return;
 
-    if (line[0] == '[' && line.back() == ']') {
+    if (line[0] == '[' && back(line) == ']') {
         section = line.substr(1, line.size() - 2);
         return;
     }
@@ -83,48 +83,58 @@ void configFile::parseLine(string &line, servcnf &server, routeCnf &route, strin
         string routePath = section.substr(6); 
         if (routePath.empty())
             throw runtime_error("Error: syntax issue in the config file.");
+
+        routeCnf& route = server.routes[routePath];
         route.root = routePath;
+
         if (key == "methodes") {
             route.methodes = split(value, ',');
         }
         else if (key == "alias")
             route.alias = value;
-        else if (key == "index") {
+        else if (key == "index")
             route.index = value;
-        }
         else if (key == "directory_listing")
             route.autoindex = (value == "on");
         else if (key == "redirect") {
             route.redirect = value;
         }
-        else if (key == "cgi_exec") {
-            vector<string> cgiData = split(value, ':');
-            if (cgiData.size() == 2) {
-                route.cgi_extension = cgiData[0];
-                route.cgi_pass = cgiData[1];
-            }
-        }
         else if (key == "allow_upload")
             route.fileUpload = (value == "true");
         else if (key == "upload_directory")
             route.uploadStore = value;
-
-        server.routes[routePath] = route;
+        else if (key == "cgi") {
+            if (value == "on")
+                route.cgi = true;
+        }
+        else if (key == "methodes_cgi") {
+            route.cgi_methods = split(value, ',');
+        }
+        else if (key == "cgi_extension") {
+            vector<string> extensions = split(value, ',');
+            for (size_t i = 0; i < extensions.size(); i++) {
+                vector<string> pair = split(extensions[i], ':');
+                if (pair.size() != 2)
+                    throw runtime_error("Error: invalid CGI extension format.");
+                route.cgi_map[trim(pair[0])] = trim(pair[1]);
+            }
+        }
+        else
+            throw runtime_error("Error: syntax issue in the config file.");
     }
 }
 
 const mpserv& configFile::parseConfig() {
-    cnf.open(fileName);
+    cnf.open(fileName.c_str());
     if (!cnf.is_open())
         throw runtime_error("Error opening the congif file.");
 
     string line, section;
     servcnf server;
-    routeCnf route;
     bool inserver = false;
 
     while (getline(cnf, line)) {
-        parseLine(line, server, route, section);
+        parseLine(line, server, section);
 
         if (line == "[server]") {
             if (inserver) {

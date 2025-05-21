@@ -1,6 +1,10 @@
 #include "../../inc/header.hpp"
 #include "../../inc/config.hpp"
 
+char back(string& str) {
+    return str[str.size() - 1];
+}
+
 void sysCallFail() {
     perror("syscall Error");
     exit(1);
@@ -34,6 +38,9 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
         case 505:
             statusText = "HTTP Version Not Supported";
             break;
+        case 504:
+            statusText = "Gateway Timeout";
+            break;
         default:
             statusText = "Error";
             break;
@@ -41,7 +48,7 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
 
     if (serverConfig.error_pages.find(statusCode) != serverConfig.error_pages.end()) {
         filePath = serverConfig.error_pages.at(statusCode);
-        ifstream errorFile(filePath);
+        ifstream errorFile(filePath.c_str());
         if (errorFile.is_open()) {
             stringstream buffer;
             buffer << errorFile.rdbuf();
@@ -50,7 +57,8 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
             if (filePath.find(".html") != string::npos) {
                 contentType = "text/html";
             }
-        } else {
+        }
+        else {
             cerr << "Warning: Could not open error page file: " << filePath << endl;
             responseBody = message;
         }
@@ -66,9 +74,7 @@ void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& s
         "\r\n" + responseBody;
 
     cerr << "Error: '" << statusText << "' sent to client (code: " << statusCode << ")" << endl;
-
     send(fd, response.c_str(), response.length(), 0);
-    close(fd);
 }
 
 string getIp(string hostname) {
@@ -86,8 +92,8 @@ string getIp(string hostname) {
     addr = (struct sockaddr_in *)res->ai_addr;
     char ip_str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(addr->sin_addr), ip_str, INET_ADDRSTRLEN);
-
-    in_addr_t ip = addr->sin_addr.s_addr; // will i need this later?
+    // in_addr_t ip = addr->sin_addr.s_addr; // will i need this later?
     freeaddrinfo(res);
     return string(ip_str);
 }
+

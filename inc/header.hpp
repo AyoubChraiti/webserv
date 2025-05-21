@@ -24,14 +24,13 @@
 #include <iomanip>
 #include <algorithm>
 #include <sys/wait.h>
-#include <filesystem>
 
 using namespace std;
 
 extern bool shutServer;
 
 struct mpserv;
-class HttpRequest;
+class Http;
 
 /* error handling */
 void sysCallFail();
@@ -47,9 +46,12 @@ string to_string(T value) {
     return oss.str();
 }
 
+char back(string& str);
+
 void ctrl_C();
 
 string getIp(string hostname);
 string trim(const string& str);
 void add_fds_to_epoll(int epollFd, int fd, uint32_t events);
 void sigchld_handler(int);
+

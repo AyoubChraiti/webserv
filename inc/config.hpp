@@ -9,12 +9,13 @@ struct routeCnf {
     string index;
     bool autoindex;
     string redirect;
-    string cgi_pass;
-    string cgi_extension;
     bool fileUpload;
     string uploadStore;
+    bool cgi;//7
+    vector<string> cgi_methods;
+    map<string, string> cgi_map;
 
-    routeCnf() : autoindex(false), fileUpload(false) {}
+    routeCnf() : autoindex(false), fileUpload(false), cgi(false) {}
 };
 
 struct servcnf {
@@ -41,7 +42,7 @@ private:
     size_t parseSize(const string &s);
     string getKey(const servcnf& server);
     vector<string> split(const string &str, char delimiter);
-    void parseLine(string &line, servcnf &server, routeCnf &route, string &section);
+    void parseLine(string &line, servcnf &server, string &section);
 
 public:
     configFile(const string &file);
@@ -52,3 +53,4 @@ mpserv configChecking(const string &filePath);
 bool isValidFile(const string &path);
 bool isValidDirectory(const string &path);
 string trim(const string& str);
+

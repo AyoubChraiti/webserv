@@ -3,11 +3,12 @@
 void signal_exit(int sig) {
     (void)sig;
     shutServer = true;
-    cout << "\nexitingggggggg.........." << endl;
-    exit(1);
+    cout << "\n Ctrl-C trigered: exiting.." << endl;
+    // exit(1);
 }
 
 void ctrl_C() {
     signal(SIGINT, signal_exit);
     signal(SIGTERM, signal_exit);
+    signal(SIGPIPE, SIG_IGN);
 }

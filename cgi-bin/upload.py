@@ -16,7 +16,7 @@ def main():
         post_body = sys.stdin.read()
 
     # Output HTTP headers followed by the body
-    print("Content-Type: text/plain")
+    print("Content-Type: text/plain\r\n\r\n")
     print()
     print(post_body)
 

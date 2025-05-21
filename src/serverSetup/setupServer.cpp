@@ -3,9 +3,10 @@
 #include "../../inc/responce.hpp"
 
 #define MAX_EVENTS 10
+
 void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
     struct epoll_event ev;
-    ev.events = events;
+    ev.events = events | EPOLLRDHUP | EPOLLHUP | EPOLLERR;  // Add these flags
     ev.data.fd = fd;
 
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1) {
@@ -13,30 +14,47 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
         sysCallFail();
     }
 }
-
+int get_close_timeout (map<int, time_t> &clientLastActive)
+{
+    if (clientLastActive.empty())
+        return -1;
+    
+    time_t now = time(NULL);
+    std::map<int, time_t>::const_iterator it = clientLastActive.begin();
+    int minTime = static_cast<int>(it->second);
+    ++it;
+    for (; it != clientLastActive.end(); ++it) {
+        if (it->second < minTime) {
+            minTime = static_cast <int> (it->second);
+        }
+    }
+    int remaining = TIMEOUT - static_cast<int>(now - minTime);
+    return remaining * 1000;
+}
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
-    map<int, HttpRequest> requestmp;
-    map<int, HttpRequest *> pipes_map;
+    map<int, Http *> requestmp;
+    map<int, Http*> pipes_map;
+    map<int, time_t> clientLastActive;
     int epollFd = epoll_create1(0);
     if (epollFd == -1)
         sysCallFail();
 
-    for (int i = 0; i < servrs.size(); i++) {
+    for (size_t i = 0; i < servrs.size(); i++) {
         add_fds_to_epoll(epollFd, servrs[i], EPOLLIN);
     }
 
     struct epoll_event events[MAX_EVENTS];
-
-    while (true) {
-        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, -1);
+    while (!shutServer) {
+        int timeout = get_close_timeout(clientLastActive);
+        int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
         if (numEvents == -1) {
             if (errno != EINTR) {
-                cout << "epoll fail\n";
+                cout << "epoll_wait fail\n";
                 sysCallFail();
             }
-            cout << "epoll fail\n";
         }
-
+        if (CGImonitor(epollFd, requestmp , pipes_map, clientLastActive))
+            continue;
         for (int i = 0; i < numEvents; i++) {
             int eventFd = events[i].data.fd;
 
@@ -49,43 +67,66 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     continue;
                 }
                 add_fds_to_epoll(epollFd, clientFd, EPOLLIN);
+                continue;
             }
-            else if (pipes_map.find(eventFd) != pipes_map.end())
-            {
+            if (pipes_map.find(eventFd) != pipes_map.end()) {
                 if (events[i].events & EPOLLOUT)
-                    handle_cgi_write(eventFd, epollFd, pipes_map);
+                    handle_cgi_write(eventFd, epollFd, pipes_map, clientLastActive);
                 else if (events[i].events & EPOLLIN)
-                    handle_cgi_read(eventFd, epollFd, pipes_map[eventFd]);
-                else if (events[i].events & EPOLLHUP) 
-                {
-                    parseCGIoutput(pipes_map[eventFd]->outputCGI);
+                    handle_cgi_read(epollFd, eventFd, pipes_map[eventFd], pipes_map);
+                else if (events[i].events & EPOLLHUP) {
+                    clientLastActive.erase(eventFd);
+                    pipes_map[eventFd]->stateCGI = COMPLETE_CGI;
+                    pipes_map[eventFd]->outputCGI.append("0\r\n\r\n");
                     modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
                     epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
-                    pipes_map.erase(eventFd);
                     close(eventFd);
+                    pipes_map.erase(eventFd);
                 }
+                continue;
+            }
+            if (events[i].events & (EPOLLERR | EPOLLHUP |  EPOLLRDHUP))
+            {
+                closeFds(epollFd, requestmp, requestmp[eventFd] , pipes_map, clientLastActive);
+                continue;
             }
             else {
-                if (events[i].events & EPOLLIN) {
-                    handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map); // request
-                }
-                else if (events[i].events & EPOLLOUT) {
-                    handle_client_write(eventFd, epollFd, conf, requestmp); // responce
-                }
+                if (events[i].events & EPOLLIN)
+                    handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map, clientLastActive);
+                else if (events[i].events & EPOLLOUT)
+                    handle_client_write(eventFd, epollFd, requestmp, pipes_map, clientLastActive);
             }
         }
-        if (shutServer) {
-            cout << "exiting sucesfully" << endl;
-            break;
-        }
     }
+    for (map<int, Http*>::iterator it = requestmp.begin(); it != requestmp.end(); ++it) {
+        Http* http = it->second;
+        if (http && http->routeResult.fileStream != NULL) {
+            if (http->routeResult.fileStream->is_open()) {
+                http->routeResult.fileStream->close();
+            }
+            delete http->routeResult.fileStream;
+            http->routeResult.fileStream = NULL;
+        }
+        close(it->first);
+        delete http;
+    }
+    requestmp.clear();
+
+    for (map<int, Http*>::iterator it = pipes_map.begin(); it != pipes_map.end(); ++it) {
+        close(it->first);
+    }
+    pipes_map.clear();
+
+    for (size_t i = 0; i < servrs.size(); i++) {
+        close(servrs[i]);
+    }
+    close(epollFd);
 }
 
 void serverSetup(mpserv &conf, vector<int> &servrs) {
     for (map<string, servcnf>::const_iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
         int serverFd;
         struct sockaddr_in address;
-        int addrlen = sizeof(address);
         if ((serverFd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
             sysCallFail();
 

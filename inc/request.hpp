@@ -1,11 +1,10 @@
 #pragma once
 
-#include "string.hpp"
 #include "config.hpp"
 
-#define BUFFER_SIZE 8000
-#define MAX_LINE 1024
-#define MAX_URI_LENGTH 2048
+#define BUFFER_SIZE 8192 // <----------------
+#define MAX_URI_LENGTH 1024
+#define TIMEOUT 10
 
 
 class HttpExcept : public exception {
@@ -23,41 +22,72 @@ public:
     const char* what() const throw() {
         return statusMessage.c_str();
     }
+    virtual ~HttpExcept() throw() {}
 };
 
 enum ParseState {
-    REQUEST_LINE,
-    HEAD,
-    BODY,
-    END_REQUEST
+    READING_REQUEST_LINE,
+    READING_HEADERS,
+    READING_BODY,
+    COMPLETE
 };
 
-class HttpRequest {
+enum CGIState {
+    HEADERS_CGI,
+    BODY_CGI,
+    COMPLETE_CGI
+};
+struct RouteResult {
+    int statusCode;
+    string statusText;
+    string responseBody;
+    string contentType;
+    string redirectLocation;
+    bool shouldRDR;
+    bool autoindex;
+    ifstream* fileStream;
+
+    RouteResult() :statusCode(200), statusText("OK"), responseBody(""), contentType("text/plain"),
+        redirectLocation(""), shouldRDR(false), autoindex(false), fileStream(NULL) {}
+};
+
+class Http {
 public:
-    // string key;
-    // ssize_t req_size;
-    // int bytesRead;
+    string key;
     string buffer;
-    ParseState lineLocation;
+    ParseState state;
     string method, uri, host, connection, version, querystring;
     map<string, string> headers;
+    RouteResult routeResult;
     size_t contentLength;
     servcnf conf;
     routeCnf mtroute;
+    fstream bodyFile;
+    size_t bytesSentSoFar;
+    string outputCGI;
+    size_t remaining;
+    string Boundary ; 
+    string fullPath;
+    string _extensionCGI;
+    CGIState stateCGI;
+    int clientFd;
+    int stdinFd;
+    int stdoutFd;
+    int bytesRead;
+    bool sendingFile;
+    bool startBoundFlag;
+    bool headerSent;
     bool isPostKeys;
     bool isChunked;
     bool isCGI;
-    fstream bodyFile;
+    bool hasBody;
+    int cgiPid;
+    size_t maxBodySizeChunked;
 
-    size_t remaining;
-    string Boundary ; 
-    bool startBoundFlag;
-    int clientFd;
 
-    string outputCGI;
-    HttpRequest();
-    HttpRequest(servcnf config);
-    // method of reqeust
+    Http(servcnf config);
+    ~Http();
+
     bool request(int clientFd);
     void parseRequestLine ();
     void HandleHeaders();
@@ -66,11 +96,17 @@ public:
     void HandleUri();
     void HandleChunkedBody();
     void HandleBoundary() ;
-    bool openFile (string filename);
+    void openFile (string name);
+    void checkIsCGI();
+    void checkPost();
+    void HandleBody();
 };
 
-void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, HttpRequest> &reqStates, map<int , HttpRequest *> &pipes_map);
 void sendErrorResponse(int fd, int statusCode, const string& message, servcnf& serverConfig);
+RouteResult handleRouting(Http* req);
+
+// requestParser file
+void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *> &req, map<int, Http *> &pipes_map, map<int, time_t>& timer);
 void modifyState(int epollFd ,int clientFd, uint32_t events);
 string getInfoClient(int clientFd);
 string getFileName(string buff);
@@ -79,9 +115,15 @@ size_t StringStream(const string &string);
 bool isValidContentLength (const string &value);
 bool isValidHostHeader(const string& host) ;
 void writebody(fstream &bodyFile , string &buffer);
+void closeOrSwitch(int clientFd, int epollFd, Http* req, map<int, Http *>& requestmp);
+void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &reqStates);
 
-int HandleCGI (int epollFd ,int clientFd, map<int, HttpRequest> &reqStates, map<int, HttpRequest *> &pipes_map);
-void handle_cgi_write(int writeFd, int epollFd,map<int, HttpRequest *> &pipes_map);
-void handle_cgi_read(int readFd, int epollFd, HttpRequest *reqStates);
-void parseCGIoutput (string &outputCGI);
-bool is_file(const std::string& path) ;
+
+// CgiHandler headers
+
+int HandleCGI (int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, Http *> &pipes_map, map<int , time_t> &timer);
+void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map, map<int, time_t> &timer);
+void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> &pipes_map);
+bool CGImonitor(int epollFd, map<int, Http *> &request, map<int, Http *> &pipes_map, map<int, time_t>& timer) ;
+string strUpper(string str);
+void closeFds (int epollFd, map<int, Http *> &requestmp,  Http *req, map<int, Http *> &pipes_map, map<int, time_t>& timer);

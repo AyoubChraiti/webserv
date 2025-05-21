@@ -91,23 +91,30 @@ string getContentType(const string& filepath) {
     return "application/octet-stream";
 }
 
-void closeOrSwitch(int clientFd, int epollFd, HttpRequest& req, map<int, HttpRequest>& requestmp) {
-    if (req.connection != "keep-alive") {
-        requestmp.erase(clientFd);
-        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1)
-            cout << "epoll ctl issue\n";
+void closeOrSwitch(int clientFd, int epollFd, Http* req, map<int, Http *>& requestmp) {
+    if (!requestmp[clientFd])
+        return;
+
+    Http* request = requestmp[clientFd];
+
+    requestmp.erase(clientFd);
+    if (req->connection != "keep-alive") {
+        if (epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL) == -1) {
+            perror("epoll_ctl");
+        }
         close(clientFd);
     }
     else {
-        requestmp.erase(clientFd);
         struct epoll_event ev;
         ev.events = EPOLLIN;
         ev.data.fd = clientFd;
         if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
-            cout << "epoll ctl issue\n";
+            perror("epoll_ctl");
         }
     }
+    delete request;
 }
+
 
 string generateAutoIndex(const string& fullPath, const string& uriPath) {
     stringstream html;
@@ -121,7 +128,7 @@ string generateAutoIndex(const string& fullPath, const string& uriPath) {
     }
 
     struct dirent* entry;
-    while ((entry = readdir(dir)) != nullptr) {
+    while ((entry = readdir(dir)) != NULL) {
         string name = entry->d_name;
 
         if (name == ".")
@@ -129,7 +136,7 @@ string generateAutoIndex(const string& fullPath, const string& uriPath) {
 
         string displayName = name;
         string href = uriPath;
-        if (href.back() != '/') href += "/";
+        if (back(href) != '/') href += "/";
         href += name;
 
         string fullEntryPath = fullPath + "/" + name;
