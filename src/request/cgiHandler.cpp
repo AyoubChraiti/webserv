@@ -56,7 +56,6 @@ void sigchld_handler(int)
 
 void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> &pipes_map)
 {
-    cout << "Read cgi script" << endl;
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));
     if (recvBytes == -1)
@@ -70,7 +69,6 @@ void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map, map
     char buff[BUFFER_SIZE];
     reqStates->bodyFile.read(buff, BUFFER_SIZE);
     size_t bytesRead = reqStates->bodyFile.gcount();
-    cout << "write : " << bytesRead <<endl;
     if (bytesRead > 0)
     {
         write(writeFd, buff, bytesRead);

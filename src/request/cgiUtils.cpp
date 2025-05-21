@@ -12,8 +12,13 @@ string strUpper(string str)
     }
     return res;
 }
-void closeFds (int epollFd, Http *req, map<int, Http *> &pipes_map, map<int, time_t>& timer)
+void closeFds (int epollFd, map<int, Http *> &requestmp,  Http *req, map<int, Http *> &pipes_map, map<int, time_t>& timer)
 {
+    if (req->cgiPid > 0) 
+    {
+        kill(req->cgiPid, SIGKILL);
+        req->cgiPid = -1;
+    }
     if (req->stdoutFd > 0) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdoutFd, NULL);
         timer.erase(req->stdoutFd);
@@ -28,30 +33,27 @@ void closeFds (int epollFd, Http *req, map<int, Http *> &pipes_map, map<int, tim
         close(req->stdinFd);
         req->stdinFd = -1;
     }
+    if (req->clientFd > 0) {
+        
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, req->clientFd, NULL);
+        requestmp.erase(req->clientFd);
+        close(req->clientFd);
+        req->clientFd = -1;
+    }
+    delete req;
+    req = NULL;
 }
 bool CGImonitor(int epollFd ,map<int, Http *> &requestmp, map<int, Http *> &pipes_map, map<int, time_t>& timer) 
 {
     time_t now = time(NULL);
     for (map<int, time_t>::iterator it = timer.begin(); it != timer.end(); ) {
-        cout << "Monitoring Cgi" << endl; 
         if (now - it->second >= TIMEOUT) {
             int fd = it->first;
             Http *req = pipes_map[fd];
             cout << "Client " << fd << " timed out\n";
-            if (req->cgiPid > 0) {
-                kill(req->cgiPid, SIGKILL);
-                req->cgiPid = -1;
-            }
             if (req->stateCGI == HEADERS_CGI)
                 sendErrorResponse(req->clientFd, 504, "504 Gateway Timeout", req->conf);
-            closeFds(epollFd, req, pipes_map, timer);
-            if (req->clientFd > 0) {
-                epoll_ctl(epollFd, EPOLL_CTL_DEL, req->clientFd, NULL);
-                requestmp.erase(req->clientFd);
-                close(req->clientFd);
-                req->clientFd = -1;
-            }
-            delete req;
+            closeFds(epollFd, requestmp,req, pipes_map, timer);
             return true;
         } else {
             ++it;

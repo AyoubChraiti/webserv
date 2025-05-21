@@ -6,7 +6,7 @@
 
 void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
     struct epoll_event ev;
-    ev.events = events;
+    ev.events = events | EPOLLRDHUP | EPOLLHUP | EPOLLERR;  // Add these flags
     ev.data.fd = fd;
 
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1) {
@@ -46,7 +46,6 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     struct epoll_event events[MAX_EVENTS];
     while (!shutServer) {
         int timeout = get_close_timeout(clientLastActive);
-        cout << timeout<< endl;
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
         if (numEvents == -1) {
             if (errno != EINTR) {
@@ -68,13 +67,15 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     continue;
                 }
                 add_fds_to_epoll(epollFd, clientFd, EPOLLIN);
+                continue;
             }
-            else if (pipes_map.find(eventFd) != pipes_map.end()) {
+            if (pipes_map.find(eventFd) != pipes_map.end()) {
                 if (events[i].events & EPOLLOUT)
                     handle_cgi_write(eventFd, epollFd, pipes_map, clientLastActive);
                 else if (events[i].events & EPOLLIN)
                     handle_cgi_read(epollFd, eventFd, pipes_map[eventFd], pipes_map);
                 else if (events[i].events & EPOLLHUP) {
+                    cout << "epollhub" << endl;
                     clientLastActive.erase(eventFd);
                     pipes_map[eventFd]->stateCGI = COMPLETE_CGI;
                     pipes_map[eventFd]->outputCGI.append("0\r\n\r\n");
@@ -83,6 +84,12 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                     close(eventFd);
                     pipes_map.erase(eventFd);
                 }
+                continue;
+            }
+            if (events[i].events & (EPOLLERR | EPOLLHUP |  EPOLLRDHUP))
+            {
+                closeFds(epollFd, requestmp, requestmp[eventFd] , pipes_map, clientLastActive);
+                continue;
             }
             else {
                 if (events[i].events & EPOLLIN)

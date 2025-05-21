@@ -52,7 +52,6 @@ void parseCGIandSend(int epollFd, int fd, Http* req,  map<int, Http *>& requestm
 {
     if (req->stateCGI == HEADERS_CGI)
     {
-        cout << "Response" << endl;
         int toDelete = 4;
         size_t pos = req->outputCGI.find("\r\n\r\n");
         if (pos == string::npos) {
@@ -165,8 +164,10 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<i
     }
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what(), req->conf);
-        if (req->isCGI && req->stateCGI != COMPLETE_CGI)
-            closeFds(epollFd, req, pipes_map, timer);
+        if (req->isCGI && req->stateCGI != COMPLETE_CGI) {
+             closeFds(epollFd,requestmp, req, pipes_map, timer);
+             return ;
+        }
         delete requestmp[fd];
         requestmp.erase(fd);
         struct epoll_event ev;
