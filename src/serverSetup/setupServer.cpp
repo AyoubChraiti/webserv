@@ -75,7 +75,6 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 else if (events[i].events & EPOLLIN)
                     handle_cgi_read(epollFd, eventFd, pipes_map[eventFd], pipes_map);
                 else if (events[i].events & EPOLLHUP) {
-                    cout << "epollhub" << endl;
                     clientLastActive.erase(eventFd);
                     pipes_map[eventFd]->stateCGI = COMPLETE_CGI;
                     pipes_map[eventFd]->outputCGI.append("0\r\n\r\n");
