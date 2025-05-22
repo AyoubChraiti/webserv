@@ -1,22 +1,24 @@
 #include "../../inc/responce.hpp"
 #include "../../inc/request.hpp"
 
-int getMethode(int clientFd, Http* req) {
+int getMethode(int clientFd, Http* req, map<int, Http*>& requestmp, int epollFd) {
     RouteResult& routeResult = req->routeResult;
 
     if (!req->headerSent) {
-        sendHeaders(clientFd, routeResult, req);
+        sendHeaders(epollFd, clientFd, routeResult, req, requestmp);
         return 0;
     }
 
     if (!req->sendingFile) {
         if (routeResult.shouldRDR) {
-            sendRedirect(clientFd, routeResult.redirectLocation, req);
+            sendRedirect(epollFd, clientFd, routeResult.redirectLocation, req, requestmp);
             return 1;
         }    
 
         if (!routeResult.fileStream->is_open()) {
-            send(clientFd, routeResult.responseBody.c_str(), routeResult.responseBody.size(), 0);
+            if (send(clientFd, routeResult.responseBody.c_str(), routeResult.responseBody.size(), 0) <= 0) {
+                close_connection(clientFd, epollFd, requestmp);
+            }
             return 1;
         }
         else {
@@ -33,8 +35,15 @@ int getMethode(int clientFd, Http* req) {
         return 1;
 
     ssize_t sent = send(clientFd, buffer, bytesRead, 0);
-    if (sent < 0)
+    if (sent <= 0) {
+        close_connection(clientFd, epollFd, requestmp);
+        if (routeResult.fileStream) {
+            routeResult.fileStream->close();
+            delete routeResult.fileStream;
+            routeResult.fileStream = NULL;
+        }
         return 1;
+    }
 
     req->bytesSentSoFar += sent;
 
@@ -42,7 +51,6 @@ int getMethode(int clientFd, Http* req) {
         routeResult.fileStream->seekg(req->bytesSentSoFar, ios::beg);
         return 0;
     }
-
     if (routeResult.fileStream->eof() || req->bytesSentSoFar >= getContentLength(req->fullPath))
         return 1;
 

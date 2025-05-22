@@ -122,6 +122,19 @@ void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &re
         response.append("\r\n");
         response.append(body);
     }
-    send(clientFd, response.c_str(),response.size(), 0);
+    size_t bytes_sent =  send(clientFd, response.c_str(),response.size(), 0);
+    if (bytes_sent <= 0) {
+        close_connection(clientFd, epollFd, reqStates);
+        return;
+    }
     closeOrSwitch(clientFd, epollFd, req, reqStates);
+}
+
+void close_connection(int fd, int epollFd, map<int, Http *> &requestmp) {
+    if (epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, NULL) == -1) {
+        perror("epoll_ctl");
+    }
+    delete requestmp[fd];
+    requestmp.erase(fd);
+    close(fd);
 }

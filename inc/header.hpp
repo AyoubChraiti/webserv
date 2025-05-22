@@ -32,13 +32,9 @@ extern bool shutServer;
 struct mpserv;
 class Http;
 
-/* error handling */
 void sysCallFail();
-
-/* server setup */
 void webserver(mpserv &conf);
 
-/* c++11 functions */
 template <typename T>
 string to_string(T value) {
     ostringstream oss;
@@ -47,11 +43,8 @@ string to_string(T value) {
 }
 
 char back(string& str);
-
 void ctrl_C();
-
 string getIp(string hostname);
 string trim(const string& str);
 void add_fds_to_epoll(int epollFd, int fd, uint32_t events);
 void sigchld_handler(int);
-

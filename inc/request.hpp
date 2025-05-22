@@ -117,6 +117,7 @@ bool isValidHostHeader(const string& host) ;
 void writebody(fstream &bodyFile , string &buffer);
 void closeOrSwitch(int clientFd, int epollFd, Http* req, map<int, Http *>& requestmp);
 void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &reqStates);
+void close_connection(int fd, int epollFd, map<int, Http *> &requestmp);
 
 
 // CgiHandler headers

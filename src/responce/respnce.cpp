@@ -1,6 +1,6 @@
 #include "../../inc/responce.hpp"
 
-void sendRedirect(int fd, const string& location, Http* req) {
+void sendRedirect(int epollFd, int fd, const string& location, Http* req, map<int, Http*>& requestmp) {
     stringstream response;
 
     response << "HTTP/1.1 301 Moved Permanently\r\n";
@@ -11,9 +11,10 @@ void sendRedirect(int fd, const string& location, Http* req) {
     response << "\r\n";
 
     string responseStr = response.str();
-    size_t bytes = send(fd, responseStr.c_str(), responseStr.size(), 0);
-
-    cout << "bytes sent: " << bytes << endl;
+    if (send(fd, responseStr.c_str(), responseStr.size(), 0) <= 0) {
+        close_connection(fd, epollFd, requestmp);
+        return;
+    }
 }
 
 size_t getContentLength(const string& path) {
@@ -25,7 +26,7 @@ size_t getContentLength(const string& path) {
     return fileStat.st_size;
 }
 
-void sendHeaders(int clientFd, RouteResult& routeResult, Http* req) {
+void sendHeaders(int epollFd, int clientFd, RouteResult& routeResult, Http* req, map<int, Http*>& requestmp) {
     stringstream response;
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
     response << "Content-Type: " << routeResult.contentType << "\r\n";
@@ -38,7 +39,10 @@ void sendHeaders(int clientFd, RouteResult& routeResult, Http* req) {
     response << "Connection: " << req->connection << "\r\n";
     response << "\r\n";
 
-    send(clientFd, response.str().c_str(), response.str().size(), 0);
+    if (send(clientFd, response.str().c_str(), response.str().size(), 0) <= 0) {
+        close_connection(clientFd, epollFd, requestmp);
+        return;
+    }
     req->headerSent = true;
 }
 
@@ -105,7 +109,10 @@ void parseCGIandSend(int epollFd, int fd, Http* req,  map<int, Http *>& requestm
         req->outputCGI.clear();
         req->outputCGI.append(to_hex(body.size()) + "\r\n").append(body).append("\r\n");
     }
-    send(fd, req->outputCGI.c_str(), req->outputCGI.length(), 0);
+    if (send(fd, req->outputCGI.c_str(), req->outputCGI.length(), 0) <= 0) {
+        close_connection(fd, epollFd, requestmp);
+        return;
+    }
     req->outputCGI.clear();
     if (req->stateCGI == COMPLETE_CGI)
     {
@@ -132,20 +139,26 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<i
     Http* req = it->second;
     try {
         if (req->routeResult.autoindex) {
-            sendHeaders(fd, req->routeResult, req);
-            send(fd, req->routeResult.responseBody.c_str(), req->routeResult.responseBody.size(), 0);
+            if (!req->headerSent) {
+                sendHeaders(epollFd, fd, req->routeResult, req, requestmp);
+                return;
+            }
+            if (send(fd, req->routeResult.responseBody.c_str(), req->routeResult.responseBody.size(), 0) <= 0) {
+                close_connection(fd, epollFd, requestmp);
+                return;
+            }
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
         }
         else if (req->routeResult.shouldRDR) {
-            sendRedirect(fd, req->mtroute.redirect, req);
+            sendRedirect(epollFd, fd, req->mtroute.redirect, req, requestmp);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
         }
         else if (req->isCGI)
             return parseCGIandSend(epollFd, fd, it->second ,requestmp);
         else if (req->method == "GET") {
-            int get = getMethode(fd, req);
+            int get = getMethode(fd, req, requestmp, epollFd);
             if (get) {
                 if (req->routeResult.fileStream) {
                     req->routeResult.fileStream->close();
@@ -157,7 +170,7 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<i
             }
         }
         else if (req->method == "DELETE") {
-            deleteMethod(fd, req);
+            deleteMethod(epollFd, fd, req, requestmp);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
         }
@@ -165,8 +178,8 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<i
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what(), req->conf);
         if (req->isCGI && req->stateCGI != COMPLETE_CGI) {
-             closeFds(epollFd,requestmp, req, pipes_map, timer);
-             return ;
+            closeFds(epollFd,requestmp, req, pipes_map, timer);
+            return ;
         }
         delete requestmp[fd];
         requestmp.erase(fd);
