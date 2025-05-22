@@ -67,7 +67,7 @@ mpserv configChecking(const string &filePath) {
 
         map<int, string>::const_iterator err_it;
         for (err_it = server.error_pages.begin(); err_it != server.error_pages.end(); ++err_it) {
-            if (err_it->first < 100 && err_it->first > 599)
+            if (err_it->first < 100 || err_it->first > 599)
                 throw runtime_error("Error: invalid error code");
             if (!isValidFile(err_it->second))
                 throw runtime_error("Error: Error page file does not exist: " + err_it->second);
@@ -93,7 +93,6 @@ mpserv configChecking(const string &filePath) {
             if (!route.uploadStore.empty() && !isValidDirectory(route.uploadStore))
                 throw runtime_error("Error: Upload directory '" + route.uploadStore + "' does not exist.");
                 
-            // to do : fix thissssssssssssssssssssssssssssss ..... 
             if (route.cgi) {
                 if (route.cgi_map.empty())
                     throw runtime_error("Error: Route '" + route_it->first + "' has CGI enabled but no CGI extensions defined.");

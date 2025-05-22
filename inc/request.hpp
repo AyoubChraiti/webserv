@@ -119,7 +119,6 @@ void closeOrSwitch(int clientFd, int epollFd, Http* req, map<int, Http *>& reque
 void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &reqStates);
 void close_connection(int fd, int epollFd, map<int, Http *> &requestmp);
 
-
 // CgiHandler headers
 
 int HandleCGI (int epollFd, int clientFd, map<int, Http *> &reqStates, map<int, Http *> &pipes_map, map<int , time_t> &timer);
