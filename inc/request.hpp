@@ -29,7 +29,8 @@ enum ParseState {
     READING_REQUEST_LINE,
     READING_HEADERS,
     READING_BODY,
-    COMPLETE
+    COMPLETE,
+    FINISH_REQEUST
 };
 
 enum CGIState {

@@ -14,7 +14,7 @@ string getInfoClient(int clientFd) {
 
 void modifyState(int epollFd ,int clientFd, uint32_t events) {
     struct epoll_event ev;
-    ev.events = events;
+    ev.events = events ;
     ev.data.fd = clientFd;
     if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
         perror("epoll_ctl");
@@ -28,11 +28,12 @@ bool Http::request(int Fd) {
     memset(buff, 0, sizeof(buff));
     ssize_t recvBytes = recv(Fd, buff, BUFFER_SIZE, 0);
     if (recvBytes == 0) {
-        if (state != COMPLETE  && !buffer.empty())
+        if (state == FINISH_REQEUST)
+            throw HttpExcept(400, "connection closed by client");
+        if (state != COMPLETE && !buffer.empty())
             throw HttpExcept(400, "Bad Request");
         return true;
     }
-
     else if (recvBytes < 0)
         throw HttpExcept(500, "Internal Server Error");
 
@@ -63,25 +64,36 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *
         if (it->second->request(clientFd)) {
             if (it->second->routeResult.autoindex || it->second->routeResult.shouldRDR) {
                 modifyState(epollFd, clientFd, EPOLLOUT);
+                it->second->state = FINISH_REQEUST;
                 return;
             }
             else if (it->second->isCGI) {
                 if (HandleCGI(epollFd, clientFd, req, pipes_map, timer) == -1)
                     throw HttpExcept(500, "Internal Server Error");
+                it->second->state = FINISH_REQEUST;
                 return;
             }
             else if (it->second->method == "POST") {
                 sendPostResponse(clientFd, epollFd,it->second ,req);
+                it->second->state = FINISH_REQEUST;
                 return;
             }
             else if (it->second->method == "GET" || it->second->method == "DELETE") {
                 modifyState(epollFd, clientFd, EPOLLOUT);
+                it->second->state = FINISH_REQEUST;
                 return;
             }
         }
     }
     catch(const HttpExcept& e) {
+        
         sendErrorResponse(clientFd, e.getStatusCode(), e.what(), conf.servers[host]);
+        if (it->second->state == FINISH_REQEUST)
+        {
+            cout << "closeed hhnaaa" << endl;
+            closeFds(epollFd, req, it->second, pipes_map, timer);
+            return;
+        }
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL); 
         delete it->second;
         req.erase(clientFd);
