@@ -125,6 +125,8 @@ void configFile::parseLine(string &line, servcnf &server, string &section) {
 }
 
 const mpserv& configFile::parseConfig() {
+    if (fileName.find('.') == string::npos || fileName.substr(fileName.find('.')) != ".conf")
+        throw runtime_error("Error opening the congif file.");
     cnf.open(fileName.c_str());
     if (!cnf.is_open())
         throw runtime_error("Error opening the congif file.");
