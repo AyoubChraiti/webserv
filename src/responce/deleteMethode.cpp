@@ -42,10 +42,7 @@ void sendDeleteResponse(int epollFd, int clientFd, int statusCode, const string&
     response += "\r\n";
     response += "";
 
-    if (send(clientFd, response.c_str(), response.size(), 0) <= 0) {
-        close_connection(clientFd, epollFd, requestmp);
-        return;
-    }
+    send(clientFd, response.c_str(), response.size(), 0);
 }
 
 void deleteMethod(int epollFd, int clientFd, Http* req, map<int, Http*>& requestmp) {

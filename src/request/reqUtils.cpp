@@ -123,10 +123,6 @@ void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &re
         response.append(body);
     }
     size_t bytes_sent =  send(clientFd, response.c_str(),response.size(), 0);
-    if (bytes_sent <= 0) {
-        close_connection(clientFd, epollFd, reqStates);
-        return;
-    }
     closeOrSwitch(clientFd, epollFd, req, reqStates);
 }
 

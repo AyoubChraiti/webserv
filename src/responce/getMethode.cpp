@@ -17,7 +17,7 @@ int getMethode(int clientFd, Http* req, map<int, Http*>& requestmp, int epollFd)
 
         if (!routeResult.fileStream->is_open()) {
             if (send(clientFd, routeResult.responseBody.c_str(), routeResult.responseBody.size(), 0) <= 0) {
-                close_connection(clientFd, epollFd, requestmp);
+                // close_connection(clientFd, epollFd, requestmp);
             }
             return 1;
         }
@@ -35,15 +35,6 @@ int getMethode(int clientFd, Http* req, map<int, Http*>& requestmp, int epollFd)
         return 1;
 
     ssize_t sent = send(clientFd, buffer, bytesRead, 0);
-    if (sent <= 0) {
-        close_connection(clientFd, epollFd, requestmp);
-        if (routeResult.fileStream) {
-            routeResult.fileStream->close();
-            delete routeResult.fileStream;
-            routeResult.fileStream = NULL;
-        }
-        return 1;
-    }
 
     req->bytesSentSoFar += sent;
 

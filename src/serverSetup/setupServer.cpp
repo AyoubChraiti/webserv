@@ -6,7 +6,7 @@
 
 void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
     struct epoll_event ev;
-    ev.events = events |  EPOLLRDHUP | EPOLLHUP | EPOLLERR;  // Add these flags
+    ev.events = events;
     ev.data.fd = fd;
 
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1) {
@@ -48,7 +48,6 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     while (!shutServer) {
         int timeout = get_close_timeout(clientLastActive);
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
-        cout << numEvents << endl;
         if (numEvents == -1) {
             if (errno != EINTR) {
                 cout << "epoll_wait fail\n";
@@ -87,22 +86,9 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 }
                 continue;
             }
-            if (events[i].events & (EPOLLERR | EPOLLHUP |  EPOLLRDHUP))
-            {
-                if (!requestmp[eventFd]) {
-                    close(eventFd);
-                    continue;
-                }
-                closeFds(epollFd, requestmp, requestmp[eventFd] , pipes_map, clientLastActive);
-                continue;
-            }
             else {
                 if (events[i].events & EPOLLIN)
-                {
-                    cout << "here" << endl;
-                    handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map, clientLastActive);
-                }
-                 
+                    handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map, clientLastActive);        
                 else if (events[i].events & EPOLLOUT)
                     handle_client_write(eventFd, epollFd, requestmp, pipes_map, clientLastActive);
             }
