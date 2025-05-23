@@ -106,7 +106,7 @@ void closeOrSwitch(int clientFd, int epollFd, Http* req, map<int, Http *>& reque
     }
     else {
         struct epoll_event ev;
-        ev.events = EPOLLIN;
+        ev.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
         ev.data.fd = clientFd;
         if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
             perror("epoll_ctl");

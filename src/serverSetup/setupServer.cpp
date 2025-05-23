@@ -98,7 +98,11 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             }
             else {
                 if (events[i].events & EPOLLIN)
+                {
+                    cout << "here" << endl;
                     handle_client_read(eventFd, epollFd, conf, requestmp, pipes_map, clientLastActive);
+                }
+                 
                 else if (events[i].events & EPOLLOUT)
                     handle_client_write(eventFd, epollFd, requestmp, pipes_map, clientLastActive);
             }
