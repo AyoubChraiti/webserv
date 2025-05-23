@@ -20,7 +20,6 @@ void setupCGIenv(string &FullPath, Http *reqStates, vector <const char *> &vec, 
             env["HTTP_" + strUpper(it->first)] = it->second;
     }
     envVar.reserve(env.size());
-    vec.reserve(env.size() + 1);
     for (map<string, string>::iterator it = env.begin(); it != env.end(); it++) {
         envVar.push_back(it->first + "=" + it->second);
         vec.push_back(const_cast<char *>(envVar.back().c_str())); 
@@ -41,7 +40,7 @@ void childCGI (Http *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
     if (reqStates->method == "POST")
         dup2(stdinFd[0], STDIN_FILENO);
     else
-        close(STDIN_FILENO); // edit
+        close(STDIN_FILENO);
     close(stdinFd[0]);
     close(stdoutFd[1]);
 

@@ -57,47 +57,66 @@ void parseCGIandSend(int epollFd, int fd, Http* req,  map<int, Http *>& requestm
     if (req->stateCGI == HEADERS_CGI)
     {
         int toDelete = 4;
+        string lineEnding = "\r\n";
         size_t pos = req->outputCGI.find("\r\n\r\n");
         if (pos == string::npos) {
             toDelete = 2;
+            lineEnding = "\n";
             pos =  req->outputCGI.find("\n\n");
         }
         if (pos == string::npos)
             throw HttpExcept(502, "Bad Gateway");
+
         string headers;
         string body;
         string statusLine = "HTTP/1.1 200 OK\r\n";
-        map<string , string> storeHeaders;
+        map<string , vector<string> > storeHeaders;
+
         headers = req->outputCGI.substr(0, pos);
         body = req->outputCGI.substr(pos + toDelete);
+        size_t posStatusline = headers.find(lineEnding);
+        if (posStatusline != string::npos) {
+            if (headers.substr(0, 5) == "HTTP/")
+            {
+                statusLine = headers.substr(0, posStatusline) + "\r\n";
+                headers.erase(0, posStatusline + lineEnding.length());
+            }
+        }
         size_t start = 0;
         while (start < headers.size())
         {
-            size_t posEnd = headers.find("\r\n", start);
+            size_t posEnd = headers.find(lineEnding, start);
             if (posEnd == string::npos)
                 break;
+
             string line = headers.substr(start, posEnd - start);
-            start = posEnd + 2;
+            start = posEnd + lineEnding.size();
+
             size_t indexColon = line.find(":");
             if (indexColon != string::npos) {
                 string key = trim(line.substr(0, indexColon));
                 string value = trim(line.substr(indexColon + 1));
-                storeHeaders[key] = value;
+                storeHeaders[key].push_back(value);
             }
         }
-        if (storeHeaders.count("Content-Type") == 0)
-            storeHeaders["Content-Type"] = "text/html";
-        if (storeHeaders.count ("Connection") == 0)
-            storeHeaders["Connection"] = "close";
-        if (storeHeaders.count("Content-Length") > 0)
+        if (storeHeaders.find("Content-Type") == storeHeaders.end())
+            storeHeaders["Content-Type"].push_back("text/html");
+        if (storeHeaders.find ("Connection") == storeHeaders.end())
+            storeHeaders["Connection"].push_back("close");
+
+        if (storeHeaders.find("Content-Length") != storeHeaders.end())
             storeHeaders.erase("Content-Length");
-        if (storeHeaders.count("Transfer-Encoding") > 0)
+        if (storeHeaders.find("Transfer-Encoding") != storeHeaders.end())
             storeHeaders.erase("Transfer-Encoding");
-        storeHeaders["Transfer-Encoding"] = "chunked";
+        storeHeaders["Transfer-Encoding"].push_back("chunked");
         headers.clear();
-        map<string, string>::const_iterator it = storeHeaders.begin();
+        map<string, vector<string> >::const_iterator it = storeHeaders.begin();
         for (; it != storeHeaders.end(); it++)
-            headers += it->first + ": " + it->second + "\r\n";
+        {
+            vector<string>::const_iterator valuesIt = it->second.begin();
+            for (; valuesIt != it->second.end(); ++valuesIt)
+                headers += it->first + ": " + *valuesIt + "\r\n";
+        }
         req->outputCGI.clear();
         req->outputCGI.append(statusLine).append(headers).append("\r\n");
         req->outputCGI.append(to_hex(body.size()) + "\r\n").append(body).append("\r\n");
@@ -178,7 +197,7 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<i
     catch (const HttpExcept& e) {
         sendErrorResponse(fd, e.getStatusCode(), e.what(), req->conf);
         if (req->isCGI && req->stateCGI != COMPLETE_CGI) {
-            closeFds(epollFd,requestmp, req, pipes_map, timer);
+            closeFds(epollFd, requestmp, req, pipes_map, timer);
             return ;
         }
         delete requestmp[fd];

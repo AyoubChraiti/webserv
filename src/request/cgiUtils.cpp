@@ -17,27 +17,28 @@ void closeFds (int epollFd, map<int, Http *> &requestmp,  Http *req, map<int, Ht
     if (req->cgiPid > 0) 
     {
         kill(req->cgiPid, SIGKILL);
+        waitpid(req->cgiPid, NULL, WNOHANG);
         req->cgiPid = -1;
     }
     if (req->stdoutFd > 0) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdoutFd, NULL);
+        close(req->stdoutFd);
         timer.erase(req->stdoutFd);
         pipes_map.erase(req->stdoutFd);
-        close(req->stdoutFd);
         req->stdoutFd = -1;
     }
     if (req->stdinFd > 0) {
         epoll_ctl(epollFd, EPOLL_CTL_DEL, req->stdinFd, NULL);
+        close(req->stdinFd);
         timer.erase(req->stdinFd);
         pipes_map.erase(req->stdinFd);
-        close(req->stdinFd);
         req->stdinFd = -1;
     }
     if (req->clientFd > 0) {
         
         epoll_ctl(epollFd, EPOLL_CTL_DEL, req->clientFd, NULL);
-        requestmp.erase(req->clientFd);
         close(req->clientFd);
+        requestmp.erase(req->clientFd);
         req->clientFd = -1;
     }
     delete req;

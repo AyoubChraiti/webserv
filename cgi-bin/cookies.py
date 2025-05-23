@@ -1,44 +1,57 @@
 #!/usr/bin/env python3
 
-import cgi
 import os
-from http import cookies
 
+cookie_header = os.getenv("HTTP_COOKIE", "")
+cookies = {}
+if cookie_header:
+    for cookie in cookie_header.split(";"):
+        if "=" in cookie:
+            name, value = cookie.strip().split("=", 1)
+            cookies[name] = value
+
+# Generate the response body
+response_lines = []
+response_lines.append("<html>")
+response_lines.append("<head><title>Cookie Test</title></head>")
+response_lines.append("<body>")
+response_lines.append("<h1>Cookie Test</h1>")
+
+# Display incoming cookies
+if cookies:
+    response_lines.append("<h2>Incoming Cookies:</h2>")
+    response_lines.append("<ul>")
+    for name, value in cookies.items():
+        response_lines.append(f"<li><strong>{name}:</strong> {value}</li>")
+    response_lines.append("</ul>")
+else:
+    response_lines.append("<p>No incoming cookies.</p>")
+
+# Confirm outgoing cookies
+response_lines.append("<h2>Outgoing Cookies:</h2>")
+response_lines.append("<p>Cookies have been set:</p>")
+response_lines.append("<ul>")
+if "username" not in cookies:
+    response_lines.append("<li><strong>username:</strong> JohnDoe</li>")
+if "theme" not in cookies:
+    response_lines.append("<li><strong>theme:</strong> dark</li>")
+response_lines.append("</ul>")
+
+response_lines.append("</body>")
+response_lines.append("</html>")
+
+response_body = "\n".join(response_lines)
+response_bytes = response_body.encode("utf-8")
+content_length = len(response_bytes)
+
+# Print CGI headers
+if "username" not in cookies:
+    print("Set-Cookie: username=JohnDoe; Path=/; HttpOnly")
+if "theme" not in cookies:
+    print("Set-Cookie: theme=dark; Path=/; Max-Age=3600")
 print("Content-Type: text/html")
+print(f"Content-Length: {content_length}")
+print()  # End of headers
 
-# Read existing cookies
-cookie = cookies.SimpleCookie(os.environ.get("HTTP_COOKIE"))
-saved_name = cookie.get("name")
-saved_city = cookie.get("city")
-
-form = cgi.FieldStorage()
-name = form.getvalue("name")
-city = form.getvalue("city")
-
-# If form submitted, set cookies
-if name and city:
-    print(f"Set-Cookie: name={name}")
-    print(f"Set-Cookie: city={city}")
-    saved_name = name
-    saved_city = city
-
-print()  # End of HTTP headers
-
-# HTML Output
-print("""
-<!DOCTYPE html>
-<html>
-<head><title>Cookie Test</title></head>
-<body>
-<h2>Enter your name and city</h2>
-<form method="post" action="/cgi-bin/cookies_test.py">
-  Name: <input type="text" name="name" required><br><br>
-  City: <input type="text" name="city" required><br><br>
-  <input type="submit" value="Submit">
-</form>
-""")
-
-if saved_name and saved_city:
-    print(f"<h3>Welcome back, {saved_name.value} from {saved_city.value}!</h3>")
-
-print("</body></html>")
+# Print response body
+print(response_body)

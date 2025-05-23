@@ -14,7 +14,7 @@ string getInfoClient(int clientFd) {
 
 void modifyState(int epollFd ,int clientFd, uint32_t events) {
     struct epoll_event ev;
-    ev.events = events | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
+    ev.events = events  | EPOLLRDHUP | EPOLLHUP | EPOLLERR;
     ev.data.fd = clientFd;
     if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
         perror("epoll_ctl");

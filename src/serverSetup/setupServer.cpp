@@ -6,7 +6,7 @@
 
 void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
     struct epoll_event ev;
-    ev.events = events | EPOLLRDHUP | EPOLLHUP | EPOLLERR;  // Add these flags
+    ev.events = events |  EPOLLRDHUP | EPOLLHUP | EPOLLERR;  // Add these flags
     ev.data.fd = fd;
 
     if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1) {
@@ -31,6 +31,7 @@ int get_close_timeout (map<int, time_t> &clientLastActive)
     int remaining = TIMEOUT - static_cast<int>(now - minTime);
     return remaining * 1000;
 }
+
 void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     map<int, Http *> requestmp;
     map<int, Http*> pipes_map;
@@ -47,17 +48,18 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
     while (!shutServer) {
         int timeout = get_close_timeout(clientLastActive);
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
+        cout << numEvents << endl;
         if (numEvents == -1) {
             if (errno != EINTR) {
                 cout << "epoll_wait fail\n";
                 sysCallFail();
             }
         }
+        
         if (CGImonitor(epollFd, requestmp , pipes_map, clientLastActive))
             continue;
         for (int i = 0; i < numEvents; i++) {
             int eventFd = events[i].data.fd;
-
             if (find(servrs.begin(), servrs.end(), eventFd) != servrs.end()) {
                 struct sockaddr_in clientAddr;
                 socklen_t clientLen = sizeof(clientAddr);
@@ -87,6 +89,10 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
             }
             if (events[i].events & (EPOLLERR | EPOLLHUP |  EPOLLRDHUP))
             {
+                if (!requestmp[eventFd]) {
+                    close(eventFd);
+                    continue;
+                }
                 closeFds(epollFd, requestmp, requestmp[eventFd] , pipes_map, clientLastActive);
                 continue;
             }
@@ -133,7 +139,6 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
         int option = 1;
         if (setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) < 0)
             sysCallFail();
-
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = inet_addr(it->second.host.c_str());
         address.sin_port = htons(atoi(it->second.port.c_str()));
