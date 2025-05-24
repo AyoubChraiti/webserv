@@ -17,7 +17,8 @@ int getMethode(int clientFd, Http* req, map<int, Http*>& requestmp, int epollFd)
 
         if (!routeResult.fileStream->is_open()) {
             if (send(clientFd, routeResult.responseBody.c_str(), routeResult.responseBody.size(), 0) <= 0) {
-                // close_connection(clientFd, epollFd, requestmp);
+                cout << "[ERROR] send() failed or client closed connection for fd: " << clientFd << endl;
+                return 0;
             }
             return 1;
         }
@@ -36,14 +37,21 @@ int getMethode(int clientFd, Http* req, map<int, Http*>& requestmp, int epollFd)
 
     ssize_t sent = send(clientFd, buffer, bytesRead, 0);
 
+    if (sent <= 0) {
+        cout << "[ERROR] send() failed or client closed connection (sent = " << sent << ") for fd: " << clientFd << endl;
+        return 0;
+    }
+
     req->bytesSentSoFar += sent;
 
     if ((size_t)sent < (size_t)bytesRead) {
         routeResult.fileStream->seekg(req->bytesSentSoFar, ios::beg);
         return 0;
     }
-    if (routeResult.fileStream->eof() || req->bytesSentSoFar >= getContentLength(req->fullPath))
+    if (routeResult.fileStream->eof() || req->bytesSentSoFar >= getContentLength(req->fullPath)) {
+        req->sendingFile = false;
         return 1;
+    }
 
     return 0;
 }

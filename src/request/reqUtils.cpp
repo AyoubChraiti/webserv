@@ -122,7 +122,11 @@ void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &re
         response.append("\r\n");
         response.append(body);
     }
-    size_t bytes_sent =  send(clientFd, response.c_str(),response.size(), 0);
+    if (send(clientFd, response.c_str(),response.size(), 0) <= 0) {
+        cout << "[ERROR] send() failed or client closed connection for fd: " << clientFd << endl;
+        close_connection(clientFd, epollFd, reqStates);
+        return;
+    }
     closeOrSwitch(clientFd, epollFd, req, reqStates);
 }
 

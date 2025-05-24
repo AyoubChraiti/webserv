@@ -34,8 +34,10 @@ bool Http::request(int Fd) {
             throw HttpExcept(400, "Bad Request");
         return true;
     }
-    else if (recvBytes < 0)
+    else if (recvBytes < 0) {
+        cout << "checkingg" << endl;
         throw HttpExcept(500, "Internal Server Error");
+    }
 
     if (recvBytes > 0) {
         buffer.append(buff, recvBytes);

@@ -12,7 +12,7 @@ void sendRedirect(int epollFd, int fd, const string& location, Http* req, map<in
 
     string responseStr = response.str();
     if (send(fd, responseStr.c_str(), responseStr.size(), 0) <= 0) {
-        close_connection(fd, epollFd, requestmp);
+        cout << "[ERROR] send() failed or client closed connection for fd: " << fd << endl;
         return;
     }
 }
@@ -40,7 +40,8 @@ void sendHeaders(int epollFd, int clientFd, RouteResult& routeResult, Http* req,
     response << "\r\n";
 
     if (send(clientFd, response.str().c_str(), response.str().size(), 0) <= 0) {
-        
+        cout << "[ERROR] send() failed or client closed connection for fd: " << clientFd << endl;
+        return;
     }
     req->headerSent = true;
 }
@@ -128,7 +129,8 @@ void parseCGIandSend(int epollFd, int fd, Http* req,  map<int, Http *>& requestm
         req->outputCGI.append(to_hex(body.size()) + "\r\n").append(body).append("\r\n");
     }
     if (send(fd, req->outputCGI.c_str(), req->outputCGI.length(), 0) <= 0) {
-        
+        cout << "[ERROR] send() failed or client closed connection for fd: " << fd << endl;
+        return;
     }
     req->outputCGI.clear();
     if (req->stateCGI == COMPLETE_CGI)
@@ -161,7 +163,8 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<i
                 return;
             }
             if (send(fd, req->routeResult.responseBody.c_str(), req->routeResult.responseBody.size(), 0) <= 0) {
-                
+                cout << "[ERROR] send() failed or client closed connection for fd: " << fd << endl;
+                return;
             }
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
