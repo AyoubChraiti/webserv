@@ -43,7 +43,7 @@ void sendDeleteResponse(int epollFd, int clientFd, int statusCode, const string&
     response += "";
 
     if (send(clientFd, response.c_str(), response.size(), 0) <= 0) {
-        cout << "[ERROR] send() failed or client closed connection for fd: " << clientFd << endl;
+        throw HttpExcept(500, "error while sending body");
     }
 }
 

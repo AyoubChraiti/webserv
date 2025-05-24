@@ -17,8 +17,7 @@ int getMethode(int clientFd, Http* req, map<int, Http*>& requestmp, int epollFd)
 
         if (!routeResult.fileStream->is_open()) {
             if (send(clientFd, routeResult.responseBody.c_str(), routeResult.responseBody.size(), 0) <= 0) {
-                cout << "[ERROR] send() failed or client closed connection for fd: " << clientFd << endl;
-                return 0;
+                throw HttpExcept(500, "error while sending body");
             }
             return 1;
         }
@@ -38,8 +37,7 @@ int getMethode(int clientFd, Http* req, map<int, Http*>& requestmp, int epollFd)
     ssize_t sent = send(clientFd, buffer, bytesRead, 0);
 
     if (sent <= 0) {
-        cout << "[ERROR] send() failed or client closed connection (sent = " << sent << ") for fd: " << clientFd << endl;
-        return 0;
+        throw HttpExcept(500, "error while sending body");
     }
 
     req->bytesSentSoFar += sent;

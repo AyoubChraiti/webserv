@@ -123,9 +123,7 @@ void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &re
         response.append(body);
     }
     if (send(clientFd, response.c_str(),response.size(), 0) <= 0) {
-        cout << "[ERROR] send() failed or client closed connection for fd: " << clientFd << endl;
-        close_connection(clientFd, epollFd, reqStates);
-        return;
+        throw HttpExcept(500, "error while sending body");
     }
     closeOrSwitch(clientFd, epollFd, req, reqStates);
 }

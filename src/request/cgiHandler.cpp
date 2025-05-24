@@ -60,7 +60,7 @@ void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> 
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));
     if (recvBytes == -1)
-        return (perror("read"), void());
+        throw HttpExcept(500, "error while reading");
     reqStates->outputCGI.append(buff, recvBytes);
     modifyState(epollFd, pipes_map[readFd]->clientFd, EPOLLOUT);
 }
@@ -72,7 +72,8 @@ void handle_cgi_write(int writeFd, int epollFd, map<int, Http *> &pipes_map, map
     size_t bytesRead = reqStates->bodyFile.gcount();
     if (bytesRead > 0)
     {
-        write(writeFd, buff, bytesRead);
+        if (write(writeFd, buff, bytesRead) == -1)
+            throw HttpExcept(500, "eroor while writing to a fd");
         if (reqStates->bodyFile.eof())
         {
             timer.erase(writeFd);
