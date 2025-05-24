@@ -8,7 +8,7 @@ string getInfoClient(int clientFd) {
     char ipStore[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(addr.sin_addr), ipStore, INET_ADDRSTRLEN);
     int port = ntohs(addr.sin_port);
-    string host = static_cast <string> (ipStore) + ":" + to_string(port);
+    string host = static_cast<string> (ipStore) + ":" + to_string(port);
     return host;
 }
 
@@ -16,10 +16,7 @@ void modifyState(int epollFd ,int clientFd, uint32_t events) {
     struct epoll_event ev;
     ev.events = events ;
     ev.data.fd = clientFd;
-    if (epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev) == -1) {
-        perror("epoll_ctl");
-        return ;
-    }
+    epoll_ctl(epollFd, EPOLL_CTL_MOD, clientFd, &ev);
 }
 
 bool Http::request(int Fd) {
@@ -35,7 +32,6 @@ bool Http::request(int Fd) {
         return true;
     }
     else if (recvBytes < 0) {
-        cout << "checkingg" << endl;
         throw HttpExcept(500, "Internal Server Error");
     }
 
@@ -88,7 +84,6 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *
         }
     }
     catch(const HttpExcept& e) {
-        
         sendErrorResponse(clientFd, e.getStatusCode(), e.what(), conf.servers[host]);
         if (it->second->state == FINISH_REQEUST)
         {

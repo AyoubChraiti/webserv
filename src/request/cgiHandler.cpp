@@ -55,8 +55,7 @@ void sigchld_handler(int)
     while (waitpid(-1, NULL, WNOHANG) > 0) {}
 }
 
-void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> &pipes_map)
-{
+void handle_cgi_read(int epollFd, int readFd, Http *reqStates, map<int, Http *> &pipes_map) {
     char buff[BUFFER_SIZE];
     ssize_t recvBytes = read(readFd, buff, sizeof(buff));
     if (recvBytes == -1)

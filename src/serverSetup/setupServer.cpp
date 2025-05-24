@@ -50,7 +50,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
         if (numEvents == -1) {
             if (errno != EINTR) {
-                cout << "epoll_wait fail\n";
+                cout << "epoll_wait failed" << endl;
                 sysCallFail();
             }
         }
@@ -64,7 +64,7 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 socklen_t clientLen = sizeof(clientAddr);
                 int clientFd = accept(eventFd, (struct sockaddr*)&clientAddr, &clientLen);
                 if (clientFd < 0) {
-                    cout << "accept failed" << endl;
+                    cout << "accept() failed" << endl;
                     continue;
                 }
                 add_fds_to_epoll(epollFd, clientFd, EPOLLIN);
