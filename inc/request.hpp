@@ -54,39 +54,41 @@ struct RouteResult {
 
 class Http {
 public:
-    string key;
-    string buffer;
-    ParseState state;
     string method, uri, host, connection, version, querystring;
     map<string, string> headers;
+    size_t maxBodySizeChunked;
     RouteResult routeResult;
-    size_t contentLength;
-    servcnf conf;
-    routeCnf mtroute;
-    fstream bodyFile;
     size_t bytesSentSoFar;
-    string outputCGI;
-    size_t remaining;
-    string Boundary ; 
-    string fullPath;
+    size_t contentLength;
     string _extensionCGI;
     CGIState stateCGI;
-    int clientFd;
-    int stdinFd;
-    int stdoutFd;
-    int bytesRead;
-    bool sendingFile;
+    ParseState state;
+    routeCnf mtroute;
+    fstream bodyFile;
+    string outputCGI;
+    size_t remaining;
+    string Boundary; 
+    string fullPath;
+    string buffer;
+    servcnf conf;
+    vector<servcnf> configs;
+    string key;
     bool startBoundFlag;
+    bool sendingFile;
     bool headerSent;
     bool isPostKeys;
     bool isChunked;
-    bool isCGI;
+    int bytesRead;
     bool hasBody;
+    int stdoutFd;
+    int clientFd;
+    int stdinFd;
+    bool isCGI;
     int cgiPid;
-    size_t maxBodySizeChunked;
 
 
     Http(servcnf config);
+    Http(vector<servcnf> config);
     ~Http();
 
     bool request(int clientFd);

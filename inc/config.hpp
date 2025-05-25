@@ -30,7 +30,7 @@ struct servcnf {
 };
 
 struct mpserv {
-    map<string, servcnf> servers; // Key is host:port
+    map<string, vector<servcnf> > servers; // Key is host:port
 };
 
 class configFile {

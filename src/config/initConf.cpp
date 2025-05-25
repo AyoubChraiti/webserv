@@ -126,32 +126,30 @@ void configFile::parseLine(string &line, servcnf &server, string &section) {
 
 const mpserv& configFile::parseConfig() {
     if (fileName.find('.') == string::npos || fileName.substr(fileName.find('.')) != ".conf")
-        throw runtime_error("Error opening the congif file.");
+        throw runtime_error("Error opening the config file.");
     cnf.open(fileName.c_str());
     if (!cnf.is_open())
-        throw runtime_error("Error opening the congif file.");
+        throw runtime_error("Error opening the config file.");
 
     string line, section;
     servcnf server;
     bool inserver = false;
 
     while (getline(cnf, line)) {
-        parseLine(line, server, section);
+        string trimmed = trim(remove_comment(line));
 
-        if (line == "[server]") {
+        if (trimmed == "[server]") {
             if (inserver) {
-                configData.servers[getKey(server)] = server;
-                server = servcnf(); 
+                configData.servers[getKey(server)].push_back(server);
+                server = servcnf();
             }
             inserver = true;
         }
+        parseLine(line, server, section);
     }
+    if (inserver)
+        configData.servers[getKey(server)].push_back(server);
 
-    string key = getKey(server);
-    if (inserver && configData.servers.find(key) == configData.servers.end()) {
-        configData.servers[key] = server;
-    }
     cnf.close();
     return configData;
 }
-

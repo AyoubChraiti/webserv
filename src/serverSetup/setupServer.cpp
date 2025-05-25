@@ -9,11 +9,9 @@ void add_fds_to_epoll(int epollFd, int fd, uint32_t events) {
     ev.events = events;
     ev.data.fd = fd;
 
-    if (epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev) == -1) {
-        cout << "epoll ctl error in add fds to epoll\n";
-        sysCallFail();
-    }
+    epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &ev);
 }
+
 int get_close_timeout (map<int, time_t> &clientLastActive)
 {
     if (clientLastActive.empty())
@@ -50,8 +48,8 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
         int numEvents = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
         if (numEvents == -1) {
             if (errno != EINTR) {
-                cout << "epoll_wait failed" << endl;
-                sysCallFail();
+                cout << "epoll_wait() failed" << endl;
+                continue;
             }
         }
         
@@ -120,21 +118,28 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
 }
 
 void serverSetup(mpserv &conf, vector<int> &servrs) {
-    for (map<string, servcnf>::const_iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
+    for (map<string, vector<servcnf> >::const_iterator it = conf.servers.begin(); it != conf.servers.end(); ++it) {
+        const vector<servcnf> &serverList = it->second;
+        if (serverList.empty())
+            continue;
+
+        const servcnf &mainServer = serverList[0]; // Bind only once in all the srvrs
+
         int serverFd;
         struct sockaddr_in address;
-        if ((serverFd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+        if ((serverFd = socket(AF_INET, SOCK_STREAM, 0)) <= 0)
             sysCallFail();
 
         int option = 1;
         if (setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option)) < 0)
             sysCallFail();
+
         address.sin_family = AF_INET;
-        address.sin_addr.s_addr = inet_addr(it->second.host.c_str());
-        address.sin_port = htons(atoi(it->second.port.c_str()));
+        address.sin_addr.s_addr = inet_addr(mainServer.host.c_str());
+        address.sin_port = htons(atoi(mainServer.port.c_str()));
 
         if (bind(serverFd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-            cout << "bind failed\n";
+            cerr << "bind failed on " << mainServer.host << ":" << mainServer.port << endl;
             sysCallFail();
         }
 
@@ -142,8 +147,8 @@ void serverSetup(mpserv &conf, vector<int> &servrs) {
             sysCallFail();
 
         servrs.push_back(serverFd);
-        
-        cout << "server " << it->second.host << " listening on port " << it->second.port << endl;
+
+        cout << "server " << mainServer.host << " listening on port " << mainServer.port << endl;
     }
 }
 

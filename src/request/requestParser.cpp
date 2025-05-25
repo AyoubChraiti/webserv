@@ -12,10 +12,10 @@ void Http::HandleUri() {
         querystring =  uri.substr(indexQUERY + 1);
         uri.erase(indexQUERY);
     }
-    map <string , routeCnf>::iterator it = conf.routes.begin();
+    map<string , routeCnf>::iterator it = conf.routes.begin();
     size_t prevLength = 0;
     string key;
-    bool flag = false; 
+    bool flag = false;
     for (; it != conf.routes.end(); it++)
     {
         string route = it->first;
@@ -81,6 +81,10 @@ void Http::parseRequestLine ()  {
         throw HttpExcept(505, "HTTP Version Not Supported");
 
     buffer.erase(0, index + 2);
+    if (!configs.empty()) {
+        state = READING_HEADERS;
+        return ;
+    }
     HandleUri();
     checkIsCGI();
 
@@ -111,9 +115,8 @@ bool isValidHostHeader(const string& host) {
     return true;
 }
 
-void Http::ParseHeaders()
-{
-    if (!headers.count("Host") || !isValidHostHeader(headers["Host"])) // edit func
+void Http::ParseHeaders() {
+    if (!headers.count("Host") || !isValidHostHeader(headers["Host"])) // edit func 
         throw HttpExcept(400, "Bad Request");
     host = headers["Host"];
 
@@ -155,12 +158,34 @@ void Http::checkPost()
         throw HttpExcept(403, "Missing upload directory");
     buffer.erase(0, 2);
     if (Boundary.empty())
-        openFile("bigfile.txt"); // edit to tmp after 
+        openFile("file.txt"); // edit to tmp after 
 }
 
-void Http::HandleHeaders()
-{
+servcnf& chose_srvr_w_host_headr(vector<servcnf>& servers, string& hostHeaderValue) {
+    cerr << "[DEBUG] chose_srvr_w_host_headr called with: " << hostHeaderValue << endl;
+    if (hostHeaderValue.empty())
+        return servers[0];
+    for (size_t i = 0; i < servers.size(); i++) {
+        cerr << "[DEBUG] checking server[" << i << "] with names: ";
+        for (size_t j = 0; j < servers[i].server_names.size(); j++)
+            cerr << servers[i].server_names[j] << " ";
+        cerr << endl;
 
+        for (size_t j = 0; j < servers[i].server_names.size(); j++) {
+            if (servers[i].server_names[j] == hostHeaderValue) {
+                cerr << "[DEBUG] match found at server[" << i << "]" << endl;
+                cerr << "maxBody: " << servers[i].maxBodySize << endl;
+                return servers[i];
+            }
+        }
+    }
+    cerr << "[DEBUG] no match, returning default" << endl;
+    return servers[0];
+}
+
+
+
+void Http::HandleHeaders() {
     size_t index;
     while ((index = buffer.find("\r\n")) != string::npos)
     {
@@ -178,6 +203,15 @@ void Http::HandleHeaders()
     if (index == string::npos)
         return ;
     ParseHeaders();
+
+    conf = chose_srvr_w_host_headr(configs, host); // xraiti added this
+    if (!configs.empty()) {
+        HandleUri();
+        checkIsCGI();
+        if (find(mtroute.methodes.begin(), mtroute.methodes.end(), method) == mtroute.methodes.end() && !isCGI)
+            throw HttpExcept(405, "Method Not Allowed");
+    }
+
     if (method == "GET" || method == "DELETE")
         state = COMPLETE;
     else
@@ -235,7 +269,7 @@ void Http::HandleChunkedBody()
         (contentLength > buffer.size()) ? buffer.erase(0, buffer.size()) : buffer.erase(0, contentLength);
         remaining = contentLength - bytesTowrite;
         if (!remaining && buffer.size() >= 2 && buffer.find("\r\n") == string::npos)
-            throw HttpExcept(400 ,"Bad Request3");
+            throw HttpExcept(400 ,"Bad Request");
     }
 }
 
@@ -311,7 +345,6 @@ void Http::HandleBody()
     else
         HandleBoundary();
     if (contentLength == 0) {
-        cout << "End reading File" << endl;
         bodyFile.clear();
         bodyFile.seekg(0, ios::beg);
         state = COMPLETE;

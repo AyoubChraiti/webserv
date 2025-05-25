@@ -55,7 +55,15 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *
     string host = getInfoClient(clientFd);
     map<int, Http *>::iterator it = req.find(clientFd);
     if (it == req.end()) {
-        Http* newReq = new Http(conf.servers[host]);
+        const vector<servcnf> &serversForHost = conf.servers[host];
+
+        Http* newReq = NULL;
+        if (serversForHost.size() == 1) {
+            newReq = new Http(serversForHost[0]);
+        }
+        else {
+            newReq = new Http(serversForHost);
+        }
         it = req.insert(make_pair(clientFd, newReq)).first;
     }
     try  {
@@ -84,10 +92,9 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *
         }
     }
     catch(const HttpExcept& e) {
-        sendErrorResponse(clientFd, e.getStatusCode(), e.what(), conf.servers[host]);
+        sendErrorResponse(clientFd, e.getStatusCode(), e.what(), conf.servers[host][0]);
         if (it->second->state == FINISH_REQEUST)
         {
-            cout << "closeed hhnaaa" << endl;
             closeFds(epollFd, req, it->second, pipes_map, timer);
             return;
         }

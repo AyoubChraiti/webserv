@@ -1,5 +1,29 @@
 #include "../../inc/request.hpp"
 
+Http::Http(vector<servcnf> config) {
+    contentLength = 0;
+    bytesRead = 0;
+    sendingFile = false;
+    bytesSentSoFar = 0;
+    headerSent = 0;
+    state = READING_REQUEST_LINE;
+    isPostKeys = true;
+    isChunked = false;
+    isCGI = false;
+    configs = config;
+    remaining = 0;
+    querystring = "";
+    Boundary = "";
+    startBoundFlag = false;
+    hasBody = false;
+    stateCGI = HEADERS_CGI;
+    stdinFd = -1;
+    stdoutFd = -1;
+    clientFd = -1;
+    cgiPid = -1;
+    maxBodySizeChunked = 0;
+}
+
 Http::Http(servcnf config) {
     contentLength = 0;
     bytesRead = 0;
