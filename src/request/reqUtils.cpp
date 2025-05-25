@@ -149,6 +149,7 @@ void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &re
     if (send(clientFd, response.c_str(),response.size(), 0) <= 0) {
         throw HttpExcept(500, "error while sending body");
     }
+    req->state = FINISH_REQEUST;
     closeOrSwitch(clientFd, epollFd, req, reqStates);
 }
 

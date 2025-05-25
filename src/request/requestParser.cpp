@@ -1,43 +1,47 @@
 #include "../../inc/request.hpp"
 
 void Http::HandleUri() {
-    const string allowed = "-._~:/?#[\\]@!$&'()*+,;=";
+    const string allowed = "-._~:/?#[\\]@!$&'()*+,;=%";
     for (size_t i = 0; i < uri.size(); ++i) {
         unsigned char ch = static_cast<unsigned char>(uri[i]);
-        if (!isalnum(ch) && allowed.find(ch) == string::npos)
+        if (!isalnum(ch) && allowed.find(ch) == string::npos) {
             throw HttpExcept(400, "Bad Request");
+        }
     }
+
     size_t indexQUERY = uri.find("?");
     if (indexQUERY != string::npos && method == "GET") {
-        querystring =  uri.substr(indexQUERY + 1);
+        querystring = uri.substr(indexQUERY + 1);
         uri.erase(indexQUERY);
     }
-    map<string , routeCnf>::iterator it = conf.routes.begin();
-    size_t prevLength = 0;
+
     string key;
-    bool flag = false;
-    for (; it != conf.routes.end(); it++)
-    {
+    size_t prevLength = 0;
+    bool matched = false;
+    for (map<string, routeCnf>::iterator it = conf.routes.begin(); it != conf.routes.end(); ++it) {
         string route = it->first;
-        if (uri.size() >= route.size() && !uri.compare(0, route.size(), route)) 
-        {
+        if (uri.size() >= route.size() && uri.compare(0, route.size(), route) == 0) {
             if (back(route) != '/' && uri.size() != route.size() && uri[route.size()] != '/')
                 continue;
             if (route.size() > prevLength) {
                 prevLength = route.size();
                 key = route;
-                flag = true;
+                matched = true;
             }
         }
     }
-    if (!flag) {
+
+    if (!matched) {
         throw HttpExcept(404, "No route for path: " + uri);
     }
-    string tmpUri = uri;
+
     mtroute = conf.routes[key];
-    string bestMatch = mtroute.root;
-    tmpUri.erase(tmpUri.begin(), tmpUri.begin() + bestMatch.size());
+    cout << "Route matched: " << key << endl;
+
+    string tmpUri = uri;
+    tmpUri.erase(0, key.size());
     fullPath = mtroute.alias + tmpUri;
+
     routeResult = handleRouting(this);
 }
 
@@ -219,10 +223,6 @@ void Http::openFile(string name)
     if (name.empty())
         throw HttpExcept(409, "Empty Body");
     string filename = mtroute.uploadStore + name;
-    ifstream testFile(filename.c_str()); // goodbit and failbit are set if its open 
-    // if (testFile.good())
-    //     throw HttpExcept(409, "File already open");
-    testFile.close();
     bodyFile.open(filename.c_str(), ios::in | ios::out | ios::binary | ios::trunc);
     if (!bodyFile.is_open())
         throw HttpExcept(500, "Fail openning file");

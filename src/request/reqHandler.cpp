@@ -82,7 +82,6 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *
             }
             else if (it->second->method == "POST") {
                 sendPostResponse(clientFd, epollFd,it->second ,req);
-                it->second->state = FINISH_REQEUST;
                 return;
             }
             else if (it->second->method == "GET" || it->second->method == "DELETE") {
@@ -94,8 +93,7 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *
     }
     catch(const HttpExcept& e) {
         sendErrorResponse(clientFd, e.getStatusCode(), e.what(), conf.servers[host][0]);
-        if (it->second->state == FINISH_REQEUST)
-        {
+        if (it->second->state == FINISH_REQEUST) {
             closeFds(epollFd, req, it->second, pipes_map, timer);
             return;
         }

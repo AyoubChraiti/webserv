@@ -27,11 +27,10 @@ RouteResult handleRouting(Http* req) {
         }
         req->fullPath += req->mtroute.index;
     }
-
-    
     if (!fileExists(req->fullPath)) {
         throw HttpExcept(404, "Not Found");
     }
+
     if (req->mtroute.cgi || req->method != "GET")
         return result;
 

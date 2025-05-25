@@ -5,7 +5,7 @@ void setupCGIenv(string &FullPath, Http *reqStates, vector <const char *> &vec, 
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_PROTOCOL"] = reqStates->version;
     env["REQUEST_METHOD"] = reqStates->method;
-    env["REDIRECT_STATUS"] = "200";
+    // env["REDIRECT_STATUS"] = "200";
     env["SCRIPT_FILENAME"] = FullPath;
     env["SCRIPT_NAME"] = FullPath.substr(FullPath.find_last_of("/") + 1);
     env["QUERY_STRING"] = reqStates->querystring;
