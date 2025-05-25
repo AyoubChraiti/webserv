@@ -24,6 +24,7 @@ bool Http::request(int Fd) {
     char buff[BUFFER_SIZE];
     memset(buff, 0, sizeof(buff));
     ssize_t recvBytes = recv(Fd, buff, BUFFER_SIZE, 0);
+
     if (recvBytes == 0) {
         if (state == FINISH_REQEUST)
             throw HttpExcept(400, "connection closed by client");

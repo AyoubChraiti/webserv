@@ -161,9 +161,11 @@ void Http::checkPost()
         openFile("file.txt"); // edit to tmp after 
 }
 
-servcnf& chose_srvr_w_host_headr(vector<servcnf>& servers, string& hostHeaderValue) {
-    if (hostHeaderValue.empty())
+servcnf chose_srvr_w_host_headr(vector<servcnf>& servers, string& hostHeaderValue) {
+    if (hostHeaderValue.empty()) {
         return servers[0];
+    }
+
     for (size_t i = 0; i < servers.size(); i++) {
         for (size_t j = 0; j < servers[i].server_names.size(); j++) {
             if (servers[i].server_names[j] == hostHeaderValue) {
@@ -193,9 +195,12 @@ void Http::HandleHeaders() {
     }
     if (index == string::npos)
         return ;
+
     ParseHeaders();
 
-    conf = chose_srvr_w_host_headr(configs, host); // xraiti added this
+    if (configs.size())
+        conf = chose_srvr_w_host_headr(configs, host);
+
     if (!configs.empty()) {
         HandleUri();
         checkIsCGI();
