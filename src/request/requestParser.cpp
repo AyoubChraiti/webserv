@@ -162,28 +162,19 @@ void Http::checkPost()
 }
 
 servcnf& chose_srvr_w_host_headr(vector<servcnf>& servers, string& hostHeaderValue) {
-    cerr << "[DEBUG] chose_srvr_w_host_headr called with: " << hostHeaderValue << endl;
     if (hostHeaderValue.empty())
         return servers[0];
     for (size_t i = 0; i < servers.size(); i++) {
-        cerr << "[DEBUG] checking server[" << i << "] with names: ";
-        for (size_t j = 0; j < servers[i].server_names.size(); j++)
-            cerr << servers[i].server_names[j] << " ";
-        cerr << endl;
-
         for (size_t j = 0; j < servers[i].server_names.size(); j++) {
             if (servers[i].server_names[j] == hostHeaderValue) {
-                cerr << "[DEBUG] match found at server[" << i << "]" << endl;
-                cerr << "maxBody: " << servers[i].maxBodySize << endl;
+                // cerr << "[DEBUG] match found at server[" << i << "]" << endl;
+                // cerr << "maxBody: " << servers[i].maxBodySize << endl;
                 return servers[i];
             }
         }
     }
-    cerr << "[DEBUG] no match, returning default" << endl;
     return servers[0];
 }
-
-
 
 void Http::HandleHeaders() {
     size_t index;
