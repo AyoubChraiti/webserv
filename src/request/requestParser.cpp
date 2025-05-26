@@ -36,12 +36,9 @@ void Http::HandleUri() {
     }
 
     mtroute = conf.routes[key];
-    cout << "Route matched: " << key << endl;
-
     string tmpUri = uri;
     tmpUri.erase(0, key.size());
     fullPath = mtroute.alias + tmpUri;
-
     routeResult = handleRouting(this);
 }
 
@@ -54,7 +51,7 @@ void Http::checkIsCGI() {
         throw HttpExcept(405, "Method Not Allowed");
     size_t extensionPos = uri.find(".");
     if (extensionPos == string::npos) {
-        throw HttpExcept(404, "fix it later");
+        throw HttpExcept(404, "Missing file extension for CGI request");
     }
     string extension_uri = uri.substr(extensionPos);
     if (!mtroute.cgi_map.count(extension_uri)) 
@@ -162,7 +159,7 @@ void Http::checkPost()
         throw HttpExcept(403, "Missing upload directory");
     buffer.erase(0, 2);
     if (Boundary.empty())
-        openFile("file.txt"); // edit to tmp after 
+        openFile("file.txt");
 }
 
 servcnf chose_srvr_w_host_headr(vector<servcnf>& servers, string& hostHeaderValue) {
@@ -189,13 +186,18 @@ void Http::HandleHeaders() {
         if (index == 0)
             break;
         string headerline = buffer.substr(0, index);
-        size_t indexColon;
-        if ((indexColon = headerline.find(':')) == string::npos)
-            throw HttpExcept(400 ,"Bad Request");
-        string key = trim(headerline.substr(0, indexColon)); // check later
-        string value = trim(headerline.substr(indexColon + 1)); // check later
-        headers.insert(make_pair(key, value));
-        buffer.erase(0, index + 2);
+        size_t indexColon = headerline.find(':');
+    
+        if (indexColon == string::npos)
+            throw HttpExcept(400, "Bad Request: Missing colon in header");
+        string key = headerline.substr(0, indexColon);
+        if (key.empty() || key.find_first_of(" \t") != string::npos)
+            throw HttpExcept(400, "Bad Request: Invalid header name");
+        string value = trim(headerline.substr(indexColon + 1)); 
+        if (value.empty())
+            throw HttpExcept(400, "Bad Request: Invalid header value");
+        headers.insert(make_pair(trim(key), value));
+        buffer.erase(0, index + 2); 
     }
     if (index == string::npos)
         return ;
@@ -287,7 +289,15 @@ void Http::HandleBoundary()
         string filename =  getFileName(buffer.substr(start_bound.size()));
         buffer.erase(0, buffer.find("\r\n\r\n") + 4);
         openFile(filename);
-        return writebody(bodyFile, buffer);  
+        string Towrite = buffer;
+        size_t pos_bound = buffer.find("\r\n--");
+        if (pos_bound != string::npos) {
+            Towrite = buffer.substr(0 , pos_bound);
+            buffer.erase(0, pos_bound);
+        }
+        else
+            buffer.clear();
+        return writebody(bodyFile, Towrite);  
     }
     size_t posBound = buffer.find("\r\n--");
     if (posBound == string::npos)
@@ -302,14 +312,22 @@ void Http::HandleBoundary()
         }
         if (bodyFile.is_open())
         {
-            bodyFile.clear(); // check later those 3
+            bodyFile.clear();
             bodyFile.seekg(0, ios::beg);
             bodyFile.close ();
         }
         string filename =  getFileName(buffer.substr(posBound + end_bound.size()));
         buffer.erase(0, buffer.find("\r\n\r\n") + 4);
         openFile(filename);
-        return writebody(bodyFile, buffer);  
+        string Towrite = buffer;
+        size_t pos_bound = buffer.find("\r\n--");
+        if (pos_bound != string::npos) {
+            Towrite = buffer.substr(0 , pos_bound);
+            buffer.erase(0, pos_bound);
+        }
+        else
+            buffer.clear();
+        return writebody(bodyFile, Towrite);   
     }
     else if (buffer.substr(posBound, end_bound.size()) == end_bound)
     {
@@ -323,6 +341,7 @@ void Http::HandleBoundary()
         contentLength += (buffer.size() - posBound);
     }
 }
+
 
 void Http::HandleBody()
 {

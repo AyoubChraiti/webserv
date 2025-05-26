@@ -150,6 +150,7 @@ void sendPostResponse(int clientFd, int epollFd, Http* req, map<int, Http *> &re
         throw HttpExcept(500, "error while sending body");
     }
     req->state = FINISH_REQEUST;
+    req->bodyFile.close();
     closeOrSwitch(clientFd, epollFd, req, reqStates);
 }
 
