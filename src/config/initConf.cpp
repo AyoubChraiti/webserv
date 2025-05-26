@@ -147,8 +147,9 @@ const mpserv& configFile::parseConfig() {
         }
         parseLine(line, server, section);
     }
-    if (inserver)
+    if (inserver) {
         configData.servers[getKey(server)].push_back(server);
+    }
 
     cnf.close();
     return configData;

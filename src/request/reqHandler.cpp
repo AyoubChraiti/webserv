@@ -38,7 +38,6 @@ bool Http::request(int Fd) {
 
     if (recvBytes > 0) {
         buffer.append(buff, recvBytes);
-        cout << buffer << endl;
         if (state != READING_BODY && buffer.find("\r\n") == string::npos)
             return false;
         if (state == READING_REQUEST_LINE)
@@ -55,6 +54,14 @@ bool Http::request(int Fd) {
 
 void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *> &req, map<int, Http *> &pipes_map, map<int, time_t>& timer) {
     string host = getInfoClient(clientFd);
+
+    if (conf.servers.find(host) == conf.servers.end()) {
+        sendErrorResponse(clientFd, 404, "Not Found", conf.servers.begin()->second[0]);
+        epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL);
+        close(clientFd);
+        return;
+    }
+    
     map<int, Http *>::iterator it = req.find(clientFd);
     if (it == req.end()) {
         const vector<servcnf> &serversForHost = conf.servers[host];

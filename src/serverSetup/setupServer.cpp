@@ -69,18 +69,24 @@ void epoll_handler(mpserv &conf ,vector<int> &servrs) {
                 continue;
             }
             if (pipes_map.find(eventFd) != pipes_map.end()) {
-                if (events[i].events & EPOLLOUT)
-                    handle_cgi_write(eventFd, epollFd, pipes_map, clientLastActive);
-                else if (events[i].events & EPOLLIN)
-                    handle_cgi_read(epollFd, eventFd, pipes_map[eventFd], pipes_map);
-                else if (events[i].events & EPOLLHUP) {
-                    clientLastActive.erase(eventFd);
-                    pipes_map[eventFd]->stateCGI = COMPLETE_CGI;
-                    pipes_map[eventFd]->outputCGI.append("0\r\n\r\n");
-                    modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
-                    epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
-                    close(eventFd);
-                    pipes_map.erase(eventFd);
+                try {
+                    if (events[i].events & EPOLLOUT)
+                        handle_cgi_write(eventFd, epollFd, pipes_map, clientLastActive);
+                    else if (events[i].events & EPOLLIN)
+                        handle_cgi_read(epollFd, eventFd, pipes_map[eventFd], pipes_map);
+                    else if (events[i].events & EPOLLHUP) {
+                        clientLastActive.erase(eventFd);
+                        pipes_map[eventFd]->stateCGI = COMPLETE_CGI;
+                        pipes_map[eventFd]->outputCGI.append("0\r\n\r\n");
+                        modifyState(epollFd, pipes_map[eventFd]->clientFd, EPOLLOUT);
+                        epoll_ctl(epollFd, EPOLL_CTL_DEL, eventFd, NULL);
+                        close(eventFd);
+                        pipes_map.erase(eventFd);
+                    }
+                }
+                catch(HttpExcept &e){
+                    sendErrorResponse(pipes_map[eventFd]->clientFd, e.getStatusCode(), e.what(), pipes_map[eventFd]->conf);
+                    closeFds(epollFd, requestmp, pipes_map[eventFd], pipes_map, clientLastActive);
                 }
                 continue;
             }

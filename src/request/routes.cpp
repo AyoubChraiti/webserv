@@ -27,6 +27,9 @@ RouteResult handleRouting(Http* req) {
         }
         req->fullPath += req->mtroute.index;
     }
+
+    cout << "Requesting file: " << req->fullPath << endl;
+    
     if (!fileExists(req->fullPath)) {
         throw HttpExcept(404, "Not Found");
     }
