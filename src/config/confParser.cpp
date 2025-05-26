@@ -106,6 +106,21 @@ mpserv configChecking(const string &filePath) {
                         throw runtime_error("Error: Route '" + route_it->first + "' has CGI disabled but CGI methods are defined.");
                 }
             }
+            for (size_t i = 0; i < serverList.size(); i++) {
+                const servcnf &server1 = serverList[i];
+
+                for (size_t j = i + 1; j < serverList.size(); j++) {
+                    const servcnf &server2 = serverList[j];
+
+                    set<string> names1(server1.server_names.begin(), server1.server_names.end());
+                    set<string> names2(server2.server_names.begin(), server2.server_names.end());
+
+                    if (names1 == names2) {
+                        throw runtime_error("Error: Duplicate server block detected for host " + server1.host +
+                            " and port " + to_string(server1.port) + " with identic server_names.");
+                    }
+                }
+            }
         }
     }
     return config;
