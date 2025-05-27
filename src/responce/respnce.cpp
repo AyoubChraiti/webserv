@@ -1,6 +1,6 @@
 #include "../../inc/responce.hpp"
 
-void sendRedirect(int epollFd, int fd, const string& location, Http* req, map<int, Http*>& requestmp) {
+void sendRedirect(int fd, const string& location, Http* req) {
     stringstream response;
 
     response << "HTTP/1.1 301 Moved Permanently\r\n";
@@ -25,7 +25,7 @@ size_t getContentLength(const string& path) {
     return fileStat.st_size;
 }
 
-void sendHeaders(int epollFd, int clientFd, RouteResult& routeResult, Http* req, map<int, Http*>& requestmp) {
+void sendHeaders(int clientFd, RouteResult& routeResult, Http* req) {
     stringstream response;
     response << "HTTP/1.1 " << routeResult.statusCode << " " << routeResult.statusText << "\r\n";
     response << "Content-Type: " << routeResult.contentType << "\r\n";
@@ -156,7 +156,7 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<i
     try {
         if (req->routeResult.autoindex) {
             if (!req->headerSent) {
-                sendHeaders(epollFd, fd, req->routeResult, req, requestmp);
+                sendHeaders(fd, req->routeResult, req);
                 return;
             }
             if (send(fd, req->routeResult.responseBody.c_str(), req->routeResult.responseBody.size(), 0) <= 0) {
@@ -166,14 +166,14 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<i
             return;
         }
         else if (req->routeResult.shouldRDR) {
-            sendRedirect(epollFd, fd, req->mtroute.redirect, req, requestmp);
+            sendRedirect(fd, req->mtroute.redirect, req);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
         }
         else if (req->isCGI)
             return parseCGIandSend(epollFd, fd, it->second ,requestmp);
         else if (req->method == "GET") {
-            int get = getMethode(fd, req, requestmp, epollFd);
+            int get = getMethode(fd, req);
             if (get) {
                 if (req->routeResult.fileStream) {
                     req->routeResult.fileStream->close();
@@ -185,7 +185,7 @@ void handle_client_write(int fd, int epollFd, map<int, Http *>& requestmp, map<i
             }
         }
         else if (req->method == "DELETE") {
-            deleteMethod(epollFd, fd, req, requestmp);
+            deleteMethod(fd, req);
             closeOrSwitch(fd, epollFd, req, requestmp);
             return;
         }

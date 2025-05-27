@@ -1,17 +1,17 @@
 #include "../../inc/responce.hpp"
 #include "../../inc/request.hpp"
 
-int getMethode(int clientFd, Http* req, map<int, Http*>& requestmp, int epollFd) {
+int getMethode(int clientFd, Http* req) {
     RouteResult& routeResult = req->routeResult;
 
     if (!req->headerSent) {
-        sendHeaders(epollFd, clientFd, routeResult, req, requestmp);
+        sendHeaders(clientFd, routeResult, req);
         return 0;
     }
 
     if (!req->sendingFile) {
         if (routeResult.shouldRDR) {
-            sendRedirect(epollFd, clientFd, routeResult.redirectLocation, req, requestmp);
+            sendRedirect(clientFd, routeResult.redirectLocation, req);
             return 1;
         }    
 

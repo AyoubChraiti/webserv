@@ -59,6 +59,15 @@ void Http::checkIsCGI() {
     _extensionCGI = mtroute.cgi_map[extension_uri];
 }
 
+void countSpace(string &line)
+{
+    for (size_t i = 0; i < line.size (); i++)
+    {
+        if (line[i] == ' ' && line[i + 1] == ' ')
+            throw HttpExcept(400, "Bad Request");
+    }
+}
+
 void Http::parseRequestLine ()  {
     size_t index = buffer.find("\r\n");
     if (index == string::npos)
@@ -69,6 +78,7 @@ void Http::parseRequestLine ()  {
         throw HttpExcept (414, "URI Too Long");
 
     string requestLine = trim(line);
+    countSpace(requestLine);
     stringstream ss (requestLine);
     ss >> method >> uri >> version;
 
@@ -273,7 +283,11 @@ void Http::HandleChunkedBody()
 
 void Http::HandleBoundary() 
 {
-    contentLength -= buffer.size();
+    if (buffer.size() > contentLength)
+        contentLength = 0;
+    else {
+        contentLength -= buffer.size();
+    }
     string start_bound = "--" + Boundary + "\r\n";
     string part_bound = "\r\n--" + Boundary + "\r\n";
     string end_bound = "\r\n--" + Boundary + "--" + "\r\n";
@@ -345,15 +359,18 @@ void Http::HandleBoundary()
 
 void Http::HandleBody()
 {
-    if (contentLength == 0 && !hasBody) {
+   
+    if ((contentLength == 0 && !hasBody)) {
         state = COMPLETE;
         return ;
-    } 
+    }
     hasBody = true;
     if (contentLength > StringStream(conf.maxBodySize))
         throw HttpExcept(413 , "Request Entity too large");
     if (Boundary.empty())
     {
+        if (buffer.size() > contentLength || (buffer.find("\r\n\r\n") != string::npos && contentLength > buffer.size()))
+            throw HttpExcept(400,  "Bad Request");
         contentLength -= buffer.size();
         writebody(bodyFile,  buffer);
     }
