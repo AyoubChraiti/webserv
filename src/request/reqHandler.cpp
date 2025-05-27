@@ -38,6 +38,7 @@ bool Http::request(int Fd) {
 
     if (recvBytes > 0) {
         buffer.append(buff, recvBytes);
+        cout << buffer << endl;
         if (state != READING_BODY && buffer.find("\r\n") == string::npos)
             return false;
         if (state == READING_REQUEST_LINE)
@@ -100,11 +101,11 @@ void handle_client_read(int clientFd, int epollFd, mpserv& conf, map<int, Http *
         }
     }
     catch(const HttpExcept& e) {
-        sendErrorResponse(clientFd, e.getStatusCode(), e.what(), conf.servers[host][0]);
         if (it->second->state == FINISH_REQEUST) {
             closeFds(epollFd, req, it->second, pipes_map, timer);
             return;
         }
+        sendErrorResponse(clientFd, e.getStatusCode(), e.what(), conf.servers[host][0]);
         epoll_ctl(epollFd, EPOLL_CTL_DEL, clientFd, NULL); 
         delete it->second;
         req.erase(clientFd);

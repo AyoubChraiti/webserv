@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 import os
+import cgi
+import html
 
+# Parse cookies from HTTP header
 cookie_header = os.getenv("HTTP_COOKIE", "")
 cookies = {}
 if cookie_header:
@@ -10,48 +13,42 @@ if cookie_header:
             name, value = cookie.strip().split("=", 1)
             cookies[name] = value
 
+# Parse form data (for new cookie input)
+form = cgi.FieldStorage()
+new_key = form.getfirst("key", "")
+new_value = form.getfirst("value", "")
+
+# Start CGI headers
+if new_key and new_value:
+    print(f"Set-Cookie: {html.escape(new_key)}={html.escape(new_value)}; Path=/; HttpOnly")
+
+print("Content-Type: text/html\n")
+
 # Generate the response body
-response_lines = []
-response_lines.append("<html>")
-response_lines.append("<head><title>Cookie Test</title></head>")
-response_lines.append("<body>")
-response_lines.append("<h1>Cookie Test</h1>")
+print("<html>")
+print("<head><title>Cookie Manager</title></head>")
+print("<body>")
+print("<h1>Cookie Manager</h1>")
 
-# Display incoming cookies
+# Show form to input new cookie
+print("""
+<h2>Set a New Cookie</h2>
+<form method="get">
+    <label>Key: <input type="text" name="key"></label><br>
+    <label>Value: <input type="text" name="value"></label><br>
+    <input type="submit" value="Set Cookie">
+</form>
+""")
+
+# Show incoming cookies
+print("<h2>Incoming Cookies:</h2>")
 if cookies:
-    response_lines.append("<h2>Incoming Cookies:</h2>")
-    response_lines.append("<ul>")
+    print("<ul>")
     for name, value in cookies.items():
-        response_lines.append(f"<li><strong>{name}:</strong> {value}</li>")
-    response_lines.append("</ul>")
+        print(f"<li><strong>{html.escape(name)}:</strong> {html.escape(value)}</li>")
+    print("</ul>")
 else:
-    response_lines.append("<p>No incoming cookies.</p>")
+    print("<p>No incoming cookies.</p>")
 
-# Confirm outgoing cookies
-response_lines.append("<h2>Outgoing Cookies:</h2>")
-response_lines.append("<p>Cookies have been set:</p>")
-response_lines.append("<ul>")
-if "username" not in cookies:
-    response_lines.append("<li><strong>username:</strong> JohnDoe</li>")
-if "theme" not in cookies:
-    response_lines.append("<li><strong>theme:</strong> dark</li>")
-response_lines.append("</ul>")
-
-response_lines.append("</body>")
-response_lines.append("</html>")
-
-response_body = "\n".join(response_lines)
-response_bytes = response_body.encode("utf-8")
-content_length = len(response_bytes)
-
-# Print CGI headers
-if "username" not in cookies:
-    print("Set-Cookie: username=JohnDoe; Path=/; HttpOnly")
-if "theme" not in cookies:
-    print("Set-Cookie: theme=dark; Path=/; Max-Age=3600")
-print("Content-Type: text/html")
-print(f"Content-Length: {content_length}")
-print()  # End of headers
-
-# Print response body
-print(response_body)
+print("</body>")
+print("</html>")

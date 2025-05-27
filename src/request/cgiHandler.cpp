@@ -5,7 +5,7 @@ void setupCGIenv(string &FullPath, Http *reqStates, vector <const char *> &vec, 
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_PROTOCOL"] = reqStates->version;
     env["REQUEST_METHOD"] = reqStates->method;
-    // env["REDIRECT_STATUS"] = "200";
+    env["REDIRECT_STATUS"] = "200";
     env["SCRIPT_FILENAME"] = FullPath;
     env["SCRIPT_NAME"] = FullPath.substr(FullPath.find_last_of("/") + 1);
     env["QUERY_STRING"] = reqStates->querystring;
@@ -44,8 +44,8 @@ void childCGI (Http *reqStates, int stdoutFd[2],int stdinFd[2], int clientFd)
     close(stdinFd[0]);
     close(stdoutFd[1]);
 
-    const char *args[] = {reqStates->_extensionCGI.c_str(), reqStates->fullPath.c_str(), NULL}; // cant change charcter
-    execve(reqStates->_extensionCGI.c_str(), const_cast<char* const*>(args), const_cast<char* const*>(vec.data())); // cast (cant change string)
+    const char *args[] = {reqStates->_extensionCGI.c_str(), reqStates->fullPath.c_str(), NULL}; 
+    execve(reqStates->_extensionCGI.c_str(), const_cast<char* const*>(args), const_cast<char* const*>(vec.data())); 
     perror("cgi execve failed");
     exit(1);
 }
