@@ -7,7 +7,7 @@ RouteResult handleRouting(Http* req) {
 
 
     if (isDirectory(req->fullPath)) {
-        if (back(req->fullPath) != '/') {
+        if (back(req->fullPath) != '/' || !req->mtroute.redirect.empty()) {
             result.shouldRDR = true;
             result.redirectLocation = req->uri + "/";
             result.statusCode = 301;
