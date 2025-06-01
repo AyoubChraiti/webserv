@@ -10,7 +10,6 @@ Features include efficient request multiplexing with `epoll`, CGI execution, adv
 - [Features](#features)
 - [Getting Started](#getting-started)
 - [Configuration File](#configuration-file)
-- [Server Architecture](#server-architecture)
   - [Request Handling](#request-handling)
   - [Response Generation](#response-generation)
   - [Multiplexing with epoll](#multiplexing-with-epoll)
@@ -18,9 +17,6 @@ Features include efficient request multiplexing with `epoll`, CGI execution, adv
   - [Session Management (Multi-Cookie Support)](#session-management-multi-cookie-support)
   - [Virtual Hosting](#virtual-hosting)
 - [Performance](#performance)
-- [Screenshots](#screenshots)
-- [Contributing](#contributing)
-- [License](#license)
 
 ---
 
@@ -126,29 +122,3 @@ Define servers, ports, document roots, server names, CGI handlers, and more.
 ## Performance
 
 Our server is designed for **maximum throughput** and **minimal latency**, making it ideal for production and educational use.
-
----
-
-## Screenshots
-
-<!-- Replace the image below with your actual screenshots -->
-![Homepage Screenshot](path/to/homepage_screenshot.png)
-
-<!-- Add more screenshots as needed -->
-
----
-
-## Contributing
-
-Contributions are welcome!  
-Please open issues or submit pull requests for improvements, bug fixes, or new features.
-
----
-
-## License
-
-This project is licensed under the MIT License.
-
----
-
-*Made with ❤️ for the 42 Webserver project.*
