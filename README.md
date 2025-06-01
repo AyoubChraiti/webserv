@@ -35,7 +35,7 @@ Features include efficient request multiplexing with `epoll`, CGI execution, adv
 
 1. **Clone the repository:**
 ```bash
-   git clone https://github.com/your-username/42-webserver.git
+   git clone https://github.com/AyoubChraiti/webserv
    cd 42-webserver
 ```
 
