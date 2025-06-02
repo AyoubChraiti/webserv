@@ -77,6 +77,7 @@ Define servers, ports, document roots, server names, CGI handlers, and more.
     methodes = GET, POST
     allow_upload = true
     upload_directory = upload/
+    cgi = on
 
 ```
 
