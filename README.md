@@ -31,26 +31,6 @@ Features include efficient request multiplexing with `epoll`, CGI execution, adv
 
 ---
 
-## Getting Started
-
-1. **Clone the repository:**
-```bash
-   git clone https://github.com/AyoubChraiti/webserv
-   cd webserv
-```
-
-2. **Build:**
-```bash
-   make
-```
-
-3. **Run:**
-```bash
-   ./webserv path/to/config.conf
-```
-
----
-
 ## Configuration File
 
 Define servers, ports, document roots, server names, CGI handlers, and more.
