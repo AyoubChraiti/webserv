@@ -3,7 +3,6 @@
 A high-performance, lightweight webserver built for the 42 project.  
 Features include efficient request multiplexing with `epoll`, CGI execution, advanced session management with multi-cookie support, and flexible multi-virtual hosting via a user-friendly configuration file.
 
----
 
 ## Table of Contents
 
@@ -18,7 +17,6 @@ Features include efficient request multiplexing with `epoll`, CGI execution, adv
   - [Virtual Hosting](#virtual-hosting)
 - [Performance](#performance)
 
----
 
 ## Features
 
@@ -29,7 +27,6 @@ Features include efficient request multiplexing with `epoll`, CGI execution, adv
 - 🌐 **Multi Virtual Hosting:** Host multiple domains with distinct configurations via a single config file.
 - 🛠️ **Easy Configuration:** Human-readable config format for easy server and virtual host management.
 
----
 
 ## Configuration File
 
@@ -66,7 +63,6 @@ Define servers, ports, document roots, server names, CGI handlers, and more.
 - `location`: Maps URL paths to filesystem or CGI.
 - `cgi`: Configures cgi support for that location.
 
----
 
 ### Request Handling
 
@@ -98,7 +94,6 @@ Define servers, ports, document roots, server names, CGI handlers, and more.
 - Serve multiple domains from the same server instance.
 - Each domain can have unique root, index, error pages, and CGI settings.
 
----
 
 ## Performance
 
